@@ -1,22 +1,21 @@
-# The purpose of this script is to go about loading MATLAB files into R
+# The purpose of this script is to go about loading the OISST data
+# saved as MATLAB files into R.
 
 
 # Load libraries ----------------------------------------------------------
 
 library(tidyverse)
 library(R.matlab)
-# library(heatwaveR)
-# library(anytime)
 
 
 # Load data ---------------------------------------------------------------
 
+# The file list
 file_list <- data.frame(file = dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/", full.names = T),
                         file_num = sapply(strsplit(sapply(strsplit(
                           dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/", 
                                                 full.names = T), "ts."), "[[", 2), ".mat"), "[[", 1))
 
-df <- file_list_sub
 # Function for loading OISST data saved in .mat format on tikoraluk
 load_OISST_mat <- function(df){
   mat_file <- readMat(df$file) # ~7 seconds
@@ -31,7 +30,6 @@ load_OISST_mat <- function(df){
     select(lon, lat, t, temp) %>% 
     na.omit() # ~2 seconds
 }
-
 
 
 # Visual test -------------------------------------------------------------
