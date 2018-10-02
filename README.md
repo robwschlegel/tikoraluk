@@ -11,3 +11,4 @@ Code for use on tikoraluk
   
 * October 02, 2018
   * Loading BIO model data
+  * Initial visualisations
