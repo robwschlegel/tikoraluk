@@ -8,3 +8,6 @@ Code for use on tikoraluk
 * October 01, 2018
   * Added script for MHW calculating functions
   * Added script for tracking the running of all of the MHW calculations
+  
+* October 02, 2018
+  * Loading BIO model data

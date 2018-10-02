@@ -9,6 +9,7 @@
 # Source scripts ----------------------------------------------------------
 
 source("MHW_func.R")
+library(doMC); doMC::registerDoMC(cores = 50)
 
 
 # Calculate MHWs ----------------------------------------------------------
@@ -49,3 +50,48 @@ system.time(
     MHW_calc(file_list[i,])
   }
 ) # 10527 seconds
+
+## Switching over to plyr for multi-cores
+
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(401:405)
+system.time(
+plyr::ddply(file_list_multi, .variables = "x", 
+            .fun = MHW_calc, .parallel = TRUE)
+) # 86 seconds at 16 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(406:415)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # 86 seconds at 16 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(416:445)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # 199 seconds at 32 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(446:500)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # 398 seconds at 32 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(501:600)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # 534 seconds at 50 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(601:700)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # 730 seconds at 50 cores
