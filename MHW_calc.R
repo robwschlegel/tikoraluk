@@ -23,29 +23,29 @@ system.time(
   for(i in 2:30){
     MHW_calc(file_list[i,])
   }
-)
+) # 3559 seconds
 system.time(
   for(i in 31:60){
     MHW_calc(file_list[i,])
   }
-)
+) # 3044 seconds
 system.time(
   for(i in 61:100){
     MHW_calc(file_list[i,])
   }
-)
+) # 2945 seconds
 system.time(
   for(i in 101:200){
     MHW_calc(file_list[i,])
   }
-)
+) # 9023 seconds
 system.time(
   for(i in 201:300){
     MHW_calc(file_list[i,])
   }
-)
+) # 12629 seconds
 system.time(
   for(i in 301:400){
     MHW_calc(file_list[i,])
   }
-)
+) # 10527 seconds
