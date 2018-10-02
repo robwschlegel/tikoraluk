@@ -102,3 +102,10 @@ system.time(
   plyr::ddply(file_list_multi, .variables = "x", 
               .fun = MHW_calc, .parallel = TRUE)
 ) # 671 seconds at 50 cores
+file_list_multi <- file_list %>% 
+  mutate(x = file_num) %>% 
+  slice(801:1440)
+system.time(
+  plyr::ddply(file_list_multi, .variables = "x", 
+              .fun = MHW_calc, .parallel = TRUE)
+) # xxx seconds at 50 cores
