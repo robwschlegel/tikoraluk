@@ -10,6 +10,10 @@ Code for use on tikoraluk
   * Added script for tracking the running of all of the MHW calculations
   
 * October 02, 2018
-  * Loading BIO model data
+  * Loading NAPA model data
   * Initial visualisations
   * Basic masks prepared
+  
+* October 03, 2018
+  * Interpolated OISST to match NAPA grid
+  * Also tested nearest neighbour
