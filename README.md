@@ -17,3 +17,4 @@ Code for use on tikoraluk
 * October 03, 2018
   * Interpolated OISST to match NAPA grid
   * Also tested nearest neighbour
+  * Getting ready for per-pixel time series creation from NAPA data

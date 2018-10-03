@@ -24,7 +24,7 @@ library(FNN)
 # nc_close(nc_rotatedAngle)
 # nc_bathy <- nc_open("../../data/NAPA025/mesh_grid/bathy_creg025_extended_5m.nc")
 # nc_close(nc_bathy)
-nc_mesh_mask <- nc_open("../../data/NAPA025/mesh_grid/CREG025_mesh_mask.nc")
+# nc_mesh_mask <- nc_open("../../data/NAPA025/mesh_grid/CREG025_mesh_mask.nc")
 # nc_close(nc_mesh_mask)
 
 # The data location
@@ -74,7 +74,7 @@ sst <- as.data.frame(ncvar_get(nc, varid = "sst")) %>%
   left_join(lat, by = c("lon", "lat"))
 
 nc_close(nc)
-nc_close(nc_mesh_mask)
+# nc_close(nc_mesh_mask)
 
 
 # The mask ----------------------------------------------------------------

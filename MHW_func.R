@@ -37,18 +37,3 @@ MHW_calc <- function(df){
   save(MHW_res, file = paste0("../data/MHW.calc.", df$file_num,".RData"))
 }
 
-# MHW_res <- OISST %>%
-#   filter(lon == unique(lon)[1],
-#          lat == unique(lat)[1]) %>% 
-#   group_by(lon, lat) %>%
-#   nest() %>%
-#   mutate(clim = purrr::map(data, ts2clm, robust = FALSE,
-#                     climatologyPeriod = c("1982-01-01", "2011-12-31")),
-#          event = purrr::map(clim, detect_event),
-#          cat = purrr::map(event, category, climatology = TRUE)) %>% 
-#   select(-data, -clim)
-# 
-# 
-# test <- ts2clm(MHW_res, robust = FALSE, climatologyPeriod = c("1982-01-01", "2011-12-31"))
-
-

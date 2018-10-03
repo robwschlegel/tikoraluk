@@ -139,33 +139,5 @@ file_list_multi <- file_list %>%
 system.time(
   plyr::ddply(file_list_multi, .variables = "x", 
               .fun = MHW_calc, .parallel = TRUE)
-) # 1270 seconds on 50 cores
+) # 103 seconds on 50 cores
 
-
-
-# Need to look more closely at file 1137
-file_list_multi <- file_list %>% 
-  mutate(x = file_num) %>% 
-  slice(1137)
-OISST <- load_OISST_mat(file_list_multi)
-MHW_res <- OISST %>%
-  group_by(lon, lat) %>%
-  nest() %>% 
-  slice(3) %>% 
-  mutate(clim = purrr::map(data, ts2clm, robust = FALSE,
-                           climatologyPeriod = c("1982-01-01", "2011-12-31")),
-         event = purrr::map(clim, detect_event),
-         cat = purrr::map(event, category, climatology = TRUE)) %>% 
-  select(-data, -clim)
-save(MHW_res, file = paste0("../data/MHW.calc.", df$file_num,".RData"))
-
-error_file <- OISST %>%
-  group_by(lon, lat) %>%
-  nest() %>% 
-  slice(3) %>% 
-  unnest()
-
-ts2clm(error_file, robust = FALSE,
-       climatologyPeriod = c("1982-01-01", "2011-12-31"))
-detect_event(ts2clm(error_file, robust = FALSE,
-                    climatologyPeriod = c("1982-01-01", "2011-12-31")))
