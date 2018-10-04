@@ -22,4 +22,5 @@ Code for use on tikoraluk
 * October 03, 2018
   * Per-pixel NAPA time series creation set
   * Need to change directions on how the NAPA data are prepped
-  
+  * Went for a nested multi-core approach where the NAPA data are subsetted
+    based on their match to the pixels present in each OISST MATLAB file

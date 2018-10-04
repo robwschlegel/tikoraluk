@@ -28,9 +28,9 @@ load("metadata/lon_OISST.RData")
 
 # Functions ---------------------------------------------------------------
 
-file_name = NAPA_files[100]
+# file_name = NAPA_files[100]
 
-load_NAPA_sst_sub <- function(file_name){
+load_NAPA_sst_sub <- function(file_name, coords){
   nc <- nc_open(as.character(file_name))
   date_start <- ymd(str_sub(basename(as.character(file_name)), start = 29, end = 36))
   date_end <- ymd(str_sub(basename(as.character(file_name)), start = 38, end = 45))
@@ -63,18 +63,23 @@ load_NAPA_sst_sub <- function(file_name){
 }
 
 
-
-lon_sub <- lon_OISST[1]
+# lon_sub <- lon_OISST[1]
 save_NAPA_sst_sub <- function(lon_sub){
   # return(lon_sub)
   coords <- lon_lat_NAPA_OISST %>% 
-    filter(lon_O == lon_sub)
+    filter(lon_O == lon_sub) #%>% 
+    # nest()
   
-  # test <- data.frame(file_name = NAPA_files[1:10],
-  #                    x = 1:10)
+  # NAPA_files_coords <- data.frame(x = rep(1:length(NAPA_files), each = nrow(coords)),
+  #                                 file_name = rep(NAPA_files, each = nrow(coords)),
+  #                                 coords = coords) %>% 
+  #   unnest()
+  
   system.time(
-    NAPA_sst_sub <- plyr::ldply(NAPA_files, .fun = load_NAPA_sst_sub, .parallel = TRUE)
-  ) # 70 seconds at 50 cores
+    NAPA_sst_sub <- plyr::ldply(NAPA_files,
+                                .fun = load_NAPA_sst_sub, coords = coords,
+                                .parallel = TRUE)
+  ) # 55 seconds at 50 cores
   
   # sst_sub_ts <- sst_sub %>% 
   #   filter(lon == 304, lat == 367)
@@ -104,8 +109,9 @@ save_NAPA_sst_sub <- function(lon_sub){
 
 # Process data ------------------------------------------------------------
 
-plyr::laply(lon_OISST[1], save_NAPA_sst_sub)
-
+system.time(
+res <- plyr::laply(lon_OISST[1], save_NAPA_sst_sub)
+) # xxx seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
@@ -116,8 +122,6 @@ NAPA_data <- lapply(NAPA_saves, function(x) {
   load(file = x)
   get(ls()[ls()!= "filename"])
 })
-
-# names(mylist) <- all.files
 
 NAPA_all <- do.call("rbind", NAPA_data)
 
