@@ -9,86 +9,103 @@
 library(tidyverse)
 library(lubridate)
 library(ncdf4)
-library(doMC); doMC::registerDoMC(cores = 10)
+library(doMC); doMC::registerDoMC(cores = 50)
 library(stringr)
 
+# source("load_mat.R")
 
 # Data --------------------------------------------------------------------
 
 # The file location
 NAPA_files <- dir("../../data/NAPA025/1d_grid_T_2D", full.names = T)
 
-# The NAPA lon/lat values
-load("NAPA/mask_long.RData")
+# The NAPA to OISST lon/lat mask
+load("metadata/lon_lat_NAPA_OISST.RData")
+
+# The OISST lon values for subsetting
+load("metadata/lon_OISST.RData")
 
 
 # Functions ---------------------------------------------------------------
 
-df <- data.frame(file_name = NAPA_files[100],
-                 lon_sub = 100)
+file_name = NAPA_files[100]
 
-load_NAPA_sst_sub <- function(df){
-  nc <- nc_open(as.character(df$file_name))
-  date_start <- ymd(str_sub(basename(as.character(df$file_name)), start = 29, end = 36))
-  date_end <- ymd(str_sub(basename(as.character(df$file_name)), start = 38, end = 45))
+load_NAPA_sst_sub <- function(file_name){
+  nc <- nc_open(as.character(file_name))
+  date_start <- ymd(str_sub(basename(as.character(file_name)), start = 29, end = 36))
+  date_end <- ymd(str_sub(basename(as.character(file_name)), start = 38, end = 45))
   date_seq <- seq(date_start, date_end, by = "day")
-  sst <- as.data.frame(ncvar_get(nc, varid = "sst")[df$lon_sub,,]) %>% 
-    mutate(lon = as.numeric(nc$dim$x$vals)[df$lon_sub]) %>% 
+  # sst <- as.data.frame(ncvar_get(nc, varid = "sst")[df$lon_sub,,]) %>% 
+  sst <- as.data.frame(ncvar_get(nc, varid = "sst")) %>% 
+    mutate(lon = as.numeric(nc$dim$x$vals)) %>%
+    # mutate(lon = as.numeric(nc$dim$x$vals)[coords$lon]) %>% 
+    # mutate(lon = coords$lon) %>% 
     gather(-lon, key = lat, value = temp) %>%
-    mutate(lat = rep(as.numeric(nc$dim$y$vals), times = 5),
-           temp = ifelse(temp == 0, NA, temp),
-           t = rep(seq(date_start, date_end, by = "day"), each = 735)) %>%
+    mutate(t = rep(date_seq, each = 388080),
+           lat = rep(as.numeric(nc$dim$y$vals), each = 2640)) %>%
     select(lon, lat, t, temp) %>%
     # na.omit() %>% 
-    filter(lon == df$lon_sub) %>%
-    left_join(mask_long, by = c("lon", "lat"))
+    # filter(lon %in% coords$lon,
+    #        lat %in% coords$lat) %>%
+    inner_join(coords[,1:4], by = c("lon", "lat")) %>% 
+    select(nav_lon, nav_lat, t, temp)
+  
+  # ggplot(filter(sst, t == min(t)), aes(x = lon, y = lat, fill = temp)) +
+  #   geom_raster() +
+  #   scale_fill_viridis_c()
+  # 
+  # ggplot(filter(sst, t == min(t)), aes(x = nav_lon, y = nav_lat, colour = temp)) +
+  #   geom_point() +
+  #   scale_colour_viridis_c()
+  
   nc_close(nc)
   return(sst)
 }
 
-save_NAPA_sst_sub <- function(df){
-  lon_sub <- df$lon_sub
-  lon_sub_label <- str_pad(lon_sub, 4, pad = "0")
-  NAPA_sst_sub <- data.frame(file_name = NAPA_files,
-                             lon_sub = rep(lon_sub, times = length(NAPA_files)),
-                             y = 1:length(NAPA_files)) %>% 
-    group_by(y) %>%
-    nest() %>% 
-    mutate(sst = purrr::map(data, load_NAPA_sst_sub)) %>% 
-    unnest(sst)
+
+
+lon_sub <- lon_OISST[1]
+save_NAPA_sst_sub <- function(lon_sub){
+  # return(lon_sub)
+  coords <- lon_lat_NAPA_OISST %>% 
+    filter(lon_O == lon_sub)
+  
+  # test <- data.frame(file_name = NAPA_files[1:10],
+  #                    x = 1:10)
+  system.time(
+    NAPA_sst_sub <- plyr::ldply(NAPA_files, .fun = load_NAPA_sst_sub, .parallel = TRUE)
+  ) # 70 seconds at 50 cores
+  
+  # sst_sub_ts <- sst_sub %>% 
+  #   filter(lon == 304, lat == 367)
+  # ggplot(sst_sub_ts, aes(x = t, y = temp)) +
+  #   geom_line()
+  # 
+  # sst_sub_2d <- sst_sub %>% 
+  #   filter(t == as.Date("1993-10-01"))
+  # ggplot(sst_sub_2d, aes(x = nav_lon, y = nav_lat, colour = temp)) +
+  #   geom_point() +
+  #   scale_colour_viridis_c()
+  
+  # return()
+  # lon_sub <- df$lon_sub
+  # lon_sub_label <- str_pad(lon_sub, 4, pad = "0")
+  # NAPA_sst_sub <- data.frame(file_name = NAPA_files,
+  #                            coords_sub = rep(coords, times = length(NAPA_files)),
+  #                            y = 1:length(NAPA_files)) #%>%
+  #   group_by(y) %>%
+  #   nest() %>% 
+  #   mutate(sst = purrr::map(data, load_NAPA_sst_sub)) %>% 
+  #   unnest(sst)
+  lon_sub_label <- str_pad(which(lon_OISST == lon_sub), width = 4, pad = "0", side = "left")
   save(NAPA_sst_sub, file = paste0("../data/NAPA_sst_sub_",lon_sub_label,".RData"))
 }
 
 
 # Process data ------------------------------------------------------------
 
-lon_sub_list <- data.frame(lon_sub = 1:length(unique(mask_long$lon)),
-                           x = 1:length(unique(mask_long$lon)))
+plyr::laply(lon_OISST[1], save_NAPA_sst_sub)
 
-# Run Thursday, October 4th, 2018
-# system.time(
-# save_NAPA_sst_sub(lon_sub_list[1,])
-# ) # 447 seconds
-
-# system.time(
-#   plyr::ddply(lon_sub_list[2:10,], .variables = "x",
-#               .fun = save_NAPA_sst_sub, .parallel = TRUE)
-# ) # xxx seconds on 50 cores
-## NB: lon_sub 2 threw an error
-
-# system.time(
-#   save_NAPA_sst_sub(lon_sub_list[2,])
-# ) # 507 seconds
-
-# system.time(
-#   plyr::ddply(lon_sub_list[3:5,], .variables = "x",
-#               .fun = save_NAPA_sst_sub, .parallel = TRUE)
-# ) # 542 seconds on 10 cores
-
-# system.time(
-#   plyr::ddply(lon_sub_list[301:305,], .variables = "x",
-#               .fun = save_NAPA_sst_sub, .parallel = TRUE)
-# ) # 557 seconds on 10 cores
 
 
 # Visualise ---------------------------------------------------------------

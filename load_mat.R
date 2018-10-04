@@ -11,9 +11,9 @@ library(R.matlab)
 # Load data ---------------------------------------------------------------
 
 # The file list
-file_list <- data.frame(file = dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/", full.names = T),
+file_list <- data.frame(file = dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries", full.names = T),
                         file_num = sapply(strsplit(sapply(strsplit(
-                          dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/", 
+                          dir("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries", 
                                                 full.names = T), "ts."), "[[", 2), ".mat"), "[[", 1))
 
 # Function for loading OISST data saved in .mat format on tikoraluk

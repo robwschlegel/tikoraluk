@@ -8,6 +8,7 @@
 
 # Libraries ---------------------------------------------------------------
 
+.libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(lubridate)
 library(gganimate)
@@ -144,14 +145,15 @@ ggplot(sst_sub, aes(x = -nav_lon, y = -nav_lat, colour = temp)) +
 # anim_save(filename = "NAPA_integer_native_anim.gif", path = "anim")
 
 
-# Interpolate -------------------------------------------------------------
+
+# Matching pixels ---------------------------------------------------------
 
 # The NAPA curvilinear lon/lat values
 load("NAPA/mask_long.RData")
 load("NAPA/mask_list.RData")
 mask_long <- mask_long %>% 
   mutate(nav_lon_corrected = ifelse(nav_lon < 0, nav_lon+360, nav_lon))
-bound <- list(list(lon = mask_long$nav_lon, lat = mask_long$nav_lat))
+# bound <- list(list(lon = mask_long$nav_lon, lat = mask_long$nav_lat))
 
 # First load one day of OISST for the whole planet
 OISST_files <- dir("../../oliver/data/sst/noaa_oi_v2/avhrr/1993", 
@@ -180,22 +182,32 @@ ggplot(oisst, aes(x = lon, y = lat, fill = temp)) +
   coord_equal()
 
 ## Then extract just the area maching to the NAPA model
-## NB: This is waaaay to computationally intensive...
-# system.time(oisst_inside <- with(oisst, mgcv::inSide(bound, lon, lat))) # xxx seconds
-# ggplot(oisst_inside, aes(x = lon, y = lat, fill = temp)) +
-#   geom_raster() +
-#   scale_fill_viridis_c() +
-#   coord_equal()
+## Currently finding the nearest neighbour for each pixel between NAPA and OISST
+match_index_1 <- knnx.index(data = as.matrix(oisst[,1:2]),
+                            query = as.matrix(mask_long[,5:4]), k = 1)
 
-## Or find the nearest neighbour for each pixel between NAPA and OISST
-match_index <- knnx.index(data =  as.matrix(oisst[,1:2]),
-                          query = as.matrix(mask_long[,5:4]), k = 1)
+match_index_2 <- knnx.index(data = as.matrix(mask_long[,5:4]),
+                            query = as.matrix(oisst[,1:2]), k = 1)
+
+## Meta-data
+lon_lat_NAPA_OISST <- mask_long %>% 
+  mutate(lon_O = oisst$lon[match_index_1],
+         lat_O = oisst$lat[match_index_1])
+save(lon_lat_NAPA_OISST, file = "metadata/lon_lat_NAPA_OISST.RData")
+
+lon_OISST <- sort(unique(oisst$lon))
+lon_OISST
+length(lon_OISST)
+save(lon_OISST, file = "metadata/lon_OISST.RData")
+##
+
 oisst_match <- oisst %>% 
-  slice(unique(match_index))
+  slice(match_index_1)
+
 ggplot(oisst_match, aes(x = lon, y = lat, fill = temp)) +
   geom_raster() +
-  scale_fill_viridis_c() +
-  coord_equal()
+  scale_fill_viridis_c() #+
+  # coord_equal()
 
 # Initial interpolation
 system.time(
