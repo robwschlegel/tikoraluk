@@ -18,3 +18,8 @@ Code for use on tikoraluk
   * Interpolated OISST to match NAPA grid
   * Also tested nearest neighbour
   * Getting ready for per-pixel time series creation from NAPA data
+
+* October 03, 2018
+  * Per-pixel NAPA time series creation set
+  * Need to change directions on how the NAPA data are prepped
+  
