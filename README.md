@@ -24,3 +24,6 @@ Code for use on tikoraluk
   * Need to change directions on how the NAPA data are prepped
   * Went for a nested multi-core approach where the NAPA data are subsetted
     based on their match to the pixels present in each OISST MATLAB file
+    
+* October 09, 2018
+  * Playing about with the OISST-NAPA analysis functions
