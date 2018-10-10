@@ -210,17 +210,17 @@ ggplot(oisst_match, aes(x = lon, y = lat, fill = temp)) +
   # coord_equal()
 
 # Initial interpolation
-system.time(
-oisst_interp <- data.frame(interpp(x = oisst_match[, "lon"], y = oisst_match[, "lat"], oisst_match[, "temp"],
-                        xo = mask_long$nav_lon_corrected, yo = mask_long$nav_lat, linear = TRUE, 
-                        extrap = FALSE, duplicate = "mean"))
-)
-
-ggplot(oisst_interp, aes(x = x, y = y, colour = z)) +
-  geom_point(size = 0.001) +
-  borders() +
-  scale_colour_viridis_c() +
-  coord_map()
+# system.time(
+# oisst_interp <- data.frame(interpp(x = oisst_match[, "lon"], y = oisst_match[, "lat"], oisst_match[, "temp"],
+#                         xo = mask_long$nav_lon_corrected, yo = mask_long$nav_lat, linear = TRUE, 
+#                         extrap = FALSE, duplicate = "mean"))
+# )
+# 
+# ggplot(oisst_interp, aes(x = x, y = y, colour = z)) +
+#   geom_point(size = 0.001) +
+#   borders() +
+#   scale_colour_viridis_c() +
+#   coord_map()
 
 
 # Compare -----------------------------------------------------------------

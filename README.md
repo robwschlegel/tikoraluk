@@ -27,3 +27,6 @@ Code for use on tikoraluk
     
 * October 09, 2018
   * Playing about with the OISST-NAPA analysis functions
+
+* October 10, 2018
+  * Calculated all of the summary stats for OISST and NAPA (excluding ice coverage)
