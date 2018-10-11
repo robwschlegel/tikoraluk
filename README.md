@@ -30,3 +30,5 @@ Code for use on tikoraluk
 
 * October 10, 2018
   * Calculated all of the summary stats for OISST and NAPA (excluding ice coverage)
+  * Basic visualisations
+  * Found error in the NAPA lat values when converting from NetCDF to RData

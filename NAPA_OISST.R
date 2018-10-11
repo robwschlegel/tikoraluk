@@ -8,6 +8,7 @@ library(tidyverse)
 library(lubridate)
 library(doMC); doMC::registerDoMC(cores = 50)
 library(stringr)
+library(FNN)
 
 source("MHW_prep.R")
 
@@ -152,47 +153,61 @@ lon_row_multi <- data.frame(lon_row = 1:1440,
 # ) # 2073 seconds at 50 cores
 
 
-# Visualise ---------------------------------------------------------------
-
-# Load all of the data run above
-
-# faceted ggplot for metrics by month
-
 
 # Difference --------------------------------------------------------------
 
+# Meta-data
 load("metadata/lon_lat_NAPA_OISST.RData")
 load("metadata/lon_OISST.RData")
 
-# Load all summary data if not already done so
+# Load all of the data run above
+OISST_NAPA_saves <- dir("../data", pattern = "OISST_NAPA", full.names = T)
 
-# First need to establish the lon/lat FNN mask
-# This may then be used to somehow dynamically pull out the correct pixels
-# tester...
-df <- lon_lat_NAPA_OISST[1,]
-diff_OISST_NAPA <- function(df){
-  
+load_sub_diff_ON <- function(file_name){
+  load(file = file_name)
+  data_sub <- inner_join(lon_lat_NAPA_OISST, OISST_NAPA_summary,
+                         by = c("nav_lon" = "lon", "nav_lat" = "lat")) %>%
+    left_join(OISST_NAPA_summary, by = c("lon_O" = "lon", "lat_O" = "lat", "month")) %>% 
+    mutate(min.z = min.x - min.y,
+           quant_10.z = quant_10.x - quant_10.y,
+           quant_25.z = quant_25.x - quant_25.y,
+           quant_50.z = quant_50.x - quant_50.y,
+           quant_75.z = quant_75.x - quant_75.y,
+           quant_90.z = quant_90.x - quant_90.y,
+           max.z = max.x - max.y,
+           mean.z = mean.x - mean.y,
+           sd.z = sd.x - sd.y,
+           dt.z = dt.x - dt.y) %>% 
+    rename_all(~str_replace_all(., ".x", "_NAPA")) %>%
+    rename_all(~str_replace_all(., ".y", "_OISST")) %>% 
+    rename_all(~str_replace_all(., ".z", "_diff"))
+  return(data_sub)
 }
 
-oisst_same <- oisst %>% 
-  slice(match_index) %>% 
-  mutate(nav_lon = mask_long$nav_lon,
-         nav_lat = mask_long$nav_lat) %>% 
-  dplyr::rename(temp_oisst = temp) %>% 
-  select(nav_lon, nav_lat, t, temp_oisst)
-
-# Then this can then be used to quickly calc. the diff.
-
-sst_combined <- sst %>% 
-  left_join(oisst_same) %>% 
-  na.omit() %>% 
-  mutate(diff = temp-temp_oisst) %>% 
-  group_by(t) %>% 
-  summarise(mean = mean(diff),
-            median = median(diff),
-            sum = sum(diff),
-            sd = sd(diff))
-
-# Visualise difference ----------------------------------------------------
+system.time(
+  diff_res <- plyr::ldply(OISST_NAPA_saves, .parallel = T,
+                          .fun = load_sub_diff_ON)
+) # 13 seconds at 50 cores
 
 
+# Visualise ---------------------------------------------------------------
+
+ggplot(data = filter(diff_res, month == "overall"), 
+       aes(x = nav_lon, y = nav_lat, colour = quant_50_NAPA)) +
+  geom_point(size = 0.001) +
+  scale_colour_viridis_c() +
+  # coord_polar() +
+  labs(x = "", y = "")
+
+ggplot(data = filter(diff_res, month == "overall"), 
+       aes(x = lon_O, y = lat_O, fill = quant_50_OISST)) +
+  geom_raster() +
+  scale_fill_viridis_c() +
+  labs(x = "", y = "") 
+
+ggplot(data = filter(diff_res, month == "overall"), 
+       aes(x = nav_lon, y = nav_lat, colour = quant_50_diff)) +
+  geom_point(size = 0.001) +
+  scale_colour_gradient2() +
+  # coord_polar() +
+  labs(x = "", y = "") 

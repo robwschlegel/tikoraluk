@@ -40,7 +40,7 @@ load_NAPA_sst_sub <- function(file_name, coords){
     mutate(lon = as.numeric(nc$dim$x$vals)) %>%
     gather(-lon, key = lat, value = temp) %>%
     mutate(t = rep(date_seq, each = 388080),
-           lat = rep(as.numeric(nc$dim$y$vals), each = 2640)) %>%
+           lat = rep(rep(as.numeric(nc$dim$y$vals), each = 528), times = 5)) %>%
     select(lon, lat, t, temp) %>%
     inner_join(coords, by = c("lon", "lat")) %>% 
     select(nav_lon, nav_lat, t, temp)
@@ -75,46 +75,63 @@ save_NAPA_sst_sub <- function(df){
 lon_OISST_multi <- data.frame(lon = lon_OISST,
                               x = 1:length(lon_OISST))
 
-# Run on Thursday, October 4th, 2018
+# Re-un on Thursday, October 11th, 2018
 system.time(
   plyr::ddply(lon_OISST_multi[1,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 66 seconds at 50 cores
+) # xxx seconds at 50 cores
 system.time(
-  plyr::ddply(lon_OISST_multi[2:100,], .variables = "x", 
+  plyr::ddply(lon_OISST_multi[2:100,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 5734 seconds at 50 cores
+) # xxx seconds at 50 cores
 system.time(
-  plyr::ddply(lon_OISST_multi[101:400,], .variables = "x", 
+  plyr::ddply(lon_OISST_multi[101:400,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 17878 seconds at 50 cores
+) # xxx seconds at 50 cores
 system.time(
-  plyr::ddply(lon_OISST_multi[401:700,], .variables = "x", 
+  plyr::ddply(lon_OISST_multi[401:700,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 19811 seconds at 50 cores
+) # xxx seconds at 50 cores
 system.time(
-  plyr::ddply(lon_OISST_multi[701:1000,], .variables = "x", 
+  plyr::ddply(lon_OISST_multi[701:1000,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 17650 seconds at 50 cores
+) # xxx seconds at 50 cores
 system.time(
-  plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x", 
+  plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # 25262 seconds at 50 cores
+) # xxx seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
 
-NAPA_saves <- dir("../data", pattern = "NAPA", full.names = T)
+NAPA_saves <- dir("../data", pattern = "NAPA_sst", full.names = T)
 
-NAPA_data <- lapply(NAPA_saves, function(x) {
-  load(file = x)
-  get(ls()[ls()!= "filename"])
-})
 
-NAPA_all <- do.call("rbind", NAPA_data)
+load_NAPA <- function(file_name){
+  load(file = file_name)
+  data_sub <- NAPA_sst_sub %>% 
+    filter(t == as.Date("1993-10-01"))
+  return(data_sub)
+}
 
-NAPA_all_sub <- NAPA_all %>% 
-  filter(t == as.Date("2000-01-01"))
+system.time(
+  NAPA_all_sub_1 <- plyr::ldply(NAPA_saves[1:360], .parallel = T,
+                          .fun = load_NAPA)
+) # 38 seconds at 50 cores
+system.time(
+  NAPA_all_sub_2 <- plyr::ldply(NAPA_saves[361:720], .parallel = T,
+                                .fun = load_NAPA)
+) # 42 seconds at 50 cores
+system.time(
+  NAPA_all_sub_3 <- plyr::ldply(NAPA_saves[721:1090], .parallel = T,
+                                .fun = load_NAPA)
+) # 42 seconds at 50 cores
+system.time(
+  NAPA_all_sub_4 <- plyr::ldply(NAPA_saves[1091:1440], .parallel = T,
+                                .fun = load_NAPA)
+) # 39 seconds at 50 cores
+
+NAPA_all_sub <- rbind(NAPA_all_sub_1, NAPA_all_sub_2, NAPA_all_sub_3, NAPA_all_sub_4)
 
 ggplot(NAPA_all_sub, aes(x = nav_lon, y = nav_lat, colour = temp)) +
   geom_point(size = 0.001) +
