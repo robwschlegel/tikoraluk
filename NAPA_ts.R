@@ -79,33 +79,32 @@ lon_OISST_multi <- data.frame(lon = lon_OISST,
 system.time(
   plyr::ddply(lon_OISST_multi[1,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 58 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[2:100,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 4850 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[101:400,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 15461 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[401:700,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 17091 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[701:1000,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 16013 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x",
               .fun = save_NAPA_sst_sub)
-) # xxx seconds at 50 cores
+) # 24572 seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
 
 NAPA_saves <- dir("../data", pattern = "NAPA_sst", full.names = T)
-
 
 load_NAPA <- function(file_name){
   load(file = file_name)
@@ -136,3 +135,11 @@ NAPA_all_sub <- rbind(NAPA_all_sub_1, NAPA_all_sub_2, NAPA_all_sub_3, NAPA_all_s
 ggplot(NAPA_all_sub, aes(x = nav_lon, y = nav_lat, colour = temp)) +
   geom_point(size = 0.001) +
   scale_colour_viridis_c()
+
+ggplot(NAPA_all_sub, aes(x = -nav_lon, y = -nav_lat, colour = temp)) +
+  geom_point(size = 0.001) +
+  scale_colour_viridis_c() +
+  coord_polar() +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(x = "", y = "")

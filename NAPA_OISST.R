@@ -51,13 +51,14 @@ load_OISST_NAPA <- function(lon_row){
 # -- Mean, median, quartiles, 10/90th, sd, min, max, decadal trend
 # - Do this for the months, too
 # - Do this for the sea ice concentration value, too (ice_ts)
-## tester...
-# OISST <- MHW_res
-# NAPA <- NAPA_sst_sub
 summarise_OISST_NAPA <- function(df){
   # Run summary calculations
   ALL_res_1 <- df %>%
-    select(lon, lat, temp) %>% 
+    # Constrain the OISST date range to match NAPA
+    # ensuring the same period for calculations
+    filter(t >= as.Date("1993-10-01"),
+           t <= as.Date("2015-12-29")) %>% 
+    # select(lon, lat, temp) %>% 
     group_by(lon, lat) %>% 
     summarise(min = min(temp, na.rm = T),
               quant_10 = quantile(temp, na.rm = T, probs = 0.10),
@@ -88,7 +89,7 @@ summarise_OISST_NAPA <- function(df){
   # Create monthly values and run linear models
   ALL_monthly <- df %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
-    select(lon, lat, monthly, temp) %>% 
+    # select(lon, lat, monthly, temp) %>% 
     group_by(lon, lat, monthly) %>%
     summarise(temp = mean(temp, na.rm = T)) %>% 
     ungroup() %>% 
@@ -142,16 +143,11 @@ lon_row_multi <- data.frame(lon_row = 1:1440,
                             x = 1:1440)
 
 
-# Run on Wednesday, October 10th, 2018
+# Re-run on Friday, October 12th, 2018
 # system.time(
-#   plyr::ddply(lon_row_multi[1,], .variables = "x",
+#   plyr::ddply(lon_row_multi, .variables = "x",
 #               .fun = analyse_OISST_NAPA, .parallel = T)
-# ) # 61 seconds at 50 cores
-# system.time(
-#   plyr::ddply(lon_row_multi[2:1440,], .variables = "x", 
-#               .fun = analyse_OISST_NAPA, .parallel = T)
-# ) # 2073 seconds at 50 cores
-
+# ) # 1969 seconds at 50 cores
 
 
 # Difference --------------------------------------------------------------
@@ -187,7 +183,7 @@ load_sub_diff_ON <- function(file_name){
 system.time(
   diff_res <- plyr::ldply(OISST_NAPA_saves, .parallel = T,
                           .fun = load_sub_diff_ON)
-) # 13 seconds at 50 cores
+) # 15 seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
