@@ -9,6 +9,7 @@ library(lubridate)
 library(doMC); doMC::registerDoMC(cores = 50)
 library(stringr)
 library(FNN)
+library(ggpubr)
 
 source("MHW_prep.R")
 
@@ -188,22 +189,65 @@ system.time(
 
 # Visualise ---------------------------------------------------------------
 
-ggplot(data = filter(diff_res, month == "overall"), 
-       aes(x = nav_lon, y = nav_lat, colour = quant_50_NAPA)) +
-  geom_point(size = 0.001) +
-  scale_colour_viridis_c() +
-  # coord_polar() +
-  labs(x = "", y = "")
+# Remove NA and 0 rows for now...
+diff_res_na_omit <- diff_res %>% 
+  na.omit() %>% 
+  filter(min_NAPA != 0)
 
-ggplot(data = filter(diff_res, month == "overall"), 
-       aes(x = lon_O, y = lat_O, fill = quant_50_OISST)) +
-  geom_raster() +
-  scale_fill_viridis_c() +
-  labs(x = "", y = "") 
+# The base map
+map_base <- fortify(map(fill=TRUE, plot=FALSE)) %>% 
+  dplyr::rename(lon = long) %>% 
+  filter(lat >= 25.6, lon <= 180) #%>% 
+  # mutate(lon = ifelse(lon > 180, lon-180, lon))
 
-ggplot(data = filter(diff_res, month == "overall"), 
-       aes(x = nav_lon, y = nav_lat, colour = quant_50_diff)) +
-  geom_point(size = 0.001) +
-  scale_colour_gradient2() +
-  # coord_polar() +
-  labs(x = "", y = "") 
+# Plotting function
+polar_map <- function(the_chosen, the_title = "Banana", diff_val = F){
+  pp <- ggplot() +
+    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
+    geom_point(data = filter(diff_res_na_omit, month == "overall"),
+               aes_string(x = "-nav_lon", y = "-nav_lat", colour = the_chosen), size = 0.001) +
+    # scale_colour_viridis_c() +
+    scale_color_distiller(palette = "Spectral") +
+    coord_polar() +
+    # scale_y_continuous(limits = c(-90, -25)) +
+    labs(x = "", y = "", title = the_title) +
+    theme(axis.text = element_blank(),
+          axis.ticks = element_blank(),
+          plot.background = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(hjust = 0.5, vjust = 1),
+          legend.position = c(0.8, 0.5),
+          legend.background = element_blank(),
+          legend.title = element_blank(),
+          legend.text = element_text(colour = "white"))
+  if(diff_val){
+    suppressMessages(
+    pp <- pp + scale_colour_gradient2()
+    )
+  }
+  return(pp)
+}
+
+# Make some pretty pictures
+napa_map <- polar_map("quant_50_NAPA", "NAPA median")
+# napa_title <-textGrob(label="Rather long title for the plot, requires quite a lot of space",just=c("center","center"))
+oisst_map <- polar_map("quant_50_OISST", "OISST median")
+diff_map <- polar_map("quant_50_diff", "NAPA - OISST", diff_val = T)
+
+# ggplot() +
+#   theme_void() +
+#   geom_blank() +
+#   scale_x_continuous(limits = c(0, 2)) +
+#   scale_y_continuous(limits = c(0,2)) +
+#   annotation_custom(grob = ggplotGrob(napa_map),
+#                     xmin = 0, xmax = 1.2,
+#                     ymin = 0.8, ymax = 2) +
+#   annotation_custom(grob = ggplotGrob(oisst_map),
+#                     xmin = 0.8, xmax = 2,
+#                     ymin = 0.8, ymax = 2) +
+#   annotation_custom(grob = ggplotGrob(diff_map),
+#                     xmin = 0.4, xmax = 1.6,
+#                     ymin = 0, ymax = 1.2)
+
+ggarrange(oisst_map, napa_map, diff_map, nrow = 1, ncol = 3)
+ggsave(filename = "graph/median_diff.pdf", height = 6, width = 18)

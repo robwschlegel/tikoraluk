@@ -36,3 +36,7 @@ Code for use on tikoraluk
 * October 11, 2018
   * Sorted error in NAPA data
   * All initial comparisons completed
+
+* October 12, 2018
+  * Working on visuals
+  
