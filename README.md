@@ -39,4 +39,5 @@ Code for use on tikoraluk
 
 * October 12, 2018
   * Working on visuals
+  * Produced a first draft comparison image
   
