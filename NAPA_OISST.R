@@ -17,9 +17,10 @@ source("MHW_prep.R")
 
 # Meta-data ---------------------------------------------------------------
 
-# Need to quantify the distance (KMs) between FNN pixels
+load("metadata/lon_lat_NAPA_OISST.RData")
+load("metadata/lon_OISST.RData")
 
-# Create static lon/lat index values for ease of comparison between the products
+# Need to quantify the distance (KMs) between FNN pixels
 
 
 # Data --------------------------------------------------------------------
@@ -125,25 +126,72 @@ summarise_OISST_NAPA <- function(df){
     ALL_res <- left_join(ALL_res_5, ALL_res_6, by = c("lon", "lat", "month"))
     )
   return(ALL_res)
-  }
+}
 
 # Function for loading, analysing, and saving the summary data
 analyse_OISST_NAPA <- function(df){
   # Load
   lon_row <- df$lon_row
   ALL_long <- load_OISST_NAPA(lon_row)
-  # Analyse
+  # Summarise
   OISST_NAPA_summary <- summarise_OISST_NAPA(ALL_long)
+  # Save
   lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
   save(OISST_NAPA_summary, file = paste0("../data/OISST_NAPA_summary_",lon_row_pad,".RData"))
 }
 
+correlate_OISST_NAPA <- function(df){
+  # Load
+  lon_row <- df$lon_row
+  ALL_long <- load_OISST_NAPA(lon_row) %>%
+    # Constrain the OISST date range to match NAPA
+    # ensuring the same period for calculations
+    filter(t >= as.Date("1993-10-01"),
+           t <= as.Date("2015-12-29"))
+  # Match up
+  ALL_match <- inner_join(lon_lat_NAPA_OISST, ALL_trim,
+                          by = c("nav_lon" = "lon", "nav_lat" = "lat")) %>%
+    left_join(ALL_trim, by = c("lon_O" = "lon", "lat_O" = "lat", "t")) %>% 
+    mutate(time = "day") %>% 
+    filter(temp.x != 0) %>% 
+    na.omit()
+  # Correlate
+  cor_day <- ALL_match %>% 
+    group_by(lon, lat) %>% 
+    summarise(cor_day = cor(temp.x, temp.y, 
+                        use = "pairwise.complete.obs", 
+                        method = "pearson"))
+  cor_month <- ALL_match %>% 
+    mutate(t = floor_date(t, "month")) %>% 
+    group_by(lon, lat, t) %>% 
+    summarise(temp.x = mean(temp.x, na.rm = T),
+              temp.y = mean(temp.y, na.rm = T)) %>% 
+    group_by(lon, lat) %>% 
+    summarise(cor_month = cor(temp.x, temp.y, 
+                            use = "pairwise.complete.obs", 
+                            method = "pearson"))
+  cor_year <- ALL_match %>% 
+    mutate(t = floor_date(t, "year")) %>% 
+    group_by(lon, lat, t) %>% 
+    summarise(temp.x = mean(temp.x, na.rm = T),
+              temp.y = mean(temp.y, na.rm = T)) %>% 
+    group_by(lon, lat) %>% 
+    summarise(cor_year = cor(temp.x, temp.y, 
+                              use = "pairwise.complete.obs", 
+                              method = "pearson"))
+  cor_all <- left_join(cor_day, cor_month, by = c("lon", "lat")) %>% 
+    left_join(cor_year, by = c("lon", "lat"))
+  return(cor_all)
+  # Save
+  # lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
+  # save(OISST_NAPA_summary, file = paste0("../data/OISST_NAPA_summary_",lon_row_pad,".RData"))
+}
 
-# Analysis ----------------------------------------------------------------
+
+# Summarise ---------------------------------------------------------------
 
 lon_row_multi <- data.frame(lon_row = 1:1440,
                             x = 1:1440)
-
 
 # Re-run on Friday, October 12th, 2018
 # system.time(
@@ -151,14 +199,9 @@ lon_row_multi <- data.frame(lon_row = 1:1440,
 #               .fun = analyse_OISST_NAPA, .parallel = T)
 # ) # 1969 seconds at 50 cores
 
-
 # Difference --------------------------------------------------------------
 
-# Meta-data
-load("metadata/lon_lat_NAPA_OISST.RData")
-load("metadata/lon_OISST.RData")
-
-# Load all of the data run above
+# Load all of the summary data run above
 OISST_NAPA_saves <- dir("../data", pattern = "OISST_NAPA", full.names = T)
 
 load_sub_diff_ON <- function(file_name){
@@ -182,21 +225,51 @@ load_sub_diff_ON <- function(file_name){
   return(data_sub)
 }
 
-system.time(
-  diff_res <- plyr::ldply(OISST_NAPA_saves, .parallel = T,
-                          .fun = load_sub_diff_ON)
-) # 15 seconds at 50 cores
+# system.time(
+#   OISST_NAPA_difference <- plyr::ldply(OISST_NAPA_saves, .parallel = T,
+#                                        .fun = load_sub_diff_ON)
+# ) # 15 seconds at 50 cores
+# save(OISST_NAPA_difference, file = "../data/OISST_NAPA_difference.RData")
+
+
+# Correlation -------------------------------------------------------------
+
+lon_row_multi <- data.frame(lon_row = 1:1440,
+                            x = 1:1440)
+
+
+# NB: This falls over at 50 cores. Not enough memmory.
+# system.time(
+#   OISST_NAPA_correlation <- plyr::ddply(lon_row_multi, .variables = "x",
+#                                         .fun = correlate_OISST_NAPA, .parallel = T)
+# ) # 1235 seconds at 40 cores
+# save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
+# Not run
+# system.time(
+#   OISST_NAPA_correlation_1 <- plyr::ddply(lon_row_multi[1:720, ], .variables = "x",
+#                                         .fun = correlate_OISST_NAPA, .parallel = T)
+# ) # xxx seconds at 50 cores
+# system.time(
+#   OISST_NAPA_correlation_2 <- plyr::ddply(lon_row_multi[721:1440, ], .variables = "x",
+#                                           .fun = correlate_OISST_NAPA, .parallel = T)
+# ) # xxx seconds at 50 cores
+# OISST_NAPA_correlation <- rbind(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2)
+# save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
 
 
 # Visualise ---------------------------------------------------------------
 
+# Load difference and correlation results
+load("../data/OISST_NAPA_difference.RData")
+load("../data/OISST_NAPA_correlation.RData")
+
 # Remove NA and 0 rows for now...
-diff_res_na_omit <- diff_res %>% 
+diff_res_na_omit <- OISST_NAPA_difference %>% 
   na.omit() %>% 
   filter(min_NAPA != 0)
 
 # The base map
-map_base <- fortify(map(fill=TRUE, plot=FALSE)) %>% 
+map_base <- fortify(map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long) %>% 
   filter(lat >= 25.6, lon <= 180) #%>% 
   # mutate(lon = ifelse(lon > 180, lon-180, lon))
