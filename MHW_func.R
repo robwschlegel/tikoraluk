@@ -37,3 +37,19 @@ MHW_calc <- function(df){
   save(MHW_res, file = paste0("../data/MHW.calc.", df$file_num,".RData"))
 }
 
+
+# Distance functions ------------------------------------------------------
+
+# Convert degrees to radians
+deg2rad <- function(deg) return(deg*pi/180)
+
+# Calculates the geodesic distance between two points specified by radian lat/lon using the haversine formula:
+gcd.hf <- function(long1, lat1, long2, lat2) {
+  R <- 6371 # Earth mean radius [km]
+  delta.long <- (long2 - long1)
+  delta.lat <- (lat2 - lat1)
+  a <- sin(delta.lat/2)^2 + cos(lat1) * cos(lat2) * sin(delta.long/2)^2
+  c <- 2 * asin(min(1,sqrt(a)))
+  d = R * c
+  return(d) # Distance in km
+}

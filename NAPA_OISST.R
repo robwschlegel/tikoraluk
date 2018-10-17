@@ -143,7 +143,7 @@ analyse_OISST_NAPA <- function(df){
 correlate_OISST_NAPA <- function(df){
   # Load
   lon_row <- df$lon_row
-  ALL_long <- load_OISST_NAPA(lon_row) %>%
+  ALL_trim <- load_OISST_NAPA(lon_row) %>%
     # Constrain the OISST date range to match NAPA
     # ensuring the same period for calculations
     filter(t >= as.Date("1993-10-01"),
@@ -157,34 +157,41 @@ correlate_OISST_NAPA <- function(df){
     na.omit()
   # Correlate
   cor_day <- ALL_match %>% 
-    group_by(lon, lat) %>% 
-    summarise(cor_day = cor(temp.x, temp.y, 
+    mutate(time = "day") %>% 
+    group_by(lon, lat, time) %>% 
+    summarise(cor = cor(temp.x, temp.y, 
+                        use = "pairwise.complete.obs", 
+                        method = "pearson"))
+  cor_monthly <- ALL_match %>% 
+    mutate(time = as.character(lubridate::month(t, label = T))) %>% 
+    group_by(lon, lat, time) %>% 
+    summarise(cor = cor(temp.x, temp.y, 
                         use = "pairwise.complete.obs", 
                         method = "pearson"))
   cor_month <- ALL_match %>% 
-    mutate(t = floor_date(t, "month")) %>% 
-    group_by(lon, lat, t) %>% 
+    mutate(t = floor_date(t, "month"),
+           time = "month") %>% 
+    group_by(lon, lat, t, time) %>% 
     summarise(temp.x = mean(temp.x, na.rm = T),
               temp.y = mean(temp.y, na.rm = T)) %>% 
-    group_by(lon, lat) %>% 
-    summarise(cor_month = cor(temp.x, temp.y, 
-                            use = "pairwise.complete.obs", 
-                            method = "pearson"))
+    group_by(lon, lat, time) %>% 
+    summarise(cor = cor(temp.x, temp.y,
+                        use = "pairwise.complete.obs", 
+                        method = "pearson"))
   cor_year <- ALL_match %>% 
     mutate(t = floor_date(t, "year")) %>% 
-    group_by(lon, lat, t) %>% 
+    group_by(lon, lat, t, time) %>% 
     summarise(temp.x = mean(temp.x, na.rm = T),
               temp.y = mean(temp.y, na.rm = T)) %>% 
-    group_by(lon, lat) %>% 
-    summarise(cor_year = cor(temp.x, temp.y, 
-                              use = "pairwise.complete.obs", 
-                              method = "pearson"))
-  cor_all <- left_join(cor_day, cor_month, by = c("lon", "lat")) %>% 
-    left_join(cor_year, by = c("lon", "lat"))
+    group_by(lon, lat, time) %>% 
+    summarise(cor = cor(temp.x, temp.y, 
+                        use = "pairwise.complete.obs", 
+                        method = "pearson"))
+  cor_all <- rbind(cor_day, cor_month, cor_year, cor_monthly) %>% 
+    mutate(time = factor(time, levels = c("day", "month", "year", 
+                                          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))
   return(cor_all)
-  # Save
-  # lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
-  # save(OISST_NAPA_summary, file = paste0("../data/OISST_NAPA_summary_",lon_row_pad,".RData"))
 }
 
 
