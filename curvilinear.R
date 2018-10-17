@@ -203,7 +203,7 @@ rad_dist <- lon_lat_NAPA_OISST %>%
          rad_lon_O = deg2rad(lon_O),
          rad_lat_O = deg2rad(lat_O)) %>% 
   group_by(lon, lat) %>%
-  summarise(dist = gcd.hf(rad_nav_lon, rad_nav_lat, rad_lon_O, rad_lat_O))
+  summarise(dist = round(gcd.hf(rad_nav_lon, rad_nav_lat, rad_lon_O, rad_lat_O), 3))
 
 # Merge and save
 lon_lat_NAPA_OISST <- left_join(lon_lat_NAPA_OISST, rad_dist, by = c("lon", "lat"))

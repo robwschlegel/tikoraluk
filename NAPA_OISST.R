@@ -21,11 +21,6 @@ source("MHW_prep.R")
 load("metadata/lon_lat_NAPA_OISST.RData")
 load("metadata/lon_OISST.RData")
 
-# Need to quantify the distance (KMs) between FNN pixels
-
-
-# Data --------------------------------------------------------------------
-
 
 # Functions ---------------------------------------------------------------
 
@@ -58,6 +53,8 @@ load_OISST_NAPA <- function(lon_row){
 summarise_OISST_NAPA <- function(df){
   # Run summary calculations
   ALL_res_1 <- df %>%
+    na.omit() %>% 
+    filter(temp != 0) %>% 
     # Constrain the OISST date range to match NAPA
     # ensuring the same period for calculations
     filter(t >= as.Date("1993-10-01"),
@@ -77,6 +74,8 @@ summarise_OISST_NAPA <- function(df){
     select(lon, lat, month, everything())
   
   ALL_res_2 <- df %>% 
+    na.omit() %>% 
+    filter(temp != 0) %>% 
     mutate(month = lubridate::month(t, label = T)) %>% 
     group_by(lon, lat, month) %>% 
     summarise(min = min(temp, na.rm = T),
@@ -92,6 +91,8 @@ summarise_OISST_NAPA <- function(df){
   
   # Create monthly values and run linear models
   ALL_monthly <- df %>% 
+    na.omit() %>% 
+    filter(temp != 0) %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
     # select(lon, lat, monthly, temp) %>% 
     group_by(lon, lat, monthly) %>%
@@ -227,9 +228,11 @@ load_sub_diff_ON <- function(file_name){
            mean.z = mean.x - mean.y,
            sd.z = sd.x - sd.y,
            dt.z = dt.x - dt.y) %>% 
+    rename_all(~str_replace_all(., "max", "banana")) %>%
     rename_all(~str_replace_all(., ".x", "_NAPA")) %>%
     rename_all(~str_replace_all(., ".y", "_OISST")) %>% 
-    rename_all(~str_replace_all(., ".z", "_diff"))
+    rename_all(~str_replace_all(., ".z", "_diff")) %>% 
+    rename_all(~str_replace_all(., "banana", "max"))
   return(data_sub)
 }
 
@@ -257,92 +260,3 @@ lon_row_multi <- data.frame(lon_row = 1:1440,
 #   select(-x)
 # save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
 
-
-# Visualise ---------------------------------------------------------------
-
-# Load difference and correlation results
-load("../data/OISST_NAPA_difference.RData")
-load("../data/OISST_NAPA_correlation.RData")
-
-# Remove NA and 0 rows for now...
-diff_res_na_omit <- OISST_NAPA_difference %>% 
-  na.omit() %>% 
-  filter(min_NAPA != 0)
-
-# The base map
-map_base <- fortify(map(fill = TRUE, plot = FALSE)) %>% 
-  dplyr::rename(lon = long) %>% 
-  filter(lat >= 25.6, lon <= 180) #%>% 
-  # mutate(lon = ifelse(lon > 180, lon-180, lon))
-
-# Plotting function
-polar_map <- function(the_chosen, diff_val = F){
-  pp <- ggplot() + theme_void() +
-    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-    geom_point(data = filter(diff_res_na_omit, month == "overall"),
-               aes_string(x = "-nav_lon", y = "-nav_lat", colour = the_chosen), size = 0.001) +
-    # scale_colour_viridis_c() +
-    scale_color_distiller(palette = "Spectral") +
-    coord_polar() +
-    # scale_y_continuous(limits = c(-90, -25)) +
-    labs(x = "", y = "") +
-    theme(legend.position = c(0.8, 0.5),
-          legend.background = element_blank(),
-          legend.title = element_blank(),
-          legend.text = element_text(colour = "white"),
-          axis.text = element_blank()#,
-          # axis.ticks = element_blank(),
-          # plot.background = element_blank(),
-          # panel.background = element_blank(),
-          # plot.title = element_text(hjust = 0.5, vjust = 1),
-          # axis.line = element_blank()
-    )
-  if(diff_val){
-    suppressMessages(
-    pp <- pp + scale_colour_gradient2(low = "blue", 
-                                      mid = "white",
-                                      high = "red",
-                                      midpoint = 0)
-    )
-  }
-  return(pp)
-}
-
-# Make some pretty pictures
-napa_map <- polar_map("quant_50_NAPA")
-napa_title <- text_grob(label = "NAPA median", face = "bold",
-                        size = 16, just = c("center","center"))
-oisst_map <- polar_map("quant_50_OISST")
-oisst_title <- text_grob(label = "OISST median",  face = "bold",
-                         size = 16, just = c("center","center"))
-diff_map <- polar_map("quant_50_diff", diff_val = T)
-diff_title <- text_grob(label = "NAPA - OISST", face = "bold",
-                        size = 16, just = c("center","center"))
-
-tri_plot <- ggplot() +
-  theme_void() +
-  geom_blank() +
-  scale_x_continuous(limits = c(0.1, 2.9)) +
-  scale_y_continuous(limits = c(0.1,0.9)) +
-  annotation_custom(grob = ggplotGrob(oisst_map),
-                    xmin = -0.1, xmax = 1.1,
-                    ymin = 0, ymax = 1) +
-  annotation_custom(grob = oisst_title,
-                    xmin = -0.1, xmax = 1.1,
-                    ymin = 0.8, ymax = 0.9) +
-  annotation_custom(grob = ggplotGrob(napa_map),
-                    xmin = 0.9, xmax = 2.1,
-                    ymin = 0, ymax = 1) +
-  annotation_custom(grob = napa_title,
-                    xmin = 0.9, xmax = 2.1,
-                    ymin = 0.8, ymax = 0.9) +
-  annotation_custom(grob = ggplotGrob(diff_map),
-                    xmin = 1.9, xmax = 3.1,
-                    ymin = 0, ymax = 1) +
-  annotation_custom(grob = diff_title,
-                    xmin = 1.9, xmax = 3.1,
-                    ymin = 0.8, ymax = 0.9)
-
-# ggarrange(oisst_map, napa_map, diff_map, nrow = 1, ncol = 3)
-# grid.arrange(napa_title, napa_map, ncol = 1, heights = c(2,15)) 
-ggsave(plot = tri_plot, filename = "graph/median_diff.png", height = 6, width = 16)

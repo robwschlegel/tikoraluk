@@ -3,6 +3,7 @@ Code for use on tikoraluk
 
 * October 17, 2018
   * Correlations run by months as well
+  * All figures created
 
 * October 16, 2018
   * Correlation between temperatures calculated for each pixel
