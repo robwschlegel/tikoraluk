@@ -180,7 +180,7 @@ cp <- ggplot() + theme_void() +
         plot.title = element_text(hjust = 0.5, size = 30), 
         strip.text = element_text(size = 16)) +
   facet_wrap(~time, ncol = 3)
-ggsave(cp, filename = "graph/diff_figs/correlation.png", width = 15, height = 21)
+ggsave(cp, filename = "graph/diff_figs/correlation.png", width = 12, height = 21)
 rm(cp)
 
 # Distance visual ---------------------------------------------------------
