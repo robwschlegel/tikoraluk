@@ -4,6 +4,7 @@
 
 # Libraries ---------------------------------------------------------------
 
+.libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(lubridate)
 library(doMC); doMC::registerDoMC(cores = 50)
@@ -244,23 +245,16 @@ load_sub_diff_ON <- function(file_name){
 lon_row_multi <- data.frame(lon_row = 1:1440,
                             x = 1:1440)
 
-
-# NB: This falls over at 50 cores. Not enough memmory.
-# system.time(
-#   OISST_NAPA_correlation <- plyr::ddply(lon_row_multi, .variables = "x",
-#                                         .fun = correlate_OISST_NAPA, .parallel = T)
-# ) # 1235 seconds at 40 cores
-# save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
-# Not run
 # system.time(
 #   OISST_NAPA_correlation_1 <- plyr::ddply(lon_row_multi[1:720, ], .variables = "x",
 #                                         .fun = correlate_OISST_NAPA, .parallel = T)
-# ) # xxx seconds at 50 cores
+# ) # 516 seconds at 50 cores
 # system.time(
 #   OISST_NAPA_correlation_2 <- plyr::ddply(lon_row_multi[721:1440, ], .variables = "x",
 #                                           .fun = correlate_OISST_NAPA, .parallel = T)
-# ) # xxx seconds at 50 cores
-# OISST_NAPA_correlation <- rbind(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2)
+# ) # 485 seconds at 50 cores
+# OISST_NAPA_correlation <- rbind(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2) %>% 
+#   select(-x)
 # save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
 
 
