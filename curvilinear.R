@@ -17,6 +17,8 @@ library(ncdf4)
 library(akima)
 library(FNN)
 
+source("MHW_func.R")
+
 
 # Data --------------------------------------------------------------------
 
@@ -193,6 +195,19 @@ match_index_2 <- knnx.index(data = as.matrix(mask_long[,5:4]),
 lon_lat_NAPA_OISST <- mask_long %>% 
   mutate(lon_O = oisst$lon[match_index_1],
          lat_O = oisst$lat[match_index_1])
+
+# Calculate distances between pixels
+rad_dist <- lon_lat_NAPA_OISST %>% 
+  mutate(rad_nav_lon = deg2rad(nav_lon_corrected), 
+         rad_nav_lat = deg2rad(nav_lat),
+         rad_lon_O = deg2rad(lon_O),
+         rad_lat_O = deg2rad(lat_O)) %>% 
+  group_by(lon, lat) %>%
+  summarise(dist = gcd.hf(rad_nav_lon, rad_nav_lat, rad_lon_O, rad_lat_O))
+
+# Merge and save
+lon_lat_NAPA_OISST <- left_join(lon_lat_NAPA_OISST, rad_dist, by = c("lon", "lat"))
+
 save(lon_lat_NAPA_OISST, file = "metadata/lon_lat_NAPA_OISST.RData")
 
 lon_OISST <- sort(unique(oisst$lon))

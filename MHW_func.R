@@ -10,7 +10,7 @@
 
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
-library(heatwaveR, lib.loc = "~/R-packages")
+library(heatwaveR)
 if(packageVersion("heatwaveR") != "0.3.4"){
   devtools::install_github("robwschlegel/heatwaveR")
 }
@@ -42,6 +42,11 @@ MHW_calc <- function(df){
 
 # Convert degrees to radians
 deg2rad <- function(deg) return(deg*pi/180)
+
+long1 = rad_dist$rad_nav_lon[1] 
+lat1 = rad_dist$rad_nav_lat[1] 
+long2 = rad_dist$rad_lon_O[1]
+lat2 = rad_dist$rad_lat_O[1]
 
 # Calculates the geodesic distance between two points specified by radian lat/lon using the haversine formula:
 gcd.hf <- function(long1, lat1, long2, lat2) {
