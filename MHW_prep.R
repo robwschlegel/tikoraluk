@@ -44,7 +44,7 @@ MHW_cat_clim <- function(df, long = FALSE){
       nest() %>%
       mutate(long = map(data, pad, interval = "day", 
                         start_val = as.Date("1982-01-01"))) %>% 
-      select(-data) %>%
+      dplyr::select(-data) %>%
       unnest()
   } else {
     return(cat_clim)

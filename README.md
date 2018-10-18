@@ -2,6 +2,9 @@
 Code for use on tikoraluk
 
 * October 17, 2018
+  * Minor tweaks
+
+* October 17, 2018
   * Correlations run by months as well
   * All figures created
 
