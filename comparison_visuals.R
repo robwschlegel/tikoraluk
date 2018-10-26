@@ -19,6 +19,9 @@ load("metadata/lon_OISST.RData")
 load("../data/OISST_NAPA_difference.RData")
 load("../data/OISST_NAPA_correlation.RData")
 
+pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
+
+
 # Full visuals for one summary stat ---------------------------------------
 
 # Remove NA and 0 rows for now...
@@ -39,7 +42,7 @@ polar_map <- function(the_chosen, diff_val = F){
     geom_point(data = filter(diff_res_na_omit, month == "overall"),
                aes_string(x = "-nav_lon", y = "-nav_lat", colour = the_chosen), size = 0.001) +
     # scale_colour_viridis_c() +
-    scale_color_distiller(palette = "Spectral") +
+    scale_colour_gradientn(colours = pretty_palette) +
     coord_polar() +
     # scale_y_continuous(limits = c(-90, -25)) +
     labs(x = "", y = "") +
@@ -129,12 +132,13 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 # Plotting function
 polar_map_diff <- function(sum_stat){
   pp <- ggplot() + theme_void() +
-    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
     geom_point(data = OISST_NAPA_difference_only,
                aes_string(x = "-nav_lon", y = "-nav_lat", colour = sum_stat), size = 0.001) +
+    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
     # scale_colour_viridis_c() +
     # scale_color_distiller(palette = "Spectral") +
-    scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+    # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+    scale_colour_gradientn(colours = pretty_palette) +
     coord_polar() +
     labs(x = "", y = "", title = sum_stat) +
     theme(legend.position = "bottom",
@@ -183,6 +187,7 @@ cp <- ggplot() + theme_void() +
 ggsave(cp, filename = "graph/diff_figs/correlation.png", width = 12, height = 21)
 rm(cp)
 
+
 # Distance visual ---------------------------------------------------------
 
 only_water <- OISST_NAPA_correlation %>% 
@@ -215,3 +220,4 @@ rm(dp)
 # Histogram of distanes between pixels
 
 # Line graphs showing relationship between summary stats and pixel distance
+
