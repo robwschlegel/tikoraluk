@@ -1,5 +1,5 @@
 # The purpose of this function is to load AVISO and NAPA data
-# And to then calculate the skewness of the flow of the data based on SSHa
+# and to then calculate the skewness of the flow of the data based on SSH/SLA
 
 
 # Load libraries ----------------------------------------------------------
@@ -18,14 +18,13 @@ NAPA_files <- dir(path = "../../data/NAPA025/1d_grid_T_2D", full.names = T)
 # The NAPA to OISST lon/lat mask
 load("metadata/lon_lat_NAPA_OISST.RData")
 
+# The OISST lon values for subsetting
+load("metadata/lon_OISST.RData")
+
 
 # Functions ---------------------------------------------------------------
 
-AVISO_ssh <- function(file_name){
-  nc <- nc_open("../data/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc")
-  test <- ncvar_get(nc, varid = )
-}
-
+# Calculate the skewness of SSH/SLA for a given pixel
 skewness <- function(df){
   
 }
