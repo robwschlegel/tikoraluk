@@ -153,7 +153,7 @@ lon_OISST_multi <- data.frame(lon = lon_OISST,
 system.time(
   plyr::ddply(lon_OISST_multi[1:100,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
-) # xxx seconds at 50 cores
+) # 6382 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[101:400,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
