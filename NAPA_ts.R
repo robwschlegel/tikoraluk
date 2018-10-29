@@ -27,7 +27,7 @@ load("metadata/lon_OISST.RData")
 
 # Functions ---------------------------------------------------------------
 
-# Function for loading the individual NAPA NetCDF files and subsetting accordingly 
+# Function for loading the individual NAPA NetCDF files and subsetting SST accordingly 
 load_NAPA_sst_sub <- function(file_name, coords){
   
   nc <- nc_open(as.character(file_name))
@@ -49,7 +49,29 @@ load_NAPA_sst_sub <- function(file_name, coords){
   return(sst)
 }
 
-# Function for combining and saving the subsetted NAPA data
+# Function for loading the individual NAPA NetCDF files and subsetting SSH accordingly 
+load_NAPA_ssh_sub <- function(file_name, coords){
+  
+  nc <- nc_open(as.character(file_name))
+  
+  date_start <- ymd(str_sub(basename(as.character(file_name)), start = 29, end = 36))
+  date_end <- ymd(str_sub(basename(as.character(file_name)), start = 38, end = 45))
+  date_seq <- seq(date_start, date_end, by = "day")
+  
+  ssh <- as.data.frame(ncvar_get(nc, varid = "ssh")) %>% 
+    mutate(lon = as.numeric(nc$dim$x$vals)) %>%
+    gather(-lon, key = lat, value = height) %>%
+    mutate(t = rep(date_seq, each = 388080),
+           lat = rep(rep(as.numeric(nc$dim$y$vals), each = 528), times = 5)) %>%
+    select(lon, lat, t, height) %>%
+    inner_join(coords, by = c("lon", "lat")) %>% 
+    select(nav_lon, nav_lat, t, height)
+  
+  nc_close(nc)
+  return(ssh)
+}
+
+# Function for combining and saving the subsetted NAPA SST data
 save_NAPA_sst_sub <- function(df){
   
   coords <- lon_lat_NAPA_OISST %>% 
@@ -69,13 +91,33 @@ save_NAPA_sst_sub <- function(df){
   }
 }
 
+# Function for combining and saving the subsetted NAPA SSH data
+save_NAPA_ssh_sub <- function(df){
+  
+  coords <- lon_lat_NAPA_OISST %>% 
+    filter(lon_O == df$lon)
+  
+  # system.time(
+  NAPA_ssh_sub <- plyr::ldply(NAPA_files,
+                              .fun = load_NAPA_ssh_sub, 
+                              .parallel = TRUE, 
+                              coords = coords)
+  # )
+  
+  lon_sub_label <- str_pad(which(lon_OISST == df$lon), width = 4, pad = "0", side = "left")
+  
+  if(nrow(NAPA_ssh_sub) > 0){
+    save(NAPA_ssh_sub, file = paste0("../data/NAPA_ssh_sub_",lon_sub_label,".RData"))
+  }
+}
 
-# Process data ------------------------------------------------------------
+
+# Extract SST -------------------------------------------------------------
 
 lon_OISST_multi <- data.frame(lon = lon_OISST,
                               x = 1:length(lon_OISST))
 
-# Re-un on Thursday, October 11th, 2018
+# Re-run on Thursday, October 11th, 2018
 system.time(
   plyr::ddply(lon_OISST_multi[1,], .variables = "x",
               .fun = save_NAPA_sst_sub)
@@ -100,6 +142,34 @@ system.time(
   plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x",
               .fun = save_NAPA_sst_sub)
 ) # 24572 seconds at 50 cores
+
+
+# Extract SSH -------------------------------------------------------------
+
+lon_OISST_multi <- data.frame(lon = lon_OISST,
+                              x = 1:length(lon_OISST))
+
+# Run on Monday, October 29th 2018
+system.time(
+  plyr::ddply(lon_OISST_multi[1:100,], .variables = "x",
+              .fun = save_NAPA_ssh_sub)
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ddply(lon_OISST_multi[101:400,], .variables = "x",
+              .fun = save_NAPA_ssh_sub)
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ddply(lon_OISST_multi[401:700,], .variables = "x",
+              .fun = save_NAPA_ssh_sub)
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ddply(lon_OISST_multi[701:1000,], .variables = "x",
+              .fun = save_NAPA_ssh_sub)
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x",
+              .fun = save_NAPA_ssh_sub)
+) # xxx seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
