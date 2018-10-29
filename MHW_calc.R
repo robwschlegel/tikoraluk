@@ -141,3 +141,46 @@ system.time(
               .fun = MHW_calc, .parallel = TRUE)
 ) # 103 seconds on 50 cores
 
+
+# NAPA MHWs ---------------------------------------------------------------
+
+NAPA_RData_multi <- NAPA_RData %>% 
+  mutate(x = file_num)
+
+# Run on Monday, October 29th, 2018
+system.time(
+  plyr::ddply(NAPA_RData_multi[1:100,], .variables = "x", 
+              .fun = MHW_NAPA_calc, .parallel = TRUE)
+) # 138 seconds on 50 cores
+system.time(
+  plyr::ddply(NAPA_RData_multi[101:600,], .variables = "x", 
+              .fun = MHW_NAPA_calc, .parallel = TRUE)
+) # 240 seconds on 50 cores
+system.time(
+  plyr::ddply(NAPA_RData_multi[601:1100,], .variables = "x", 
+              .fun = MHW_NAPA_calc, .parallel = TRUE)
+) # 437 seconds on 50 cores
+system.time(
+  plyr::ddply(NAPA_RData_multi[1101:1440,], .variables = "x", 
+              .fun = MHW_NAPA_calc, .parallel = TRUE)
+) # 462 seconds on 50 cores
+
+
+# OISST MHW match ---------------------------------------------------------
+
+OISST_RData_multi <- OISST_RData %>% 
+  mutate(x = file_num)
+
+# Run on Monday, October 29th, 2018
+system.time(
+  plyr::ddply(OISST_RData_multi[1:100,], .variables = "x", 
+              .fun = MHW_match_calc, .parallel = TRUE)
+) # 195 seconds on 50 cores
+system.time(
+  plyr::ddply(OISST_RData_multi[101:770,], .variables = "x", 
+              .fun = MHW_match_calc, .parallel = TRUE)
+) # 743 seconds on 50 cores
+system.time(
+  plyr::ddply(OISST_RData_multi[771:1440,], .variables = "x", 
+              .fun = MHW_match_calc, .parallel = TRUE)
+) # 895 seconds on 50 cores
