@@ -1,6 +1,12 @@
 # tikoraluk
 Code for use on tikoraluk
 
+* October 30, 2018
+  * Completed the NAPA SLA extractions
+
+* October 18 - 29, 2018
+  * Lots of things...
+
 * October 17, 2018
   * Minor tweaks
 

@@ -157,19 +157,19 @@ system.time(
 system.time(
   plyr::ddply(lon_OISST_multi[101:400,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
-) # xxx seconds at 50 cores
+) # 17828 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[401:700,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
-) # xxx seconds at 50 cores
+) # 19462 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[701:1000,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
-) # xxx seconds at 50 cores
+) # 17802 seconds at 50 cores
 system.time(
   plyr::ddply(lon_OISST_multi[1001:1440,], .variables = "x",
               .fun = save_NAPA_ssh_sub)
-) # xxx seconds at 50 cores
+) # 25423 seconds at 50 cores
 
 
 # Visualise ---------------------------------------------------------------
