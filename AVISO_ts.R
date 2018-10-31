@@ -5,15 +5,15 @@
 
 library(tidyverse)
 library(ncdf4)
-library(doMC); doMC::registerDoMC(cores = 3)
+library(doMC); doMC::registerDoMC(cores = 50)
 
 
 # Files -------------------------------------------------------------------
 
 # The NetCDF files
-# AVISO_files <- dir(path = "../data", pattern = "CMEMS", full.names = T)
-AVISO_files <- c("~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc",
-                 "~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc")
+AVISO_files <- dir(path = "../data", pattern = "CMEMS", full.names = T)
+# AVISO_files <- c("~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc",
+                 # "~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc")
 
 # The NAPA to OISST lon/lat mask
 load("metadata/lon_lat_NAPA_OISST.RData")
@@ -27,14 +27,14 @@ load("metadata/lon_OISST.RData")
 # Ease function for extracting AVISO variables
 AVISO_var <- function(file_name, var_id, coords){
   nc <- nc_open(as.character(file_name))
-  coord_sub <- which(nc$dim$longitude$vals == df$lon)
+  coord_sub <- which(nc$dim$longitude$vals == coords)
   res <- ncvar_get(nc, varid = var_id)[coord_sub, , ]
   dimnames(res) <- list(#lon = nc$dim$longitude$vals,
                         lat = nc$dim$latitude$vals,
                         t = nc$dim$time$vals)
   res <- as.data.frame(reshape2::melt(res, value.name = var_id), row.names = NULL) %>% 
     mutate(t = as.Date(t, origin = "1950-01-01"),
-           lon = df$lon) %>%
+           lon = coords) %>%
     select(lon, everything())
     # filter(lon == coords)
   nc_close(nc)
@@ -54,7 +54,7 @@ load_AVISO_anom_sub <- function(file_name, coords){
 }
 
 # Function for combining and saving the subsetted NAPA SST data
-save_AVISO_anom_sub <- function(df){
+save_AVISO_anom_sub <- function(coords){
   
   # coords <- lon_lat_NAPA_OISST %>% 
   #   filter(lon_O == df$lon)
@@ -65,24 +65,68 @@ save_AVISO_anom_sub <- function(df){
   AVISO_anom_sub <- plyr::ldply(AVISO_files,
                                 .fun = load_AVISO_anom_sub, 
                                 .parallel = TRUE, 
-                                coords = df$lon)
+                                coords = coords)
   # )
   
-  lon_sub_label <- str_pad(which(lon_OISST == df$lon), width = 4, pad = "0", side = "left")
+  lon_sub_label <- str_pad(which(lon_OISST == coords), width = 4, pad = "0", side = "left")
   
-  if(nrow(AVISO_anom_sub) > 0){
+  # if(nrow(AVISO_anom_sub) > 0){
     save(AVISO_anom_sub, file = paste0("../data/AVISO_anom_sub_",lon_sub_label,".RData"))
-  }
+  # }
 }
 
 
 # AVISO anom --------------------------------------------------------------
 
-lon_OISST_multi <- data.frame(lon = lon_OISST,
-                              x = 1:length(lon_OISST))
+# lon_OISST_multi <- data.frame(lon = lon_OISST,
+#                               x = 1:length(lon_OISST))
 
 # Run on Tuesday, October 30th, 2018
 system.time(
-  plyr::ddply(lon_OISST_multi[1,], .variables = "x",
-              .fun = save_AVISO_anom_sub)
+  plyr::ldply(lon_OISST[1], .fun = save_AVISO_anom_sub, .progress = "text")
+) # 230 seconds at 50 cores
+system.time(
+  plyr::ldply(lon_OISST[2:10], .fun = save_AVISO_anom_sub, .progress = "text")
+) # 2097 seconds at 50 cores
+system.time(
+  plyr::ldply(lon_OISST[11:52], .fun = save_AVISO_anom_sub, .progress = "text")
+) # stopped at 52 and wouldn't continue
+system.time(
+  plyr::ldply(lon_OISST[53:55], .fun = save_AVISO_anom_sub, .progress = "text")
+) # hung after 55
+# Switching over to for loop to see if this addresses the hanging issue
+system.time(
+  for(i in 56:58){
+    save_AVISO_anom_sub(lon_OISST[i])
+    print(paste("Completed run",i,"at",system.time()))
+  }
+) # stops after three runs
+system.time(
+  for(i in 59:62){
+    print(paste("Began run",i,"at",Sys.time()))
+    save_AVISO_anom_sub(lon_OISST[i])
+    print(paste("Completed run",i,"at",Sys.time()))
+  }
+) # 1015 seconds at 50 cores
+system.time(
+  for(i in 63:72){
+    print(paste("Began run",i,"at",Sys.time()))
+    save_AVISO_anom_sub(lon_OISST[i])
+    print(paste("Completed run",i,"at",Sys.time()))
+  }
+) # stops after three runs
+
+
+system.time(
+  plyr::ldply(lon_OISST[101:400], .fun = save_AVISO_anom_sub, .progress = "text")
 ) # xxx seconds at 50 cores
+system.time(
+  plyr::ldply(lon_OISST[401:700], .fun = save_AVISO_anom_sub, .progress = "text")
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ldply(lon_OISST[701:1000], .fun = save_AVISO_anom_sub, .progress = "text")
+) # xxx seconds at 50 cores
+system.time(
+  plyr::ldply(lon_OISST[1001:1440], .fun = save_AVISO_anom_sub, .progress = "text")
+) # xxx seconds at 50 cores
+

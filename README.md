@@ -3,6 +3,7 @@ Code for use on tikoraluk
 
 * October 30, 2018
   * Completed the NAPA SLA extractions
+  * Began AVISO anomaly extractions
 
 * October 18 - 29, 2018
   * Lots of things...
