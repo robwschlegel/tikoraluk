@@ -12,8 +12,6 @@ library(doMC); doMC::registerDoMC(cores = 50)
 
 # The NetCDF files
 AVISO_files <- dir(path = "../data", pattern = "CMEMS", full.names = T)
-# AVISO_files <- c("~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc",
-                 # "~/Downloads/CMEMS_dataset-duacs-rep-global-merged-allsat-phy-l4_1993-01.nc")
 
 # The NAPA to OISST lon/lat mask
 load("metadata/lon_lat_NAPA_OISST.RData")
@@ -29,22 +27,18 @@ AVISO_var <- function(file_name, var_id, coords){
   nc <- nc_open(as.character(file_name))
   coord_sub <- which(nc$dim$longitude$vals == coords)
   res <- ncvar_get(nc, varid = var_id)[coord_sub, , ]
-  dimnames(res) <- list(#lon = nc$dim$longitude$vals,
-                        lat = nc$dim$latitude$vals,
+  dimnames(res) <- list(lat = nc$dim$latitude$vals,
                         t = nc$dim$time$vals)
   res <- as.data.frame(reshape2::melt(res, value.name = var_id), row.names = NULL) %>% 
     mutate(t = as.Date(t, origin = "1950-01-01"),
            lon = coords) %>%
     select(lon, everything())
-    # filter(lon == coords)
   nc_close(nc)
   return(res)
 }
 
 # Load AVSIO anomaly data and subset accordingly
 load_AVISO_anom_sub <- function(file_name, coords){
-  # nc <- nc_open(as.character(file_name))
-  # correct_dates <- as.Date(nc$dim$time$vals, origin = "1950-01-01")
   sla <- AVISO_var(file_name, "sla", coords)
   ugosa <- AVISO_var(file_name, "ugosa", coords)
   vgosa <- AVISO_var(file_name, "vgosa", coords)
@@ -78,9 +72,6 @@ save_AVISO_anom_sub <- function(coords){
 
 # AVISO anom --------------------------------------------------------------
 
-# lon_OISST_multi <- data.frame(lon = lon_OISST,
-#                               x = 1:length(lon_OISST))
-
 # Run on Tuesday, October 30th, 2018
 system.time(
   plyr::ldply(lon_OISST[1], .fun = save_AVISO_anom_sub, .progress = "text")
@@ -109,12 +100,12 @@ system.time(
   }
 ) # 1015 seconds at 50 cores
 system.time(
-  for(i in 63:72){
+  for(i in 63){
     print(paste("Began run",i,"at",Sys.time()))
     save_AVISO_anom_sub(lon_OISST[i])
     print(paste("Completed run",i,"at",Sys.time()))
   }
-) # stops after three runs
+) # stops after one run
 
 
 system.time(
