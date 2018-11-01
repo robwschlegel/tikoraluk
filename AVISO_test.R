@@ -62,10 +62,9 @@ save_AVISO_anom_sub <- function(coords){
 # AVISO anom --------------------------------------------------------------
 
 system.time(
-  for(i in 64:73){
-    print(paste("Began run",i,"at",Sys.time()))
+  for(i in 1:1440){
+    print(paste0("Began run ",i,", lon = ",lon_OISST[i],", at ",Sys.time()))
     save_AVISO_anom_sub(lon_OISST[i])
     print(paste("Completed run",i,"at",Sys.time()))
   }
-) #
-
+)

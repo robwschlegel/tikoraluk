@@ -1,5 +1,11 @@
 # tikoraluk
-Code for use on tikoraluk
+The code in this repository is intended for use on tikoraluk.  
+
+Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
+
+* November 01, 2018
+  * AVISO anomaly extractions underway
+  * Some of the code for the MHW comparisons complete
 
 * October 30, 2018
   * Completed the NAPA SLA extractions

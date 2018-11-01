@@ -10,8 +10,6 @@ library(lubridate)
 library(doMC); doMC::registerDoMC(cores = 50)
 library(stringr)
 library(FNN)
-library(ggpubr)
-library(gridExtra)
 
 source("MHW_prep.R")
 
