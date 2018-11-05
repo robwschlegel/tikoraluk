@@ -7,7 +7,6 @@
 library(tidyverse)
 
 
-
 # Meta-data ---------------------------------------------------------------
 
 load("metadata/lon_lat_NAPA_OISST.RData")
@@ -130,15 +129,15 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
   # mutate(lon = ifelse(lon > 180, lon-360, lon))
 
 # Plotting function
-polar_map_diff <- function(sum_stat){
+polar_map_diff <- function(sum_stat, df){
   pp <- ggplot() + theme_void() +
-    geom_point(data = OISST_NAPA_difference_only,
+    geom_point(data = df,
                aes_string(x = "-nav_lon", y = "-nav_lat", colour = sum_stat), size = 0.001) +
     geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
     # scale_colour_viridis_c() +
     # scale_color_distiller(palette = "Spectral") +
-    # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-    scale_colour_gradientn(colours = pretty_palette) +
+    scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+    # scale_colour_gradientn(colours = pretty_palette) +
     coord_polar() +
     labs(x = "", y = "", title = sum_stat) +
     theme(legend.position = "bottom",
@@ -152,16 +151,16 @@ polar_map_diff <- function(sum_stat){
   ggsave(pp, filename = paste0("graph/diff_figs/",sum_stat,".png"), width = 12, height = 21)
 }
 
-polar_map_diff("min_diff")
-polar_map_diff("quant_10_diff")
-polar_map_diff("quant_25_diff")
-polar_map_diff("quant_50_diff")
-polar_map_diff("quant_75_diff")
-polar_map_diff("quant_90_diff")
-polar_map_diff("max_diff")
-polar_map_diff("mean_diff")
-polar_map_diff("sd_diff")
-polar_map_diff("dt_diff")
+polar_map_diff("min_diff", OISST_NAPA_difference_only)
+polar_map_diff("quant_10_diff", OISST_NAPA_difference_only)
+polar_map_diff("quant_25_diff", OISST_NAPA_difference_only)
+polar_map_diff("quant_50_diff", OISST_NAPA_difference_only)
+polar_map_diff("quant_75_diff", OISST_NAPA_difference_only)
+polar_map_diff("quant_90_diff", OISST_NAPA_difference_only)
+polar_map_diff("max_diff", OISST_NAPA_difference_only)
+polar_map_diff("mean_diff", OISST_NAPA_difference_only)
+polar_map_diff("sd_diff", OISST_NAPA_difference_only)
+polar_map_diff("dt_diff", OISST_NAPA_difference_only)
 
 
 # Correlation visuals -----------------------------------------------------
@@ -224,4 +223,89 @@ rm(dp)
 
 # Skewness visual ---------------------------------------------------------
 
+
+
+# MHW difference visuals --------------------------------------------------
+
+MHW_ON_saves <- dir("../data", pattern = "OISST_NAPA_MHW", full.names = T)
+
+### Visuals for the clim stat differences
+## tester...
+# file_name <- MHW_ON_saves[1]
+load_MHW_ON_clim_diff <- function(file_name){
+  load(file = file_name)
+  res <- ALL_res[[1]]
+  return(res)
+}
+system.time(
+  MHW_ON_clim_diff <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_clim_diff)
+) # 10 seconds at 50 cores
+polar_map_diff("seas_min", filter(MHW_ON_clim_diff, product == "difference"))
+polar_map_diff("seas_mean", filter(MHW_ON_clim_diff, product == "difference"))
+polar_map_diff("seas_max", filter(MHW_ON_clim_diff, product == "difference"))
+polar_map_diff("thresh_min", filter(MHW_ON_clim_diff, product == "difference"))
+polar_map_diff("thresh_mean", filter(MHW_ON_clim_diff, product == "difference"))
+polar_map_diff("thresh_max", filter(MHW_ON_clim_diff, product == "difference"))
+
+### Visuals for the clim t-tests
+load_MHW_ON_clim_p <- function(file_name){
+  load(file = file_name)
+  res <- ALL_res[[2]]
+  return(res)
+}
+system.time(
+  MHW_ON_clim_p <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_clim_p)
+) # 5 seconds at 50 cores
+colnames(MHW_ON_clim_p)[5:6] <- c("seas_p", "thresh_p")
+polar_map_diff("seas_p", MHW_ON_clim_p)
+polar_map_diff("thresh_p", MHW_ON_clim_p)
+
+
+### Visuals for the event count differences
+load_MHW_ON_event_count <- function(file_name){
+  load(file = file_name)
+  res <- ALL_res[[3]]
+  return(res)
+}
+system.time(
+  MHW_ON_event_count <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_count)
+) # 5 seconds at 50 cores
+MHW_ON_event_count_diff <- left_join(filter(MHW_ON_event_count, product == "NAPA"), 
+                                    filter(MHW_ON_event_count, product == "OISST"),
+                                    by = c("nav_lon", "nav_lat", "month")) %>% 
+  mutate(count = count.x - count.y,
+         product = "difference") %>% 
+  select(nav_lon, nav_lat, product, month, count)
+polar_map_diff("count", MHW_ON_event_count_diff)
+
+
+### Visuals for the event stat differences
+load_MHW_ON_event_diff <- function(file_name){
+  load(file = file_name)
+  res <- ALL_res[[4]]
+  return(res)
+}
+system.time(
+  MHW_ON_event_diff <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_diff)
+) # 10 seconds at 50 cores
+polar_map_diff("duration_min", filter(MHW_ON_event_diff, product == "difference"))
+polar_map_diff("duration_mean", filter(MHW_ON_event_diff, product == "difference"))
+polar_map_diff("duration_max", filter(MHW_ON_event_diff, product == "difference"))
+polar_map_diff("intensity_max_min", filter(MHW_ON_event_diff, product == "difference"))
+polar_map_diff("intensity_max_mean", filter(MHW_ON_event_diff, product == "difference"))
+polar_map_diff("intensity_max_max", filter(MHW_ON_event_diff, product == "difference"))
+
+
+### Visuals for the event t-tests
+load_MHW_ON_event_p <- function(file_name){
+  load(file = file_name)
+  res <- ALL_res[[5]]
+  return(res)
+}
+system.time(
+  MHW_ON_event_p <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_p)
+) # 5 seconds at 50 cores
+colnames(MHW_ON_event_p)[5:6] <- c("duration_p", "intensity_max_p")
+polar_map_diff("duration_p", MHW_ON_event_p)
+polar_map_diff("intensity_max_p", MHW_ON_event_p)
 
