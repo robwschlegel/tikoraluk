@@ -20,6 +20,40 @@ load("../data/OISST_NAPA_correlation.RData")
 
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
 
+# The base map
+map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
+  dplyr::rename(lon = long) %>% 
+  filter(lat >= 25.6, lon <= 180) #%>%
+# filter(lat >= 25.6)# %>%
+# mutate(lon = ifelse(lon > 180, lon-360, lon))
+
+
+# Functions ---------------------------------------------------------------
+
+# Plotting function
+polar_map_diff <- function(sum_stat, df, plot_name = NA){
+  pp <- ggplot() + theme_void() +
+    geom_point(data = df,
+               aes_string(x = "-nav_lon", y = "-nav_lat", colour = sum_stat), size = 0.001) +
+    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
+    # scale_colour_viridis_c() +
+    # scale_color_distiller(palette = "Spectral") +
+    scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+    # scale_colour_gradientn(colours = pretty_palette) +
+    coord_polar() +
+    labs(x = "", y = "", title = sum_stat) +
+    theme(legend.position = "bottom",
+          legend.background = element_blank(),
+          legend.title = element_blank(),
+          legend.text = element_text(colour = "black"),
+          axis.text = element_blank(),
+          plot.title = element_text(hjust = 0.5, size = 30), 
+          strip.text = element_text(size = 16)) +
+    facet_wrap(~month, ncol = 3)
+  if(is.na(plot_name)) plot_name <- sum_stat
+  ggsave(pp, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 12, height = 21)
+}
+#
 
 # Full visuals for one summary stat ---------------------------------------
 
@@ -29,7 +63,7 @@ diff_res_na_omit <- OISST_NAPA_difference %>%
   filter(min_NAPA != 0)
 
 # The base map
-map_base <- fortify(map(fill = TRUE, plot = FALSE)) %>% 
+map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long) %>% 
   filter(lat >= 25.6, lon <= 180) #%>% 
 # mutate(lon = ifelse(lon > 180, lon-180, lon))
@@ -121,36 +155,6 @@ OISST_NAPA_difference <- OISST_NAPA_difference %>%
 OISST_NAPA_difference_only <- OISST_NAPA_difference %>% 
   select(lon:month, min_diff:dt_diff)
 
-# The base map
-map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
-  dplyr::rename(lon = long) %>% 
-  filter(lat >= 25.6, lon <= 180) #%>%
-  # filter(lat >= 25.6)# %>%
-  # mutate(lon = ifelse(lon > 180, lon-360, lon))
-
-# Plotting function
-polar_map_diff <- function(sum_stat, df){
-  pp <- ggplot() + theme_void() +
-    geom_point(data = df,
-               aes_string(x = "-nav_lon", y = "-nav_lat", colour = sum_stat), size = 0.001) +
-    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-    # scale_colour_viridis_c() +
-    # scale_color_distiller(palette = "Spectral") +
-    scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-    # scale_colour_gradientn(colours = pretty_palette) +
-    coord_polar() +
-    labs(x = "", y = "", title = sum_stat) +
-    theme(legend.position = "bottom",
-          legend.background = element_blank(),
-          legend.title = element_blank(),
-          legend.text = element_text(colour = "black"),
-          axis.text = element_blank(),
-          plot.title = element_text(hjust = 0.5, size = 30), 
-          strip.text = element_text(size = 16)) +
-    facet_wrap(~month, ncol = 3)
-  ggsave(pp, filename = paste0("graph/diff_figs/",sum_stat,".png"), width = 12, height = 21)
-}
-
 polar_map_diff("min_diff", OISST_NAPA_difference_only)
 polar_map_diff("quant_10_diff", OISST_NAPA_difference_only)
 polar_map_diff("quant_25_diff", OISST_NAPA_difference_only)
@@ -223,6 +227,10 @@ rm(dp)
 
 # Skewness visual ---------------------------------------------------------
 
+load("../data/AVISO_NAPA_skewness_diff.RData")
+polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "difference"))
+polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "AVISO"), "skewness_AVISO")
+polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "NAPA"), "skewness_NAPA")
 
 
 # MHW difference visuals --------------------------------------------------

@@ -15,7 +15,7 @@ library(doMC); doMC::registerDoMC(cores = 50)
 
 source("MHW_func.R")
 rm(file_list, NAPA_RData, OISST_RData)
-options(scipen=999)
+options(scipen = 999)
 
 
 # Data --------------------------------------------------------------------
@@ -95,7 +95,7 @@ clim_diff <- function(df){
     summarise_if(is.numeric, .funs = c("min", "mean", "max"), na.rm = T)
   clim_mmm_dif <- left_join(filter(clim_mmm, product == "NAPA"), 
                             filter(clim_mmm, product == "OISST"),
-                            by = c("nav_lon", "nav_lat", "month")) %>% 
+                            by = c("nav_lon", "nav_lat", "month")) %>%
     mutate(seas_min = seas_min.x - seas_min.y,
            seas_mean = seas_mean.x - seas_mean.y,
            seas_max = seas_max.x - seas_max.y, 

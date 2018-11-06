@@ -3,6 +3,9 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+* November 06, 2018
+  * Calculated and visualised skewness differences
+
 * November 05, 2018
   * Calculated differences in MHWs between NAPA and OISST
   * Visualised the differences
