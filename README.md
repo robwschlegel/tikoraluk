@@ -3,6 +3,10 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+* November 07, 2018
+  * Re-calculated MHW comparison stats
+  * Re-created all comparison visuals
+
 * November 06, 2018
   * Calculated and visualised skewness differences
 

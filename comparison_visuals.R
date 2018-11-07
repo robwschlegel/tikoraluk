@@ -235,85 +235,35 @@ polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "NAPA"), 
 
 # MHW difference visuals --------------------------------------------------
 
-MHW_ON_saves <- dir("../data", pattern = "OISST_NAPA_MHW", full.names = T)
+load("../data/OISST_NAPA_MHW_summary.RData")
+OISST_NAPA_MHW_summary_diff <- filter(OISST_NAPA_MHW_summary, product == "difference")
 
-### Visuals for the clim stat differences
-## tester...
-# file_name <- MHW_ON_saves[1]
-load_MHW_ON_clim_diff <- function(file_name){
-  load(file = file_name)
-  res <- ALL_res[[1]]
-  return(res)
-}
-system.time(
-  MHW_ON_clim_diff <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_clim_diff)
-) # 10 seconds at 50 cores
-polar_map_diff("seas_min", filter(MHW_ON_clim_diff, product == "difference"))
-polar_map_diff("seas_mean", filter(MHW_ON_clim_diff, product == "difference"))
-polar_map_diff("seas_max", filter(MHW_ON_clim_diff, product == "difference"))
-polar_map_diff("thresh_min", filter(MHW_ON_clim_diff, product == "difference"))
-polar_map_diff("thresh_mean", filter(MHW_ON_clim_diff, product == "difference"))
-polar_map_diff("thresh_max", filter(MHW_ON_clim_diff, product == "difference"))
+# Visuals for the clim stat differences
+polar_map_diff("seas_min", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("seas_mean", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("seas_max", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("thresh_min", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("thresh_mean", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("thresh_max", OISST_NAPA_MHW_summary_diff)
 
-### Visuals for the clim t-tests
-load_MHW_ON_clim_p <- function(file_name){
-  load(file = file_name)
-  res <- ALL_res[[2]]
-  return(res)
-}
-system.time(
-  MHW_ON_clim_p <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_clim_p)
-) # 5 seconds at 50 cores
-colnames(MHW_ON_clim_p)[5:6] <- c("seas_p", "thresh_p")
-polar_map_diff("seas_p", MHW_ON_clim_p)
-polar_map_diff("thresh_p", MHW_ON_clim_p)
+# Visuals for the clim t-tests and KS-tests
+polar_map_diff("seas_t_test", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("thresh_t_test", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("seas_KS_test", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("thresh_KS_test", OISST_NAPA_MHW_summary_diff)
 
+# Visuals for the event count differences
+polar_map_diff("count", OISST_NAPA_MHW_summary_diff)
 
-### Visuals for the event count differences
-load_MHW_ON_event_count <- function(file_name){
-  load(file = file_name)
-  res <- ALL_res[[3]]
-  return(res)
-}
-system.time(
-  MHW_ON_event_count <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_count)
-) # 5 seconds at 50 cores
-MHW_ON_event_count_diff <- left_join(filter(MHW_ON_event_count, product == "NAPA"), 
-                                    filter(MHW_ON_event_count, product == "OISST"),
-                                    by = c("nav_lon", "nav_lat", "month")) %>% 
-  mutate(count = count.x - count.y,
-         product = "difference") %>% 
-  select(nav_lon, nav_lat, product, month, count)
-polar_map_diff("count", MHW_ON_event_count_diff)
+# Visuals for the event stat differences
+polar_map_diff("duration_min", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("duration_mean", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("duration_max", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("intensity_max_min", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("intensity_max_mean", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("intensity_max_max", OISST_NAPA_MHW_summary_diff)
 
-
-### Visuals for the event stat differences
-load_MHW_ON_event_diff <- function(file_name){
-  load(file = file_name)
-  res <- ALL_res[[4]]
-  return(res)
-}
-system.time(
-  MHW_ON_event_diff <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_diff)
-) # 10 seconds at 50 cores
-polar_map_diff("duration_min", filter(MHW_ON_event_diff, product == "difference"))
-polar_map_diff("duration_mean", filter(MHW_ON_event_diff, product == "difference"))
-polar_map_diff("duration_max", filter(MHW_ON_event_diff, product == "difference"))
-polar_map_diff("intensity_max_min", filter(MHW_ON_event_diff, product == "difference"))
-polar_map_diff("intensity_max_mean", filter(MHW_ON_event_diff, product == "difference"))
-polar_map_diff("intensity_max_max", filter(MHW_ON_event_diff, product == "difference"))
-
-
-### Visuals for the event t-tests
-load_MHW_ON_event_p <- function(file_name){
-  load(file = file_name)
-  res <- ALL_res[[5]]
-  return(res)
-}
-system.time(
-  MHW_ON_event_p <- plyr::ldply(MHW_ON_saves, .parallel = T, .fun = load_MHW_ON_event_p)
-) # 5 seconds at 50 cores
-colnames(MHW_ON_event_p)[5:6] <- c("duration_p", "intensity_max_p")
-polar_map_diff("duration_p", MHW_ON_event_p)
-polar_map_diff("intensity_max_p", MHW_ON_event_p)
+# Visuals for the event t-tests
+polar_map_diff("duration_t_test", OISST_NAPA_MHW_summary_diff)
+polar_map_diff("intensity_max_t_test", OISST_NAPA_MHW_summary_diff)
 
