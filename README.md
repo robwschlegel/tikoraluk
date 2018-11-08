@@ -3,6 +3,9 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+* November 08, 2018
+  * Visualised difference between OSTIA and OISST data on 2007-12-31
+
 * November 07, 2018
   * Re-calculated MHW comparison stats
   * Re-created all comparison visuals
