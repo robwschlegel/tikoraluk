@@ -1,0 +1,57 @@
+---
+title: "NAPA OISST comparisons"
+author: "Robert Schlegel"
+date: "08 November 2018"
+output: html_document
+---
+
+# Overview
+
+The following select figures illustrate important differences between the NAPA model output and the NOAA OISST v2 product as well as AVISO+ SLA.
+
+One may usethe table of contents tab on the left side of this document to jump to a desired location.
+
+
+## Distances
+
+Firstly we look at the distance between the nearest OISST/AVISO pixel being compared to each NAPA pixel. Note that most pixels are within a few kms of each other, with the exception of several nearshore points that are not included in the model.
+
+
+![](graph/diff_figs/distance.png)
+
+
+## Basic comparisons
+
+### Summary stats
+
+There are simply too many figures with too many panels to include here. It will rather be necessary to select key panels that illustrate specific patterns of interest or that are improtant for other reasons.
+
+
+### Long-term trends
+
+![](graph/diff_figs/dt_diff.png)
+
+
+
+### Correlations
+
+
+## Skewness comparisons
+
+### AVISO skewness
+![](graph/diff_figs/skewness_AVISO.png)
+
+### NAPA skewness
+![](graph/diff_figs/skewness_AVISO.png)
+
+### Skewness comparison
+![](graph/diff_figs/skewness.png)
+
+
+## MHW comparisons
+
+### Seasonal and threshold clims
+
+
+### MHW metrics
+

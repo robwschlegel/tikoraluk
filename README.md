@@ -5,6 +5,7 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 * November 08, 2018
   * Visualised difference between OSTIA and OISST data on 2007-12-31
+  * Putting NAPA -- OISST comparison document together
 
 * November 07, 2018
   * Re-calculated MHW comparison stats

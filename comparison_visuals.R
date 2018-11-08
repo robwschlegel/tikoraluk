@@ -2,7 +2,7 @@
 # of the visualisations for the NAPA OISST comparisons
 
 
-# libraries ---------------------------------------------------------------
+# Libraries ---------------------------------------------------------------
 
 library(tidyverse)
 
