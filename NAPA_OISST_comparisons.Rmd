@@ -1,57 +1,78 @@
 ---
 title: "NAPA OISST comparisons"
 author: "Robert Schlegel"
-date: "08 November 2018"
-output: html_document
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    # css: acid.css
+    fig_caption: yes
+    fig_width: 5
+    highlight: default
+    number_sections: yes
+    theme: yeti
+    toc: yes
+    toc_float: yes
+fontsize: 10pt
+language: Australian
+# mainfont: PT Serif
+# monofont: PT Mono
+# csl: progress-in-oceanography.csl
+# sansfont: PT Sans
+# bibliography: Presentations.bib
+# papersize: A4
 ---
 
 # Overview
 
 The following select figures illustrate important differences between the NAPA model output and the NOAA OISST v2 product as well as AVISO+ SLA.
 
-One may usethe table of contents tab on the left side of this document to jump to a desired location.
+One may use the table of contents tab on the left side of this document to jump to a desired location.
 
 
-## Distances
+# Distances
 
-Firstly we look at the distance between the nearest OISST/AVISO pixel being compared to each NAPA pixel. Note that most pixels are within a few kms of each other, with the exception of several nearshore points that are not included in the model.
+Firstly we look at the distance between the nearest OISST/AVISO pixel being compared to each NAPA pixel. Note that most pixels are within a few kms of one another, with the exception of several nearshore points that are not resolved in the model.
 
 
 ![](graph/diff_figs/distance.png)
 
 
-## Basic comparisons
+# Basic comparisons
 
-### Summary stats
+The following subsection show the results of comparing basic summary statistics between the NAPA and OISST/AVISO data for each co-lacated pixel as seen in the distances section above.
+
+
+## Summary stats
 
 There are simply too many figures with too many panels to include here. It will rather be necessary to select key panels that illustrate specific patterns of interest or that are improtant for other reasons.
 
 
-### Long-term trends
+## Long-term trends
 
 ![](graph/diff_figs/dt_diff.png)
 
 
 
-### Correlations
+# Correlations
 
 
-## Skewness comparisons
+# Skewness comparisons
 
-### AVISO skewness
+## AVISO skewness
 ![](graph/diff_figs/skewness_AVISO.png)
 
-### NAPA skewness
+## NAPA skewness
 ![](graph/diff_figs/skewness_AVISO.png)
 
-### Skewness comparison
+## Skewness comparison
 ![](graph/diff_figs/skewness.png)
 
 
-## MHW comparisons
+# MHW comparisons
 
-### Seasonal and threshold clims
+## Seasonal and threshold clims
 
 
-### MHW metrics
+## MHW metrics
 
