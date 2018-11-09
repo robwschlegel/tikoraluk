@@ -7,6 +7,7 @@
 source("MHW_func.R")
 library(FNN)
 library(lubridate)
+library(ncdf4)
 doMC::registerDoMC(cores = 50)
 
 
@@ -89,16 +90,22 @@ OSTIA_OISST_diff <- function(df_OSTIA, df_OISST){
 OSTIA_sub <- load_OSTIA_sub(OSTIA_files[1], as.Date("2007-12-31"))
 
 # Load OISST in stages as it is too RAM intensive in one shot
-system.time(
-  OISST_sub_1 <- plyr::ldply(OISST_files[1:720], load_OISST_sub, 
-                           .parallel = T, chosen_date = as.Date("2007-12-31"))
-) # 356 seconds at 50 cores
-system.time(
-  OISST_sub_2 <- plyr::ldply(OISST_files[721:1440], load_OISST_sub, 
-                             .parallel = T, chosen_date = as.Date("2007-12-31"))
-) # 350 seconds at 50 cores
-OISST_sub <- rbind(OISST_sub_1, OISST_sub_2)
-rm(OISST_sub_1, OISST_sub_2)
+# system.time(
+#   OISST_sub_1 <- plyr::ldply(OISST_files[1:480], load_OISST_sub, 
+#                            .parallel = T, chosen_date = as.Date("2007-12-31"))
+# ) # 249 seconds at 50 cores
+# system.time(
+#   OISST_sub_2 <- plyr::ldply(OISST_files[481:960], load_OISST_sub, 
+#                              .parallel = T, chosen_date = as.Date("2007-12-31"))
+# ) # 331 seconds at 50 cores
+# system.time(
+#   OISST_sub_3 <- plyr::ldply(OISST_files[961:1440], load_OISST_sub, 
+#                              .parallel = T, chosen_date = as.Date("2007-12-31"))
+# ) # xxx seconds at 50 cores
+# OISST_sub <- rbind(OISST_sub_1, OISST_sub_2, OISST_sub_3)
+# rm(OISST_sub_1, OISST_sub_2, OISST_sub_3)
+# save(OISST_sub, file = "../data/OISST_sub_2007_12_31.RData")
+load("../data/OISST_sub_2007_12_31.RData")
 
 OISST_sub_corrected <- OISST_sub %>% 
   mutate(lon = ifelse(lon > 180, lon - 360, lon)) %>% 
@@ -111,7 +118,7 @@ global_sst <- function(df, product){
   sst_world <- ggplot(df, aes(x = lon, y = lat, fill = sst)) +
     geom_raster() +
     borders(fill = "grey80", colour = NA) +
-    scale_fill_gradientn(colours = pretty_palette) +
+    scale_fill_gradientn(colours = pretty_palette, limits = c(-2, 32)) +
     coord_cartesian(expand = F, 
                     xlim = c(-180, 180),
                     ylim = c(-89.875, 89.875)) +
