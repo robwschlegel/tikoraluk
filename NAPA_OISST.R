@@ -39,6 +39,7 @@ load_OISST_NAPA <- function(lon_row){
                   lat = nav_lat) %>% 
     select(lon, lat, t, temp)
   ALL_long <- rbind(OISST_long, NAPA_long)
+  rm(MHW_res, NAPA_sst_sub, OISST_long, NAPA_long)
   return(ALL_long)
 }
 
@@ -140,50 +141,52 @@ analyse_OISST_NAPA <- function(df){
   save(OISST_NAPA_summary, file = paste0("../data/OISST_NAPA_summary_",lon_row_pad,".RData"))
 }
 
-correlate_OISST_NAPA <- function(df){
+correlate_OISST_NAPA <- function(lon_row){
   # Load
-  lon_row <- df$lon_row
+  # lon_row <- df$lon_row
   ALL_trim <- load_OISST_NAPA(lon_row) %>%
     # Constrain the OISST date range to match NAPA
     # ensuring the same period for calculations
     filter(t >= as.Date("1993-10-01"),
            t <= as.Date("2015-12-29"))
   # Match up
-  ALL_match <- inner_join(lon_lat_NAPA_OISST, ALL_trim,
+  ALL_match <- left_join(lon_lat_NAPA_OISST, ALL_trim,
                           by = c("nav_lon" = "lon", "nav_lat" = "lat")) %>%
-    left_join(ALL_trim, by = c("lon_O" = "lon", "lat_O" = "lat", "t")) %>% 
+    na.omit() %>% 
+    left_join(ALL_trim, by = c("lon_O" = "lon", "lat_O" = "lat", "t")) %>%
     mutate(time = "day") %>% 
     filter(temp.x != 0) %>% 
     na.omit()
   # Correlate
   cor_day <- ALL_match %>% 
     mutate(time = "day") %>% 
-    group_by(lon, lat, time) %>% 
+    group_by(nav_lon, nav_lat, time) %>% 
     summarise(cor = cor(temp.x, temp.y, 
                         use = "pairwise.complete.obs", 
                         method = "pearson"))
   cor_monthly <- ALL_match %>% 
     mutate(time = as.character(lubridate::month(t, label = T))) %>% 
-    group_by(lon, lat, time) %>% 
+    group_by(nav_lon, nav_lat, time) %>% 
     summarise(cor = cor(temp.x, temp.y, 
                         use = "pairwise.complete.obs", 
                         method = "pearson"))
   cor_month <- ALL_match %>% 
     mutate(t = floor_date(t, "month"),
            time = "month") %>% 
-    group_by(lon, lat, t, time) %>% 
+    group_by(nav_lon, nav_lat, t, time) %>% 
     summarise(temp.x = mean(temp.x, na.rm = T),
               temp.y = mean(temp.y, na.rm = T)) %>% 
-    group_by(lon, lat, time) %>% 
+    group_by(nav_lon, nav_lat, time) %>% 
     summarise(cor = cor(temp.x, temp.y,
                         use = "pairwise.complete.obs", 
                         method = "pearson"))
   cor_year <- ALL_match %>% 
-    mutate(t = floor_date(t, "year")) %>% 
-    group_by(lon, lat, t, time) %>% 
+    mutate(t = floor_date(t, "year"),
+           time = "year") %>% 
+    group_by(nav_lon, nav_lat, t, time) %>% 
     summarise(temp.x = mean(temp.x, na.rm = T),
               temp.y = mean(temp.y, na.rm = T)) %>% 
-    group_by(lon, lat, time) %>% 
+    group_by(nav_lon, nav_lat, time) %>% 
     summarise(cor = cor(temp.x, temp.y, 
                         use = "pairwise.complete.obs", 
                         method = "pearson"))
@@ -243,18 +246,19 @@ load_sub_diff_ON <- function(file_name){
 
 # Correlation -------------------------------------------------------------
 
-lon_row_multi <- data.frame(lon_row = 1:1440,
-                            x = 1:1440)
-
-# system.time(
-#   OISST_NAPA_correlation_1 <- plyr::ddply(lon_row_multi[1:720, ], .variables = "x",
-#                                         .fun = correlate_OISST_NAPA, .parallel = T)
-# ) # 516 seconds at 50 cores
-# system.time(
-#   OISST_NAPA_correlation_2 <- plyr::ddply(lon_row_multi[721:1440, ], .variables = "x",
-#                                           .fun = correlate_OISST_NAPA, .parallel = T)
-# ) # 485 seconds at 50 cores
-# OISST_NAPA_correlation <- rbind(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2) %>% 
-#   select(-x)
-# save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
+print(paste("Began run 1 at ", Sys.time()))
+system.time(
+  OISST_NAPA_correlation_1 <- plyr::ldply(1:480, .fun = correlate_OISST_NAPA, .parallel = T)
+) # xxx seconds at 50 cores
+print(paste("Began run 2 at ", Sys.time()))
+system.time(
+  OISST_NAPA_correlation_2 <- plyr::ldply(481:960, .fun = correlate_OISST_NAPA, .parallel = T)
+) # xxx seconds at 50 cores
+print(paste("Began run 3 at ", Sys.time()))
+system.time(
+  OISST_NAPA_correlation_3 <- plyr::ldply(961:1440, .fun = correlate_OISST_NAPA, .parallel = T)
+) # 335 seconds at 50 cores
+OISST_NAPA_correlation <- rbind(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2, OISST_NAPA_correlation_3)
+rm(OISST_NAPA_correlation_1, OISST_NAPA_correlation_2, OISST_NAPA_correlation_3)
+save(OISST_NAPA_correlation, file = "../data/OISST_NAPA_correlation.RData")
 
