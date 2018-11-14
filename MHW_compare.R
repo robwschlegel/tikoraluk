@@ -28,28 +28,6 @@ options(scipen = 999)
 # Functions ---------------------------------------------------------------
 
 # Function for calculating t-tests on multiple columns
-# df <- ALL_clim %>%
-#   ungroup() %>%
-#   filter(nav_lon == ALL_clim$nav_lon[1],
-#          nav_lat == ALL_clim$nav_lat[1]) %>%
-#   select(-doy, -nav_lon, - nav_lat) %>%
-#   mutate(product = as.factor(product))
-# df <- ALL_event %>%
-#   ungroup() %>%
-#   filter(nav_lon == ALL_event$nav_lon[1],
-#          nav_lat == ALL_event$nav_lat[1],
-#          month == "Jan") %>%
-#   select(-date_peak, -nav_lon, - nav_lat, -month) %>%
-#   mutate(product = as.factor(product))
-# test <- plyr::ddply(ALL_clim, .variables = c("nav_lon", "nav_lat", "month"), .fun = t_test_p)
-# test <- ALL_event %>% 
-#   select(-date_peak) %>%
-#   nest() %>% 
-#   slice(292) %>% 
-#   unnest()
-#   # mutate(t_tests = map(data, t_test_p))
-# df <- test %>% 
-#   select(-(nav_lon:month))
 t_test_p <- function(df){
   NAPA_row <- nrow(filter(df, product == "NAPA"))
   NAPA_unique <- nrow(unique(filter(df, product == "NAPA")[, 1]))

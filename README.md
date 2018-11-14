@@ -3,6 +3,10 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+* November 14, 2018
+  * Work on comparison figures
+  * Created ice cover time series for NAPA data
+
 * November 09, 2018
   * More work on comparing the NAPA and OISST/AVISO products
 

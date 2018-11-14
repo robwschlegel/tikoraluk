@@ -49,10 +49,15 @@ There are simply too many figures with too many panels to include here. It will 
 
 ## Quantiles
 
-## Min Mean Max
+## Min Mean Max {.tabset}
 
 The mean differences are shown here to highlight what is a rather consistent pattern between these two products. That being that NAPA is either putting the Gulf Stream North of were the OISST has it, or is thinking it is much warmer. The NAPA data do show that the Labrador Sea is warmer than in the OISST data. The Arctic Ocean north of Scandinavia is cooler in the NAPA data, as well as the Atlantic south of where it thinks the Gulf Stream is. These patterns tend to hold rather consistent throughout all months, with the exception of the ocean north of Hudson Bay being warmer in the NAPA data during late summer.
 
+### Model
+
+### Observation
+
+### Comparison
 ![](graph/diff_figs/mean_diff.png)
 
 ## Std. Dev.

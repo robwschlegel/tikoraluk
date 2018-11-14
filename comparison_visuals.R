@@ -25,11 +25,13 @@ load("../data/OISST_NAPA_MHW_summary.RData")
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
 
 # The base map
+# The base map
 map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long) %>% 
-  filter(lat >= 25.6, lon <= 180) #%>%
-# filter(lat >= 25.6)# %>%
-# mutate(lon = ifelse(lon > 180, lon-360, lon))
+  # filter(lat >= 25.6, lon <= 180) #%>%
+  filter(lat >= 25.6) %>%
+  mutate(group = ifelse(lon > 180, group+9999, group),
+         lon = ifelse(lon > 180, lon-360, lon))
 
 
 # Prep --------------------------------------------------------------------
@@ -66,36 +68,49 @@ lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST,
 # Functions ---------------------------------------------------------------
 
 # Plotting function
-polar_map_diff <- function(sum_stat, df, plot_name = NA, chosen_palette = "red-blue"){
-  pp <- ggplot() + theme_void() +
-    geom_point(data = df,
-               aes_string(x = "-nav_lon", y = "-nav_lat", colour = sum_stat), size = 0.001) +
-    geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-    # scale_colour_viridis_c() +
-    # scale_color_distiller(palette = "Spectral") +
-    # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-    # scale_colour_gradientn(colours = pretty_palette) +
-    coord_polar() +
-    labs(x = "", y = "", title = sum_stat) +
-    theme(legend.position = "bottom",
-          legend.background = element_blank(),
-          legend.title = element_blank(),
-          legend.text = element_text(colour = "black"),
-          axis.text = element_blank(),
-          plot.title = element_text(hjust = 0.5, size = 30), 
-          strip.text = element_text(size = 16)) +
-    facet_wrap(~month, ncol = 3)
-  if(chosen_palette == "red-blue"){
-    pp_col <- pp + scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
-  } else if(chosen_palette == "viridis"){
-    pp_col <- pp + scale_colour_viridis_c()
-  } else if(chosen_palette == "spectral"){
-    pp_col <- pp + scale_color_distiller(palette = "Spectral")
-  }else if(chosen_palette == "pretty"){
-    pp_col <- pp + scale_colour_gradientn(colours = pretty_palette)
-  }
+polar_map_diff <- function(sum_stat, df, plot_name = NA, plot_title = NA,
+                           chosen_palette = "red-blue", colour_range = NA, 
+                           legend_title = NA, legend_position = c(0.5, 0.1)){
   if(is.na(plot_name)) plot_name <- sum_stat
-  ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 12, height = 21)
+  if(is.na(plot_title)) plot_title <- sum_stat
+  if(is.na(legend_title)) legend_title <- "Model - Obs (°C)"
+  if(is.na(colour_range)){
+    colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T), 
+                      max(df[,colnames(df) == sum_stat], na.rm = T))
+  }
+  pp <- ggplot() + theme_void() +
+    geom_point(data = df, size = 0.001,
+               aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
+    geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+    coord_map("ortho", orientation = c(90, 0, 0)) +
+    # coord_polar() +
+    # scale_x_continuous(limits = c(-180, 180), expand = c(0, 0)) +
+    # scale_y_continuous(limits = c(-90, -25.5),expand = c(0, 0)) +
+    # expand_limits(c(0,0)) +
+    labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
+    guides(colour = guide_colourbar(title.position = "top", direction = "horizontal")) +
+    theme(legend.background = element_blank(),
+          legend.text = element_text(colour = "black"),
+          legend.position = legend_position,
+          axis.text = element_blank(),
+          plot.title = element_text(hjust = 0.5, size = 25), 
+          strip.text = element_text(size = 18), 
+          panel.border = element_rect(colour = "black", fill = NA), 
+          panel.spacing.x = unit(0,"cm"),
+          panel.spacing.y = unit(0.5,"cm"),
+          strip.background = element_rect(fill = "grey80")) +
+    facet_wrap(~month, ncol = 4)
+  if(chosen_palette == "red-blue"){
+    pp_col <- pp + scale_colour_gradient2(low = "blue", mid = "white", high = "red", 
+                                          midpoint = 0, limits = colour_range)
+  } else if(chosen_palette == "viridis"){
+    pp_col <- pp + scale_colour_viridis_c(limits = colour_range)
+  } else if(chosen_palette == "spectral"){
+    pp_col <- pp + scale_color_distiller(palette = "Spectral", limits = colour_range)
+  }else if(chosen_palette == "pretty"){
+    pp_col <- pp + scale_colour_gradientn(colours = pretty_palette, limits = colour_range)
+  }
+  ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
 }
 #
 
@@ -198,6 +213,7 @@ dp <- ggplot() + theme_void() +
         legend.text = element_text(colour = "black"),
         axis.text = element_blank(),
         plot.title = element_text(hjust = 0.5))
+dp
 ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
 rm(dp)
 
