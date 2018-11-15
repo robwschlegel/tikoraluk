@@ -264,6 +264,6 @@ MHW_ON <- function(lon_row){
 
 # Run on Monday, November 5th, 2018
 system.time(
-  OISST_NAPA_MHW_summary <- plyr::ldply(seq(1:1440), .fun = MHW_ON, .parallel = T)
+  OISST_NAPA_MHW_summary <- plyr::ldply(1:1440, .fun = MHW_ON, .parallel = T)
 ) # 1627 seconds at 50 cores
 save(OISST_NAPA_MHW_summary, file = "../data/OISST_NAPA_MHW_summary.RData")

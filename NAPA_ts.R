@@ -144,7 +144,6 @@ save_NAPA_ssh_sub <- function(df){
 # Function for combining and saving the subsetted NAPA ice data
 save_NAPA_ice_sub <- function(lon_row){
   lon_sub_label <- str_pad(lon_row, width = 4, pad = "0", side = "left")
-  paste("Began run", lon_sub_label, "at", Sys.time())
   
   coords <- lon_lat_NAPA_OISST %>% 
     filter(lon_O == lon_OISST[lon_row])
@@ -155,7 +154,6 @@ save_NAPA_ice_sub <- function(lon_row){
   
   save(NAPA_ice_sub, file = paste0("../data/NAPA_ice_sub_",lon_sub_label,".RData"))
   rm(NAPA_ice_sub)
-  paste("Completed run", lon_sub_label, "at", Sys.time())
 }
 
 # Extract SST -------------------------------------------------------------
