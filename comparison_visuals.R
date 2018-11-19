@@ -25,7 +25,6 @@ load("../data/OISST_NAPA_MHW_summary.RData")
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
 
 # The base map
-# The base map
 map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long) %>% 
   # filter(lat >= 25.6, lon <= 180) #%>%

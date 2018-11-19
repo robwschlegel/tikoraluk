@@ -3,6 +3,9 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+* November 19, 2018
+  * Work on the Gulf Stream visuals
+
 * November 14, 2018
   * Calculated ice cover summary stats
 
