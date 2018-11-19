@@ -118,3 +118,15 @@ plot_2
 plot_combi <- ggpubr::ggarrange(plot_1, plot_2, common.legend = T)
 plot_combi
 ggsave(plot_combi, filename = "graph/SST_SSH.pdf", height = 6,width = 13)
+
+# Visualise the different 0 skewness contours on top of the SST differences
+ggplot(filter(GS_skew, month == "overall", product != "difference"), 
+       aes(x = lon_O_corrected, y = lat_O)) +
+  geom_raster(data = filter(GS_summary, month == "overall"), aes(fill = mean_diff)) +
+  # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
+  # geom_contour(data = aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
+  geom_contour(aes(z = skewness, colour = product), breaks = 0) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
+  labs(x = "", y = "", fill = "Mean\ndifference (C)")
