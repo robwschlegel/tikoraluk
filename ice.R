@@ -31,8 +31,8 @@ load("metadata/lon_OISST.RData")
 #          round(nav_lat, 2) == 50.00) %>%
 #   select(-(nav_lon:product), t, ice)
 dt <- function(df, val, ...){
-  date_sub <- seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month")
   if(nrow(na.omit(df)) == 0) return(NA)
+  date_sub <- seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month")
   res <- df %>% 
     # na.omit() %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
@@ -57,9 +57,6 @@ ice_diff <- function(df){
     unnest()
   ice_sum <- df %>% 
     group_by(nav_lon, nav_lat, month, product) %>%
-    # select(-t) %>% 
-    # summarise(ice, funs(min, median, mean, max, sd, dt), na.rm = T)
-    # summarise_all(funs(min, median, mean, max, sd, dt), na.rm = T) %>%
     summarise_if(is.numeric, .funs = c("min", "median", "mean", "max", "sd"), na.rm = T) %>%
     replace(is.na(.), NA) %>% 
     left_join(ice_dt, by = c("nav_lon", "nav_lat", "month", "product")) %>% 

@@ -3,6 +3,13 @@ The code in this repository is intended for use on tikoraluk.
 
 Many of the file pathways will not work when not run on Robert Schlegel's username when logged into the server.
 
+## Updates  
+
+* November 20, 2018
+  * Re-calculated the NAPA OISST summaries to account for some minor oversights
+    * This includes the difference and correlation values
+  * Working on streamlining the visualisations
+
 * November 19, 2018
   * Work on the Gulf Stream visuals
 

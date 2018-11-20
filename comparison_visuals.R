@@ -16,10 +16,10 @@ load("metadata/lon_OISST.RData")
 # Data --------------------------------------------------------------------
 
 # The various comparison results
-load("../data/OISST_NAPA_difference.RData")
-load("../data/OISST_NAPA_correlation.RData")
-load("../data/AVISO_NAPA_skewness_diff.RData")
+load("../data/OISST_NAPA_SST_summary.RData")
 load("../data/OISST_NAPA_MHW_summary.RData")
+load("../data/AVISO_NAPA_skewness_diff.RData")
+load("../data/OISST_NAPA_ice_summary.RData")
 
 # A custom palette
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
@@ -36,40 +36,41 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 # Prep --------------------------------------------------------------------
 
 # Remove NA and 0 rows for now...
-OISST_NAPA_difference <- OISST_NAPA_difference %>% 
-  na.omit() %>% 
-  filter(min_NAPA != 0) %>% 
-  mutate(month = factor(month, levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-                                          "overall")))
+# OISST_NAPA_difference <- OISST_NAPA_difference %>% 
+#   na.omit() %>% 
+#   filter(min_NAPA != 0) %>% 
+#   mutate(month = factor(month, levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+#                                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+#                                           "overall")))
 
 # Data frames with only difference results
-OISST_NAPA_difference_only <- OISST_NAPA_difference %>% 
-  select(lon:month, min_diff:dt_diff)
-
-OISST_NAPA_MHW_summary_diff <- filter(OISST_NAPA_MHW_summary, product == "difference")
+# OISST_NAPA_SST_summary_diff <- filter(OISST_NAPA_SST_summary, product == "difference")
+# OISST_NAPA_MHW_summary_diff <- filter(OISST_NAPA_MHW_summary, product == "difference")
+# OISST_NAPA_ice_summary_diff <- filter(OISST_NAPA_ice_summary, product == "difference")
 
 # # Correlation values
 # OISST_NAPA_correlation <- OISST_NAPA_correlation %>% 
 #   left_join(lon_lat_NAPA_OISST, by = c("lon", "lat"))
 
 # No-land mask
-only_water <- OISST_NAPA_correlation %>% 
-  select(nav_lon, nav_lat) %>% 
-  unique()
+# only_water <- OISST_NAPA_correlation %>% 
+#   select(nav_lon, nav_lat) %>% 
+#   unique()
 
-lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST, 
-                                        by = c("nav_lon", "nav_lat")) %>% 
-  arrange(dist)
+# lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST, 
+#                                         by = c("nav_lon", "nav_lat")) %>% 
+#   arrange(dist)
 
 
 
 # Functions ---------------------------------------------------------------
 
-# Plotting function
-polar_map_diff <- function(sum_stat, df, plot_name = NA, plot_title = NA,
-                           chosen_palette = "red-blue", colour_range = NA, 
-                           legend_title = NA, legend_position = c(0.5, 0.1)){
+# df <- AVISO_NAPA_skewness_diff
+
+# Function that creates and saves multiple plots from one input dataframe
+polar_plot_output <- function(df, sum_stat, plot_name = NA, plot_title = NA,
+                              chosen_palette = "red-blue", colour_range = NA, 
+                              legend_title = NA, legend_position = c(0.5, 0.1)){
   if(is.na(plot_name)) plot_name <- sum_stat
   if(is.na(plot_title)) plot_title <- sum_stat
   if(is.na(legend_title)) legend_title <- "Model - Obs (°C)"
@@ -77,15 +78,31 @@ polar_map_diff <- function(sum_stat, df, plot_name = NA, plot_title = NA,
     colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T), 
                       max(df[,colnames(df) == sum_stat], na.rm = T))
   }
+  # NAPA
+  if("NAPA" %in% unique(df$product)){
+    polar_plots(filter(df, product ==  "NAPA"), sum_stat, plot_name = plot_name, 
+                plot_title = plot_title,  chosen_palette = chosen_palette, 
+                colour_range = colour_range,  legend_title = legend_title, 
+                legend_position = legend_position)
+  }
+
+  # OISST
+  
+  # AVISO
+  
+  # difference
+  
+}
+
+
+# Plotting function
+polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette, 
+                        colour_range,  legend_title, legend_position){
   pp <- ggplot() + theme_void() +
     geom_point(data = df, size = 0.001,
                aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     coord_map("ortho", orientation = c(90, 0, 0)) +
-    # coord_polar() +
-    # scale_x_continuous(limits = c(-180, 180), expand = c(0, 0)) +
-    # scale_y_continuous(limits = c(-90, -25.5),expand = c(0, 0)) +
-    # expand_limits(c(0,0)) +
     labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
     guides(colour = guide_colourbar(title.position = "top", direction = "horizontal")) +
     theme(legend.background = element_blank(),
@@ -110,9 +127,108 @@ polar_map_diff <- function(sum_stat, df, plot_name = NA, plot_title = NA,
     pp_col <- pp + scale_colour_gradientn(colours = pretty_palette, limits = colour_range)
   }
   ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
-}
-#
+}#
 
+
+# Distance visual ---------------------------------------------------------
+
+# Map of distance between pixels
+dp <- ggplot() + theme_void() +
+  geom_point(data = lon_lat_NAPA_OISST_no_land,
+             aes(x = -nav_lon, y = -nav_lat, colour = dist), size = 0.001) +
+  geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
+  # scale_colour_viridis_c() +
+  scale_color_distiller(palette = "BuPu") +
+  # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  coord_polar() +
+  labs(x = "", y = "", title = "Distance (km) between nearest pixels") +
+  theme(legend.position = "bottom",
+        legend.background = element_blank(),
+        legend.title = element_blank(),
+        legend.text = element_text(colour = "black"),
+        axis.text = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+dp
+ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
+rm(dp)
+
+# Histogram of distanes between pixels
+
+# Line graphs showing relationship between summary stats and pixel distance
+
+
+# Difference visuals ------------------------------------------------------
+
+polar_plot_output("min_diff", OISST_NAPA_difference_only)
+polar_plot_output("quant_10_diff", OISST_NAPA_difference_only)
+polar_plot_output("quant_25_diff", OISST_NAPA_difference_only)
+polar_plot_output("quant_50_diff", OISST_NAPA_difference_only)
+polar_plot_output("quant_75_diff", OISST_NAPA_difference_only)
+polar_plot_output("quant_90_diff", OISST_NAPA_difference_only)
+polar_plot_output("max_diff", OISST_NAPA_difference_only)
+polar_plot_output("mean_diff", OISST_NAPA_difference_only)
+polar_plot_output("sd_diff", OISST_NAPA_difference_only)
+polar_plot_output("dt_diff", OISST_NAPA_difference_only)
+
+
+# Correlation visuals -----------------------------------------------------
+
+
+
+# Skewness visual ---------------------------------------------------------
+
+polar_plot_output("skewness", AVISO_NAPA_skewness_diff)
+polar_plot_output("skewness", filter(AVISO_NAPA_skewness_diff, product == "AVISO"), "skewness_AVISO")
+polar_plot_output("skewness", filter(AVISO_NAPA_skewness_diff, product == "NAPA"), "skewness_NAPA")
+
+
+# MHW difference visuals --------------------------------------------------
+
+# Visuals for the clim stat differences
+polar_plot_output("seas_min", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("seas_mean", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("seas_max", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("thresh_min", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("thresh_mean", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("thresh_max", OISST_NAPA_MHW_summary_diff)
+
+# Visuals for the clim t-tests and KS-tests
+polar_plot_output("seas_t_test", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("thresh_t_test", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("seas_KS_test", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("thresh_KS_test", OISST_NAPA_MHW_summary_diff)
+
+# Visuals for the event count differences
+polar_plot_output("count", OISST_NAPA_MHW_summary_diff)
+
+# Visuals for the event stat differences
+polar_plot_output("duration_min", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("duration_mean", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("duration_max", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("intensity_max_min", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("intensity_max_mean", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("intensity_max_max", OISST_NAPA_MHW_summary_diff)
+
+# Visuals for the event t-tests
+polar_plot_output("duration_t_test", OISST_NAPA_MHW_summary_diff)
+polar_plot_output("intensity_max_t_test", OISST_NAPA_MHW_summary_diff)
+
+# Visualise duration and maximum intensity values for just NAPA and OISST
+polar_plot_output("duration_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
+               "duration_mean_NAPA", "pretty")
+polar_plot_output("duration_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
+               "duration_mean_OISST", "pretty")
+polar_plot_output("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
+               "intensity_max_mean_NAPA", "pretty")
+polar_plot_output("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
+               "intensity_max_mean_OISST", "pretty")
+
+
+# Ice visuals -------------------------------------------------------------
+
+
+# Gulf Stream visuals -----------------------------------------------------
+#
 
 # Full visuals for one summary stat ---------------------------------------
 
@@ -192,119 +308,4 @@ polar_map_diff <- function(sum_stat, df, plot_name = NA, plot_title = NA,
 # # ggarrange(oisst_map, napa_map, diff_map, nrow = 1, ncol = 3)
 # # grid.arrange(napa_title, napa_map, ncol = 1, heights = c(2,15)) 
 # ggsave(plot = tri_plot, filename = "graph/median_diff.png", height = 6, width = 16)
-
-
-# Distance visual ---------------------------------------------------------
-
-# Map of distance between pixels
-dp <- ggplot() + theme_void() +
-  geom_point(data = lon_lat_NAPA_OISST_no_land,
-             aes(x = -nav_lon, y = -nav_lat, colour = dist), size = 0.001) +
-  geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-  # scale_colour_viridis_c() +
-  scale_color_distiller(palette = "BuPu") +
-  # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-  coord_polar() +
-  labs(x = "", y = "", title = "Distance (km) between nearest pixels") +
-  theme(legend.position = "bottom",
-        legend.background = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(colour = "black"),
-        axis.text = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-dp
-ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
-rm(dp)
-
-# Histogram of distanes between pixels
-
-# Line graphs showing relationship between summary stats and pixel distance
-
-
-# Difference visuals ------------------------------------------------------
-
-polar_map_diff("min_diff", OISST_NAPA_difference_only)
-polar_map_diff("quant_10_diff", OISST_NAPA_difference_only)
-polar_map_diff("quant_25_diff", OISST_NAPA_difference_only)
-polar_map_diff("quant_50_diff", OISST_NAPA_difference_only)
-polar_map_diff("quant_75_diff", OISST_NAPA_difference_only)
-polar_map_diff("quant_90_diff", OISST_NAPA_difference_only)
-polar_map_diff("max_diff", OISST_NAPA_difference_only)
-polar_map_diff("mean_diff", OISST_NAPA_difference_only)
-polar_map_diff("sd_diff", OISST_NAPA_difference_only)
-polar_map_diff("dt_diff", OISST_NAPA_difference_only)
-
-# The long-term trends from the NAPA and OISST data
-polar_map_diff("dt_NAPA", OISST_NAPA_difference)
-polar_map_diff("dt_OISST", OISST_NAPA_difference)
-
-
-# Correlation visuals -----------------------------------------------------
-
-cp <- ggplot() + theme_void() +
-  geom_point(data = OISST_NAPA_correlation,
-             aes(x = -nav_lon, y = -nav_lat, colour = cor), size = 0.001) +
-  geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-  scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-  coord_polar() +
-  labs(x = "", y = "", title = "Per pixel correlation (r)") +
-  theme(legend.position = "bottom",
-        legend.background = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(colour = "black"),
-        axis.text = element_blank(),
-        plot.title = element_text(hjust = 0.5, size = 30), 
-        strip.text = element_text(size = 16)) +
-  facet_wrap(~time, ncol = 3)
-ggsave(cp, filename = "graph/diff_figs/correlation.png", width = 12, height = 21)
-# rm(cp)
-
-
-# Skewness visual ---------------------------------------------------------
-
-polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "difference"))
-polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "AVISO"), "skewness_AVISO")
-polar_map_diff("skewness", filter(AVISO_NAPA_skewness_diff, product == "NAPA"), "skewness_NAPA")
-
-
-# MHW difference visuals --------------------------------------------------
-
-# Visuals for the clim stat differences
-polar_map_diff("seas_min", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("seas_mean", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("seas_max", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("thresh_min", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("thresh_mean", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("thresh_max", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the clim t-tests and KS-tests
-polar_map_diff("seas_t_test", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("thresh_t_test", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("seas_KS_test", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("thresh_KS_test", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event count differences
-polar_map_diff("count", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event stat differences
-polar_map_diff("duration_min", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("duration_mean", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("duration_max", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("intensity_max_min", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("intensity_max_mean", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("intensity_max_max", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event t-tests
-polar_map_diff("duration_t_test", OISST_NAPA_MHW_summary_diff)
-polar_map_diff("intensity_max_t_test", OISST_NAPA_MHW_summary_diff)
-
-# Visualise duration and maximum intensity values for just NAPA and OISST
-polar_map_diff("duration_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
-               "duration_mean_NAPA", "pretty")
-polar_map_diff("duration_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
-               "duration_mean_OISST", "pretty")
-polar_map_diff("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
-               "intensity_max_mean_NAPA", "pretty")
-polar_map_diff("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
-               "intensity_max_mean_OISST", "pretty")
 
