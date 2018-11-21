@@ -23,13 +23,45 @@ load("metadata/lon_OISST.RData")
 
 # Functions ---------------------------------------------------------------
 
+# Function for creating day, month, year means for sst
+ice_DMY <- function(df, product){
+  
+  # Daily values
+  df_daily <- df %>% 
+    mutate(month = "daily")
+  
+  # Monthly values
+  df_monthly <- df %>% 
+    mutate(t = floor_date(t, "month")) %>% 
+    group_by(nav_lon, nav_lat, t) %>% 
+    summarise(ice = mean(ice, na.rm = T)) %>% 
+    mutate(month = "monthly") %>% 
+    ungroup()
+  
+  # Yearly values
+  df_yearly <- df %>% 
+    mutate(t = floor_date(t, "year")) %>% 
+    group_by(nav_lon, nav_lat, t) %>% 
+    summarise(ice = mean(ice, na.rm = T)) %>% 
+    mutate(month = "yearly") %>% 
+    ungroup()
+  
+  # daily values by month
+  df_month <- df %>% 
+    mutate(month = lubridate::month(t, label = T))
+  
+  # All together now...
+  df_ALL <- rbind(df_daily, df_monthly, df_yearly, df_month) %>% 
+    mutate(product = product,
+           month = factor(month, levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", 
+                                            "daily", "monthly", "yearly"))) %>% 
+    group_by(nav_lon, nav_lat, month)
+  return(df_ALL)
+}
+
+
 # Function for calculating simple decadal trends
-# df <- ALL_ice %>%
-#   ungroup() %>%
-#   # na.omit() %>%
-#   filter(round(nav_lon, 2) == 0.16,
-#          round(nav_lat, 2) == 50.00) %>%
-#   select(-(nav_lon:product), t, ice)
 dt <- function(df, val, ...){
   if(nrow(na.omit(df)) == 0) return(NA)
   date_sub <- seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month")
@@ -82,49 +114,57 @@ ice_diff <- function(df){
 ## tester...
 # lon_row <- 1
 ice_ON <- function(lon_row){
+  
+  ### Begin
   print(paste("Began run", lon_row, "at", Sys.time()))
   lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
   
-  ### Load NAPA data
+  ### Load data
   load(paste0("../data/NAPA_ice_sub_",lon_row_pad,".RData"))
+  mat_file <- readMat(paste0("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/avhrr-only-v2.ts.",lon_row_pad,".mat")) # ~7 seconds
+  
+  ### Create ice mask
+  # ice_mask <- NAPA_ice_sub %>% 
+  #   mutate(ice = ifelse(ice == 0, 9999, ice)) %>% 
+  #   mutate(ice = ifelse(is.na(ice), 0, ice)) %>% 
+  #   filter(ice != 9999) %>% 
+  #   select(nav_lon, nav_lat) %>% 
+  #   distinct()
+  
+  ### Prep NAPA data
   NAPA_ice <- NAPA_ice_sub %>% 
-    mutate(ice = ifelse(ice == 0, NA, ice)) %>% # Set the landmask to NA as it is 0 for some reason...
+    # right_join(ice_mask, by = c("nav_lon", "nav_lat")) %>%
+    mutate(ice = ifelse(ice == 0, NA, ice)) %>%  # Remove the landmask as it is 0 for some reason...
+    # mutate(ice = ifelse(is.na(ice), 0, ice)) %>%
+    # filter(ice != 9999) %>%
     select(-date_end) %>% 
     dplyr::rename(t = date_start) %>% 
-    mutate(month = lubridate::month(t, label = T)) %>%
-    select(nav_lon, nav_lat, month, t, ice) %>%
-    mutate(product = "NAPA")
-  rm(NAPA_ice_sub)
+    select(nav_lon, nav_lat, t, ice) %>%
+    na.omit() %>% 
+    ice_DMY(., "NAPA")
   
-  ### Load OISST data
-  mat_file <- readMat(paste0("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/avhrr-only-v2.ts.",lon_row_pad,".mat")) # ~7 seconds
+  ### Prep OISST data
   OISST_ice <- as.data.frame(t(mat_file$ice.ts)) %>% 
     setNames(., as.numeric(mat_file$lat)) %>% 
     mutate(t = as.Date(as.POSIXct((mat_file$time - 719529) * 86400,
                                   origin = "1970-01-01", tz = "UTC"))) %>% 
-    gather(-t, key = lat, value = ice) %>% 
-    mutate(lon = mat_file$lon[as.numeric(lon_row)],
-           lat = as.numeric(lat),
-           ice = ifelse(is.nan(ice), NA, ice)) %>%
-    select(lon, lat, t, ice) %>% 
-    # na.omit() %>% 
-    left_join(lon_lat_NAPA_OISST, by = c("lon" = "lon_O", "lat" = "lat_O")) %>% 
-    mutate(month = lubridate::month(t, label = T)) %>% 
-    select(nav_lon, nav_lat, month, t, ice) %>% 
+    gather(-t, key = lat_O, value = ice) %>% 
+    # mutate(ice = ifelse(is.na(ice), 0, ice)) %>% 
     filter(t >= as.Date("1993-10-01"),
            t <= as.Date("2015-12-29")) %>% 
-    inner_join(unique(select(NAPA_ice, nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>% 
-    mutate(product = "OISST")
+    mutate(lon_O = mat_file$lon[as.numeric(lon_row)],
+           lat_O = as.numeric(lat_O)) %>%
+    left_join(lon_lat_NAPA_OISST, by = c("lon_O", "lat_O")) %>% 
+    select(nav_lon, nav_lat, t, ice) %>% 
+    na.omit() %>%
+    right_join(distinct(select(NAPA_ice_sub, nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>%
+    na.omit() %>%
+    ice_DMY(., "OISST")
+  rm(NAPA_ice_sub)
   rm(mat_file)
   
   ### Combine
-  ALL_ice <- rbind(OISST_ice, NAPA_ice) %>% 
-    mutate(month = "overall") %>% 
-    rbind(OISST_ice, NAPA_ice) %>% 
-    mutate(month = factor(month, levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", 
-                                            "overall"))) %>% 
-    group_by(nav_lon, nav_lat, month)
+  ALL_ice <- rbind(OISST_ice, NAPA_ice)
   rm(NAPA_ice, OISST_ice)
   
   ### MMM
@@ -138,13 +178,11 @@ ice_ON <- function(lon_row){
 
 # Calculations ------------------------------------------------------------
 
-# system.time(
-#   test <- ice_ON(1)
-# ) # 60 seconds 
+system.time(
+  test <- ice_ON(1)
+) # 22 seconds
 
-# Run on Thursday, November 15th, 2018
-# system.time(
-#   OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)
-# ) # 1627 seconds at 50 cores
+# Re-run on Wednesday, November 15th, 2018
+# OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)
 # save(OISST_NAPA_ice_summary, file = "../data/OISST_NAPA_ice_summary.RData")
 
