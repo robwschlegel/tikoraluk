@@ -141,6 +141,6 @@ skewness_AN <- function(lon_row){
 # ) # 33 seconds
 
 # Re-run on Wednesday, November 21st, 2018
-AVISO_NAPA_skewness_summary <- plyr::ldply(1:1440, .fun = skewness_AN, .parallel = T)
-save(AVISO_NAPA_skewness_summary, file = "../data/AVISO_NAPA_skewness_summary.RData")
+# AVISO_NAPA_skewness_summary <- plyr::ldply(1:1440, .fun = skewness_AN, .parallel = T)
+# save(AVISO_NAPA_skewness_summary, file = "../data/AVISO_NAPA_skewness_summary.RData")
 

@@ -62,31 +62,39 @@ ice_DMY <- function(df, product){
 
 
 # Function for calculating simple decadal trends
-dt <- function(df, val, ...){
-  if(nrow(na.omit(df)) == 0) return(NA)
-  date_sub <- seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month")
+# df <- ALL_ice %>%
+#   ungroup() %>%
+#   # na.omit() %>%
+#   filter(round(nav_lon, 2) == 0.16,
+#          round(nav_lat, 2) == 50.00) %>%
+#   select(-(nav_lon:product), t, ice)
+dt <- function(df){
+  date_sub <- data.frame(monthly = seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month"))
   res <- df %>% 
     # na.omit() %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
-    group_by(monthly) %>% 
+    group_by(monthly) %>%
     summarise_if(is.numeric, .funs = c("mean"), na.rm = T) %>%
-    filter(monthly %in% date_sub) %>% 
-    replace(is.na(.), 0) %>% 
-    do(dt = round(as.numeric(coef(lm(ice ~ monthly, data = .))[2]) * 120, 4)) %>% 
-    mutate(dt = as.numeric(dt))
-  return(as.numeric(res))
+    filter(monthly %in% date_sub$monthly)
+  if(nrow(na.omit(res)) <= 2) return(NA)
+  res_dt <- round(as.numeric(coef(lm(ice ~ monthly, data = res))[2]) * 120, 4)
+  return(as.numeric(res_dt))
 }
 
 
 # Function for finding mmm diff between products
 # df <- ALL_ice
 ice_diff <- function(df){
+  
+  # Decadal trends
   ice_dt <- df %>% 
     group_by(nav_lon, nav_lat, month, product) %>% 
     nest() %>% 
     mutate(dt = map(data, dt)) %>% 
     select(-data) %>% 
     unnest()
+  
+  # Summary
   ice_sum <- df %>% 
     group_by(nav_lon, nav_lat, month, product) %>%
     summarise_if(is.numeric, .funs = c("min", "median", "mean", "max", "sd"), na.rm = T) %>%
@@ -94,6 +102,8 @@ ice_diff <- function(df){
     left_join(ice_dt, by = c("nav_lon", "nav_lat", "month", "product")) %>% 
     rename_at(vars(-(nav_lon:product)), ~ paste0("ice_",.))
   is.na(ice_sum) <- sapply(ice_sum, is.infinite)
+  
+  # Differences
   ice_sum_dif <- left_join(filter(ice_sum, product == "NAPA"), 
                             filter(ice_sum, product == "OISST"),
                             by = c("nav_lon", "nav_lat", "month")) %>%
@@ -123,20 +133,9 @@ ice_ON <- function(lon_row){
   load(paste0("../data/NAPA_ice_sub_",lon_row_pad,".RData"))
   mat_file <- readMat(paste0("../../oliver/data/sst/noaa_oi_v2/avhrr/timeseries/avhrr-only-v2.ts.",lon_row_pad,".mat")) # ~7 seconds
   
-  ### Create ice mask
-  # ice_mask <- NAPA_ice_sub %>% 
-  #   mutate(ice = ifelse(ice == 0, 9999, ice)) %>% 
-  #   mutate(ice = ifelse(is.na(ice), 0, ice)) %>% 
-  #   filter(ice != 9999) %>% 
-  #   select(nav_lon, nav_lat) %>% 
-  #   distinct()
-  
   ### Prep NAPA data
   NAPA_ice <- NAPA_ice_sub %>% 
-    # right_join(ice_mask, by = c("nav_lon", "nav_lat")) %>%
     mutate(ice = ifelse(ice == 0, NA, ice)) %>%  # Remove the landmask as it is 0 for some reason...
-    # mutate(ice = ifelse(is.na(ice), 0, ice)) %>%
-    # filter(ice != 9999) %>%
     select(-date_end) %>% 
     dplyr::rename(t = date_start) %>% 
     select(nav_lon, nav_lat, t, ice) %>%
@@ -149,7 +148,6 @@ ice_ON <- function(lon_row){
     mutate(t = as.Date(as.POSIXct((mat_file$time - 719529) * 86400,
                                   origin = "1970-01-01", tz = "UTC"))) %>% 
     gather(-t, key = lat_O, value = ice) %>% 
-    # mutate(ice = ifelse(is.na(ice), 0, ice)) %>% 
     filter(t >= as.Date("1993-10-01"),
            t <= as.Date("2015-12-29")) %>% 
     mutate(lon_O = mat_file$lon[as.numeric(lon_row)],
@@ -178,9 +176,9 @@ ice_ON <- function(lon_row){
 
 # Calculations ------------------------------------------------------------
 
-system.time(
-  test <- ice_ON(1)
-) # 22 seconds
+# system.time(
+#   test <- ice_ON(1)
+# ) # 18 seconds
 
 # Re-run on Wednesday, November 15th, 2018
 # OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)

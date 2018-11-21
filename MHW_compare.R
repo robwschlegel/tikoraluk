@@ -115,11 +115,7 @@ event_diff <- function(df){
 MHW_ON <- function(lon_row){
   print(paste("Began run", lon_row, "at", Sys.time()))
   lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
-  # 
-  # if(file.exists(paste0("../data/OISST_NAPA_MHW_summary_",lon_row_pad,".RData"))){
-  #   print(paste0("OISST_NAPA_MHW_summary_",lon_row_pad,
-  #                ".RData already exists. Moving on to next file."))
-  # } else {
+  
   ### Load data
   load(paste0("../data/MHW.NAPA.calc.",lon_row_pad,".RData"))
   load(paste0("../data/MHW.match.calc.",lon_row_pad,".RData"))

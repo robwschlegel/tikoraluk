@@ -6,6 +6,10 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 ## Updates  
 
 * November 20, 2018
+  * Recalculated the ice and skewness values as well
+  * More work on visuals
+
+* November 20, 2018
   * Re-calculated the NAPA OISST summaries to account for some minor oversights
     * This includes the difference and correlation values
   * Working on streamlining the visualisations

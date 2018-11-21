@@ -68,21 +68,20 @@ sst_DMY <- function(df, product){
 
 # Function for calculating simple decadal trends
 dt <- function(df){
-  if(nrow(na.omit(df)) == 0) return(NA)
-  date_sub <- seq(as.Date("1994-01-01"), as.Date("2015-12-29"), by = "month")
+  date_sub <- data.frame(monthly = seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month"))
   res <- df %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
-    group_by(monthly) %>% 
+    group_by(monthly) %>%
     summarise_if(is.numeric, .funs = c("mean"), na.rm = T) %>%
-    filter(monthly %in% date_sub) %>% 
-    replace(is.na(.), 0) %>% 
-    do(dt = round(as.numeric(coef(lm(temp ~ monthly, data = .))[2]) * 120, 4)) %>% 
-    mutate(dt = as.numeric(dt))
-  return(as.numeric(res))
+    filter(monthly %in% date_sub$monthly)
+  if(nrow(na.omit(res)) <= 2) return(NA)
+  res_dt <- round(as.numeric(coef(lm(temp ~ monthly, data = res))[2]) * 120, 4)
+  return(as.numeric(res_dt))
 }
 
 
 # Function for finding mmm diff between products
+# df <- ALL_sst
 sst_diff <- function(df){
   
   # Decadal trends
@@ -130,56 +129,87 @@ sst_diff <- function(df){
 
 
 # Function for creating daily decadal trend steps from a known decadal trend value
-dt_steps <- function(dt_val){
+dt_steps <- function(df){
   date_seq <- seq(as.Date("1994-01-01"), as.Date("2015-12-29"), by = "day")
-  dt_seq <- seq(0, dt_val, length.out = length(date_seq))
+  dt_seq <- seq(0, df$dt, length.out = length(date_seq))
   dt_res <- data.frame(t = date_seq, dt = dt_seq)
   return(dt_res)
 }
 
 
-# Function for finding correlations between data
-sst_cor <- function(ALL_df, NAPA_df, OISST_df, dt_df){
+# Function for running the numbers on sst from NAPA and OISST
+## tester...
+# lon_row <- 1
+sst_ON <- function(lon_row){
   
-  ### Prep
-  dt_daily <- dt_df %>% 
-    ungroup() %>% 
-    filter(product != "difference") %>% 
-    select(nav_lon, nav_lat, product, dt) %>% 
-    group_by(nav_lon, nav_lat, product) %>% 
-    do(dt_steps())
+  ## Begin
+  print(paste("Began run", lon_row, "at", Sys.time()))
+  lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
   
-  ### Flat NAPA
-  NAPA_flat <- MHW_clim(NAPA_df) %>% 
-    select(nav_lon, nav_lat, t, temp, seas) %>% 
-    filter(t >= "1994-01-01", t <= "2015-12-29") %>% 
-    mutate(product = "NAPA") %>% 
-    left_join(dt_daily, by = c("nav_lon", "nav_lat", "t", "product")) %>% 
-    mutate(temp = temp-seas-dt) %>% 
+  ### Load NAPA data
+  load(paste0("../data/MHW.NAPA.calc.",lon_row_pad,".RData"))
+  NAPA_sst <- MHW_clim(MHW_res) %>% 
+    mutate(temp = ifelse(temp == 0, NA, temp)) %>%  # Remove the landmask as it is 0 for some reason...
+    na.omit() %>% 
     select(nav_lon, nav_lat, t, temp) %>% 
     sst_DMY(., "NAPA")
   
-  ### Flat OISST
-  OISST_flat <- MHW_clim(OISST_df) %>% 
+  ### Load OISST data
+  load(paste0("../data/MHW.match.calc.",lon_row_pad,".RData"))
+  OISST_sst <- MHW_clim(MHW_match_res) %>% 
     left_join(lon_lat_NAPA_OISST, by = c("lon" = "lon_O", "lat" = "lat_O")) %>% 
-    right_join(unique(select(MHW_clim(NAPA_df), nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>% 
-    filter(t >= "1994-01-01", t <= "2015-12-29") %>%
-    mutate(product = "OISST") %>% 
-    left_join(dt_daily, by = c("nav_lon", "nav_lat", "t", "product")) %>% 
-    mutate(temp = temp-seas-dt) %>%
+    right_join(distinct(select(filter(MHW_clim(MHW_res), temp!= 0), nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>% 
+    na.omit() %>% 
     select(nav_lon, nav_lat, t, temp) %>% 
     sst_DMY(., "OISST")
   
-
+  ### Combine
+  ALL_sst <- rbind(NAPA_sst, OISST_sst)
+  
+  ### difference
+  ALL_sst_diff <- sst_diff(ALL_sst)
+  
   ### Normal correlation - no change to data
-  ALL_norm_cor <- left_join(filter(ALL_df, product == "NAPA"), 
-                            filter(ALL_df, product == "OISST"),
+  ALL_norm_cor <- left_join(filter(ALL_sst, product == "NAPA"), 
+                            filter(ALL_sst, product == "OISST"),
                             by = c("nav_lon", "nav_lat", "t", "month")) %>% 
     group_by(nav_lon, nav_lat, month) %>% 
     summarise(cor_norm = cor(temp.x, temp.y, 
                              use = "pairwise.complete.obs", 
                              method = "pearson"))
   
+  ### Daily decadal trend steps
+  dt_daily <- ALL_sst_diff %>% 
+    ungroup() %>% 
+    filter(product != "difference", month == "daily") %>% 
+    na.omit() %>% 
+    select(nav_lon, nav_lat, product, dt) %>% 
+    group_by(nav_lon, nav_lat, product) %>%
+    do(dt_steps(.))
+  
+  ### Flat NAPA
+  NAPA_flat <- MHW_clim(MHW_res) %>% 
+    mutate(temp = ifelse(temp == 0, NA, temp)) %>%  # Remove the landmask as it is 0 for some reason...
+    mutate(product = "NAPA") %>% 
+    left_join(dt_daily, by = c("nav_lon", "nav_lat", "t", "product")) %>% 
+    na.omit() %>% 
+    mutate(temp = temp-seas-dt) %>% 
+    select(nav_lon, nav_lat, t, temp) %>% 
+    sst_DMY(., "NAPA")
+  
+  ### Flat OISST
+  OISST_flat <- MHW_clim(MHW_match_res) %>% 
+    left_join(lon_lat_NAPA_OISST, by = c("lon" = "lon_O", "lat" = "lat_O")) %>% 
+    right_join(unique(select(MHW_clim(MHW_res), nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>% 
+    filter(t >= "1994-01-01", t <= "2015-12-29") %>%
+    mutate(product = "OISST") %>% 
+    left_join(dt_daily, by = c("nav_lon", "nav_lat", "t", "product")) %>% 
+    na.omit() %>% 
+    mutate(temp = temp-seas-dt) %>%
+    select(nav_lon, nav_lat, t, temp) %>% 
+    sst_DMY(., "OISST")
+  rm(MHW_res)
+  rm(MHW_match_res)
   
   ### Flat correlation - seas. sig. and DT removed
   ALL_flat_cor <- left_join(NAPA_flat, OISST_flat,
@@ -189,50 +219,9 @@ sst_cor <- function(ALL_df, NAPA_df, OISST_df, dt_df){
                              use = "pairwise.complete.obs", 
                              method = "pearson"))
   
-  
   ### Finish
-  ALL_cor <- left_join(ALL_norm_cor, ALL_flat_cor, by = c("nav_lon", "nav_lat", "month")) %>% 
+  ALL_sst_cor <- left_join(ALL_norm_cor, ALL_flat_cor, by = c("nav_lon", "nav_lat", "month")) %>% 
     mutate(product = "difference")
-  return(ALL_cor)
-}
-
-
-# Function for running the numbers on sst from NAPA and OISST
-## tester...
-# lon_row <- 1
-sst_ON <- function(lon_row){
-  print(paste("Began run", lon_row, "at", Sys.time()))
-  lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
-  
-  ### Load NAPA data
-  load(paste0("../data/MHW.NAPA.calc.",lon_row_pad,".RData"))
-  NAPA_sst <- MHW_clim(MHW_res) %>% 
-    select(nav_lon, nav_lat, t, temp) %>% 
-    sst_DMY(., "NAPA")
-  
-  ### Load OISST data
-  load(paste0("../data/MHW.match.calc.",lon_row_pad,".RData"))
-  OISST_sst <- MHW_clim(MHW_match_res) %>% 
-    left_join(lon_lat_NAPA_OISST, by = c("lon" = "lon_O", "lat" = "lat_O")) %>% 
-    right_join(unique(select(MHW_clim(MHW_res), nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>% 
-    select(nav_lon, nav_lat, t, temp) %>% 
-      sst_DMY(., "OISST")
-  
-  ### Combine
-  ALL_sst <- rbind(NAPA_sst, OISST_sst)
-  
-  ### difference
-  # system.time(
-  ALL_sst_diff <- sst_diff(ALL_sst)
-  # ) # 29 seconds
-  
-  ### correlation
-  # system.time(
-  ALL_sst_cor <- sst_cor(ALL_sst, MHW_res, MHW_match_res, ALL_sst_diff)
-  # ) # 33 seconds
-  rm(ALL_sst, MHW_res, MHW_match_res)
-  
-  ### Finish
   ALL_sst_res <- left_join(ALL_sst_diff, ALL_sst_cor, 
                            by = c("nav_lon", "nav_lat", "month", "product"))
   print(paste("Completed run",lon_row,"at",Sys.time()))
@@ -244,16 +233,13 @@ sst_ON <- function(lon_row){
 
 # system.time(
 #   test <- sst_ON(1)
-# ) # 70 seconds
+# ) # 42 seconds
 
-# Re-run on Friday, October 12th, 2018
-system.time(
-  OISST_NAPA_SST_summary_1 <- plyr::ldply(1:720, .fun = sst_ON, .parallel = T)
-) # xxx seconds at 50 cores
-system.time(
-  OISST_NAPA_SST_summary_2 <- plyr::ldply(721:1440, .fun = sst_ON, .parallel = T)
-) # xxx seconds at 50 cores
-OISST_NAPA_SST_summary <- rbind(OISST_NAPA_SST_summary_1, OISST_NAPA_SST_summary_2)
-rm(OISST_NAPA_SST_summary_1, OISST_NAPA_SST_summary_2)
+# Re-run on Wednesday, November 21st, 2018
+# OISST_NAPA_SST_summary_1 <- plyr::ldply(1:720, .fun = sst_ON, .parallel = T)
+# OISST_NAPA_SST_summary_2 <- plyr::ldply(721:1440, .fun = sst_ON, .parallel = T)
+# OISST_NAPA_SST_summary <- rbind(OISST_NAPA_SST_summary_1, OISST_NAPA_SST_summary_2)
+# rm(OISST_NAPA_SST_summary_1, OISST_NAPA_SST_summary_2)
+OISST_NAPA_SST_summary <- plyr::ldply(1:1440, .fun = sst_ON, .parallel = T)
 save(OISST_NAPA_SST_summary, file = "../data/OISST_NAPA_SST_summary.RData")
 

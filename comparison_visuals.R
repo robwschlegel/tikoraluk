@@ -20,6 +20,7 @@ load("../data/OISST_NAPA_SST_summary.RData")
 load("../data/OISST_NAPA_MHW_summary.RData")
 load("../data/AVISO_NAPA_skewness_summary.RData")
 load("../data/OISST_NAPA_ice_summary.RData")
+load("../data/OISST_NAPA_ice_round.RData")
 
 # A custom palette
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
@@ -36,22 +37,30 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 # Prep --------------------------------------------------------------------
 
 # Ice dataframes for easier contour plotting
-ice_sub <- OISST_NAPA_ice_summary %>% 
-  # filter(product == "NAPA") %>% 
-  na.omit() %>% 
-  mutate(ice_round = round(ice_mean, 1)) %>% 
-  select(nav_lon:month, ice_round) %>% 
-  filter(product != "difference", ice_round == 0.5)
-  # mutate(ice_cut = cut(ice_mean, c(0.00, 0.25, 0.50, 0.75, 1.00)))
+## NB: Only needs to be run once
+## Is loaded above
+# OISST_NAPA_ice_round <- OISST_NAPA_ice_summary %>% 
+#   na.omit() %>% 
+#   filter(product != "difference") %>% 
+#   group_by(nav_lon, nav_lat, month, product) %>% 
+#   summarise(ice_round = round(ice_mean, 1)) %>% 
+#   as.data.frame()
+# save(OISST_NAPA_ice_round, file = "../data/OISST_NAPA_ice_round.RData")
 
 # No-land mask
-only_water <- OISST_NAPA_SST_summary %>%
+only_water <- OISST_NAPA_ice_summary %>%
   select(nav_lon, nav_lat) %>%
   dplyr::distinct()
 
 lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST,
                                         by = c("nav_lon", "nav_lat")) %>%
   arrange(dist)
+
+# Only the 0.5 ice coverage pixels
+ice_sub <- filter(OISST_NAPA_ice_round, ice_round == 0.5) #%>% 
+  # right_join(lon_lat_NAPA_OISST_no_land, by = c("nav_lon", "nav_lat")) %>% 
+  # select(nav_lon, nav_lat, month, product, ice_round) %>% 
+  # na.omit()
 
 
 # Functions ---------------------------------------------------------------
@@ -103,45 +112,59 @@ polar_plot_output <- function(df, sum_stat, plot_name = NA, plot_title = NA,
     polar_plots(filter(df, product == "difference"), sum_stat, plot_name = paste0(plot_name,"_difference"), 
                 plot_title = paste(plot_title, "difference"),  chosen_palette = chosen_palette, 
                 colour_range = NA,  legend_title = paste("Model - Obs\n", legend_title), 
-                legend_position = legend_position)
+                legend_position = legend_position, ice = TRUE)
   }
 }
 
 
 
 
-df <- filter(OISST_NAPA_SST_summary, product == "difference", month == "daily")
-ice_sub_sub <- filter(ice_sub, month == "daily")
-sum_stat <- "min"
-plot_name <- "min_difference"
-plot_title <- "min difference"
-chosen_palette <- "red-blue"
-colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
-                  max(df[,colnames(df) == sum_stat], na.rm = T))
-legend_title <- "Model - Obs\nTemperature (°C)"
-legend_position <- c(0.9, 0.1)
-
-
-ggplot(data = df) + theme_void() +
-  geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
-  geom_point(data = ice_sub_sub, aes(x = nav_lon, y = nav_lat, shape = product), colour = "grey30", size = 0.2) +
-  # geom_contour(data = ice_sub_sub, aes(z = ice_round, x = nav_lon, y = nav_lat), breaks = 0.5) +
-  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  coord_map("ortho", orientation = c(90, 0, 0)) +
-  labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
-  guides(colour = guide_colourbar(title.position = "top", direction = "horizontal")) +
-  theme(legend.background = element_blank(),
-        legend.text = element_text(colour = "black"),
-        legend.position = legend_position,
-        axis.text = element_blank(),
-        plot.title = element_text(hjust = 0.5, size = 25), 
-        strip.text = element_text(size = 18), 
-        panel.border = element_rect(colour = "black", fill = NA), 
-        panel.spacing.x = unit(0,"cm"),
-        panel.spacing.y = unit(0.5,"cm"),
-        strip.background = element_rect(fill = "grey80")) +
-  scale_colour_gradient2(low = "blue", mid = "white", high = "red", 
-                         midpoint = 0, limits = colour_range)
+# df <- filter(OISST_NAPA_SST_summary, product == "difference", month == "daily")
+# ice_OISST <- filter(OISST_NAPA_ice_round, month == "daily", product == "OISST", ice_round == 0.5)
+# ice_OISST_edge <- ice_OISST[chull(ice_OISST[,1:2]),]
+# ice_NAPA <- filter(OISST_NAPA_ice_round, month == "daily", product == "NAPA", ice_round == 0.5)
+# ice_sub <- filter(OISST_NAPA_ice_round, month == "daily", ice_round == 0.5) #%>%
+#   # mutate(nav_lon = round(nav_lon, 0),
+#   #        nav_lat = round(nav_lat, 0)) %>% 
+#   # group_by(nav_lon, nav_lat, product) %>% 
+#   # summarise(ice_round = mean(ice_round, na.rm = T))
+# sum_stat <- "min"
+# plot_name <- "min_difference"
+# plot_title <- "min difference"
+# chosen_palette <- "red-blue"
+# colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
+#                   max(df[,colnames(df) == sum_stat], na.rm = T))
+# legend_title <- "Model - Obs\nTemperature (°C)"
+# legend_position <- c(0.9, 0.1)
+# 
+# 
+# ggplot(data = df) + theme_void() +
+#   geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
+#   # geom_point(data = ice_OISST, aes(x = nav_lon, y = nav_lat), colour = "green", size = 0.1, alpha = 0.1) +
+#   # geom_point(data = ice_NAPA, aes(x = nav_lon, y = nav_lat), colour = "yellow", size = 0.1, alpha = 0.1) +
+#   geom_point(data = ice_sub, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3) +
+#   # geom_line(data = ice_sub, aes(x = nav_lon, y = nav_lat, group = product)) +
+#   # geom_polygon(data = ice_OISST_edge, aes(x = nav_lon, y = nav_lat), colour = "green", size = 0.1, alpha = 0.3) +
+#   # geom_contour(data = ice_OISST, aes(z = ice_round, x = nav_lon, y = nav_lat), breaks = 0.5) +
+#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+#   coord_map("ortho", orientation = c(90, 0, 0)) +
+#   scale_fill_manual(values = c("green", "yellow")) +
+#   labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
+#   guides(colour = guide_colourbar(title.position = "top", direction = "horizontal"),
+#          fill = guide_legend(title.position = "top", direction = "horizontal",
+#                              override.aes = list(size = 5, alpha = 1))) +
+#   theme(legend.background = element_blank(),
+#         legend.text = element_text(colour = "black"),
+#         legend.position = legend_position,
+#         axis.text = element_blank(),
+#         plot.title = element_text(hjust = 0.5, size = 25), 
+#         strip.text = element_text(size = 18), 
+#         panel.border = element_rect(colour = "black", fill = NA), 
+#         panel.spacing.x = unit(0,"cm"),
+#         panel.spacing.y = unit(0.5,"cm"),
+#         strip.background = element_rect(fill = "grey80")) +
+#   scale_colour_gradient2(low = "blue", mid = "white", high = "red", 
+#                          midpoint = 0, limits = colour_range)
 #
 
 
@@ -149,17 +172,21 @@ ggplot(data = df) + theme_void() +
 
 # Plotting function
 polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette, 
-                        colour_range,  legend_title, legend_position){
+                        colour_range,  legend_title, legend_position, ice = F){
   if(is.na(colour_range[1])){
     colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
                       max(df[,colnames(df) == sum_stat], na.rm = T))
   }
   pp <- ggplot(data = df) + theme_void() +
     geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
+    # geom_point(data = ice, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     coord_map("ortho", orientation = c(90, 0, 0)) +
+    scale_fill_manual(values = c("green", "yellow")) +
     labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
-    guides(colour = guide_colourbar(title.position = "top", direction = "horizontal")) +
+    guides(colour = guide_colourbar(title.position = "top", direction = "horizontal"),
+           fill = guide_legend(title.position = "top", direction = "horizontal",
+                               override.aes = list(size = 5, alpha = 1))) +
     theme(legend.background = element_blank(),
           legend.text = element_text(colour = "black"),
           legend.position = legend_position,
@@ -180,6 +207,10 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
     pp_col <- pp + scale_color_distiller(palette = "Spectral", limits = colour_range)
   }else if(chosen_palette == "pretty"){
     pp_col <- pp + scale_colour_gradientn(colours = pretty_palette, limits = colour_range)
+  }
+  if(ice){
+    pp_col <- pp_col + 
+      geom_point(data = ice_sub, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3)
   }
   ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
 }#
