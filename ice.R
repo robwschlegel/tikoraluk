@@ -20,6 +20,9 @@ load("metadata/lon_lat_NAPA_OISST.RData")
 # The OISST lon values for subsetting
 load("metadata/lon_OISST.RData")
 
+# The water mask to correctly remove land ice from calculations
+load("metadata/only_water.RData")
+
 
 # Functions ---------------------------------------------------------------
 
@@ -62,16 +65,9 @@ ice_DMY <- function(df, product){
 
 
 # Function for calculating simple decadal trends
-# df <- ALL_ice %>%
-#   ungroup() %>%
-#   # na.omit() %>%
-#   filter(round(nav_lon, 2) == 0.16,
-#          round(nav_lat, 2) == 50.00) %>%
-#   select(-(nav_lon:product), t, ice)
 dt <- function(df){
   date_sub <- data.frame(monthly = seq(as.Date("1994-01-01"), as.Date("2015-12-01"), by = "month"))
   res <- df %>% 
-    # na.omit() %>% 
     mutate(monthly = floor_date(t, unit = "month")) %>% 
     group_by(monthly) %>%
     summarise_if(is.numeric, .funs = c("mean"), na.rm = T) %>%
@@ -122,7 +118,7 @@ ice_diff <- function(df){
 
 # Function for running numbers on ice from NAPA and OISST
 ## tester...
-# lon_row <- 1
+# lon_row <- 100
 ice_ON <- function(lon_row){
   
   ### Begin
@@ -138,9 +134,11 @@ ice_ON <- function(lon_row){
     mutate(ice = ifelse(ice == 0, NA, ice)) %>%  # Remove the landmask as it is 0 for some reason...
     select(-date_end) %>% 
     dplyr::rename(t = date_start) %>% 
+    right_join(only_water, by = c("nav_lon", "nav_lat")) %>%
     select(nav_lon, nav_lat, t, ice) %>%
     na.omit() %>% 
     ice_DMY(., "NAPA")
+  rm(NAPA_ice_sub)
   
   ### Prep OISST data
   OISST_ice <- as.data.frame(t(mat_file$ice.ts)) %>% 
@@ -155,10 +153,9 @@ ice_ON <- function(lon_row){
     left_join(lon_lat_NAPA_OISST, by = c("lon_O", "lat_O")) %>% 
     select(nav_lon, nav_lat, t, ice) %>% 
     na.omit() %>%
-    right_join(distinct(select(NAPA_ice_sub, nav_lon, nav_lat)), by = c("nav_lon", "nav_lat")) %>%
+    right_join(only_water, by = c("nav_lon", "nav_lat")) %>%
     na.omit() %>%
     ice_DMY(., "OISST")
-  rm(NAPA_ice_sub)
   rm(mat_file)
   
   ### Combine
@@ -177,10 +174,10 @@ ice_ON <- function(lon_row){
 # Calculations ------------------------------------------------------------
 
 # system.time(
-#   test <- ice_ON(1)
-# ) # 18 seconds
+#   test <- ice_ON(100)
+# ) # 13 seconds
 
-# Re-run on Wednesday, November 15th, 2018
+# Re-run on Thursday, November 16th, 2018
 # OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)
 # save(OISST_NAPA_ice_summary, file = "../data/OISST_NAPA_ice_summary.RData")
 
