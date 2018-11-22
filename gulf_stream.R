@@ -5,33 +5,38 @@
 # Libraries ---------------------------------------------------------------
 
 library(tidyverse)
+library(directlabels)
 
 
 # Data --------------------------------------------------------------------
 
 # Skewness data
-load("../data/AVISO_NAPA_skewness_diff.RData")
-GS_skew <- AVISO_NAPA_skewness_diff %>% 
-  na.omit() %>% 
+load("../data/AVISO_NAPA_skewness_summary.RData")
+GS_skew <- AVISO_NAPA_skewness_summary %>% 
+  # na.omit() %>% 
   left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>% 
   mutate(lon_O_corrected = ifelse(lon_O > 0, lon_O-360, lon_O),
          product = factor(product, levels = c("AVISO", "NAPA", "difference"))) %>% 
   filter(lon_O_corrected <= -40, lon_O_corrected >= -85,
-         lat_O <= 50, lat_O >= 25) %>% 
+         lat_O <= 50, lat_O >= 25,
+         month == "daily") %>% 
   group_by(lon_O_corrected, lat_O, product, month) %>% 
-  summarise(skewness = mean(skewness, na.rm = T))
+  summarise(skewness = mean(skewness, na.rm = T)) %>% 
+  mutate(skew_label = as.factor(round(skewness, 0))) %>% 
+  arrange(skew_label)
 
 # SST summary data
-load("../data/OISST_NAPA_difference.RData")
-GS_summary <- OISST_NAPA_difference %>% 
-  na.omit() %>% 
-  # left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>% 
+load("../data/OISST_NAPA_SST_summary.RData")
+GS_summary <- OISST_NAPA_SST_summary %>% 
+  # na.omit() %>% 
+  left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>%
   mutate(lon_O_corrected = ifelse(lon_O > 0, lon_O-360, lon_O)) %>% 
   filter(lon_O_corrected <= -40, lon_O_corrected >= -85,
          lat_O <= 50, lat_O >= 25,
-         min_NAPA != 0) %>% 
-  group_by(lon_O_corrected, lat_O, month) %>% 
-  select(lon_O_corrected, lat_O, month, min_NAPA:dt_diff) %>% 
+         min != 0,
+         month == "daily") %>% 
+  select(lon_O_corrected, lat_O, month, product, min:dt) %>% 
+  group_by(lon_O_corrected, lat_O, month, product) %>%
   summarise_all(.funs = "mean")
 
 # Metadata
@@ -61,8 +66,7 @@ pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcf
 # Visuals -----------------------------------------------------------------
 
 # Visualise one skewness map
-ggplot(filter(GS_skew, month == "overall"), 
-       aes(x = lon_O_corrected, y = lat_O)) +
+plot_1 <- ggplot(GS_skew, aes(x = lon_O_corrected, y = lat_O)) +
   geom_raster(aes(fill = skewness)) +
   # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
   geom_contour(aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
@@ -71,11 +75,14 @@ ggplot(filter(GS_skew, month == "overall"),
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
   coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
   labs(x = "", y = "") +
-  facet_wrap(~product)
+  facet_wrap(~product) +
+  theme(legend.position = "bottom")
+plot_1
+ggsave(plot_1, filename = "graph/GS/skewness.png", width = 10, height = 3)
 
 # Visualise AVISO and NAPA contours together
-ggplot(filter(GS_skew, month == "overall", product != "difference"), 
-       aes(x = lon_O_corrected, y = lat_O)) +
+plot_2 <- ggplot(filter(GS_skew, product != "difference"), 
+                 aes(x = lon_O_corrected, y = lat_O)) +
   # geom_raster(aes(fill = skewness)) +
   # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
   # geom_contour(data = aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
@@ -83,50 +90,56 @@ ggplot(filter(GS_skew, month == "overall", product != "difference"),
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
   # scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
   coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
-  labs(x = "", y = "")# +
-  # facet_wrap(~product)
+  labs(x = "", y = "") +
+  theme(legend.position = "bottom")
+plot_2
+ggsave(plot_2, filename = "graph/GS/contour_only.png", width = 4, height = 3)
 
 # Visualise skewness contours on top of SST
-plot_1 <- ggplot(filter(GS_skew, month == "overall", product == "AVISO"), 
+plot_3 <- ggplot(filter(GS_skew, product == "AVISO"), 
                  aes(x = lon_O_corrected, y = lat_O)) +
-  geom_raster(data = filter(GS_summary, month == "overall"),
-              aes(fill = mean_OISST)) +
+  geom_raster(data = filter(GS_summary, product == "OISST"), aes(fill = mean)) +
   # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
-  # geom_contour(aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
+  geom_contour(aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
   geom_contour(aes(z = skewness), breaks = 0, colour = "black") +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
   # scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
   scale_fill_gradientn(colours = pretty_palette, limits = c(0, 30)) +
-  coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
-  labs(x = "", y = "", title = "AVISO + OISST", fill = "SST (C)")
-plot_1
+  coord_cartesian(xlim = c(-85, -40), ylim = c(25.5, 50), expand = F) +
+  labs(x = "", y = "", title = "AVISO + OISST", fill = "SST (°C)")
+plot_3
 
-plot_2 <- ggplot(filter(GS_skew, month == "overall", product == "NAPA"), 
+plot_4 <- ggplot(filter(GS_skew, product == "NAPA"), 
                  aes(x = lon_O_corrected, y = lat_O)) +
-  geom_raster(data = filter(GS_summary, month == "overall"),
-              aes(fill = mean_NAPA)) +
+  geom_raster(data = filter(GS_summary, product == "NAPA"), aes(fill = mean)) +
   # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
-  # geom_contour(aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
+  geom_contour(aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
   geom_contour(aes(z = skewness), breaks = 0, colour = "black") +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  # geom_dl(method = "calc.boxes", aes(label = skewness)) +
   # scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
   scale_fill_gradientn(colours = pretty_palette, limits = c(0, 30)) +
-  coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
-  labs(x = "", y = "", title = "NAPA", fill = "SST (C)")
-plot_2
-
-plot_combi <- ggpubr::ggarrange(plot_1, plot_2, common.legend = T)
-plot_combi
-ggsave(plot_combi, filename = "graph/SST_SSH.pdf", height = 6,width = 13)
+  coord_cartesian(xlim = c(-85, -40), ylim = c(25.5, 50), expand = F) +
+  labs(x = "", y = "", title = "NAPA", fill = "SST (°C)")
+plot_4
 
 # Visualise the different 0 skewness contours on top of the SST differences
-ggplot(filter(GS_skew, month == "overall", product != "difference"), 
-       aes(x = lon_O_corrected, y = lat_O)) +
-  geom_raster(data = filter(GS_summary, month == "overall"), aes(fill = mean_diff)) +
+plot_5 <- ggplot(filter(GS_skew, product != "difference"), 
+                 aes(x = lon_O_corrected, y = lat_O)) +
+  geom_raster(data = filter(GS_summary, product == "difference"), aes(fill = mean)) +
   # geom_contour(aes(z = skewness), breaks = c(-2, 2), colour = "grey 80") +
   # geom_contour(data = aes(z = skewness), breaks = c(-1, 1), colour = "grey 50") +
   geom_contour(aes(z = skewness, colour = product), breaks = 0) +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-  coord_cartesian(xlim = c(-85, -40), ylim = c(25.25, 50), expand = F) +
-  labs(x = "", y = "", fill = "Mean\ndifference (C)")
+  scale_colour_manual(values = c("black", "purple")) +
+  coord_cartesian(xlim = c(-85, -40), ylim = c(25.5, 50), expand = F) +
+  labs(x = "", y = "", title = "NAPA - OISST", fill = "Mean\ndifference (°C)") +
+  theme(legend.position = "bottom")
+plot_5
+
+plot_combi_1 <- ggpubr::ggarrange(plot_3, plot_4, common.legend = T, legend = "bottom")
+plot_combi_2 <- ggpubr::ggarrange(plot_combi_1, plot_5, widths = c(2, 1))
+plot_combi_2
+ggsave(plot_combi_2, filename = "graph/GS/SST_SSH.png", height = 4, width = 15)
+

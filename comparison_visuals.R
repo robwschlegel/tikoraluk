@@ -5,6 +5,7 @@
 # Libraries ---------------------------------------------------------------
 
 library(tidyverse)
+doMC::registerDoMC(cores = 50)
 
 
 # Meta-data ---------------------------------------------------------------
@@ -16,7 +17,7 @@ load("metadata/only_water.RData")
 
 # Data --------------------------------------------------------------------
 
-load("~/Downloads/OISST_NAPA_ice_round.RData")
+# load("~/Downloads/OISST_NAPA_ice_round.RData")
 
 # The various comparison results
 load("../data/OISST_NAPA_SST_summary.RData")
@@ -63,11 +64,17 @@ lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST,
   arrange(dist)
 
 # Only the 0.5 ice coverage pixels
-ice_sub <- filter(OISST_NAPA_ice_round) %>% 
+ice_sub <- filter(OISST_NAPA_ice_round, ice_round == 0.5) %>% 
   right_join(only_water, by = c("nav_lon", "nav_lat")) %>%
   na.omit()
   # select(nav_lon, nav_lat, month, product, ice_round) %>% 
   # na.omit()
+
+# Only overall MHW data for plotting
+OISST_NAPA_MHW_summary_corrected <- OISST_NAPA_MHW_summary %>% 
+  filter(month == "overall") %>% 
+  mutate(month == as.character(month),
+         month = "daily")
 
 
 # Functions ---------------------------------------------------------------
@@ -75,10 +82,15 @@ ice_sub <- filter(OISST_NAPA_ice_round) %>%
 # df <- OISST_NAPA_SST_summary
 
 # Function that creates and saves multiple plots from one input dataframe
-polar_plot_output <- function(df, sum_stat, plot_name = NA, plot_title = NA,
+polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
                               chosen_palette = "red-blue", colour_range = NA, 
                               legend_title = NA, legend_position = c(0.9, 0.1)){
   if(is.na(legend_title)) legend_title <- "Temperature (°C)"
+  if(sum_stat %in% c("dt", "ice_dt")) legend_title <- "Temp./dec (°C)"
+  if(sum_stat == "count") legend_title <- "Events (n)"
+  if(sum_stat == "duration") legend_title <- "Duration (days)"
+  if(sum_stat %in% c("seas_t_test", "thresh_t_test", "seas_KS_test", "thresh_KS_test", 
+                     "duration_t_test", "intensity_max_t_test")) legend_title <- "Probability (p)"
   if(is.na(plot_name)) plot_name <- sum_stat
   if(is.na(plot_title)) plot_title <- sum_stat
   
@@ -89,26 +101,31 @@ polar_plot_output <- function(df, sum_stat, plot_name = NA, plot_title = NA,
                            max(df_full[,colnames(df_full) == sum_stat], na.rm = T))
     # NAPA
     if("NAPA" %in% unique(df_full$product)){
-      if("AVISO" %in% unique(df_full$product)){
+      if("AVISO" %in% unique(df_full$product) | sum_stat == "dt"){
         NAPA_palette <- "red-blue"
       } else {
         NAPA_palette <- "pretty"
       }
-      polar_plots(filter(df, product == "NAPA"), sum_stat, plot_name = paste(plot_name,"_NAPA"), 
+      polar_plots(filter(df, product == "NAPA"), sum_stat, plot_name = paste0(plot_name,"_NAPA"), 
                   plot_title = paste(plot_title, "NAPA"),  chosen_palette = NAPA_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
     }
     # OISST
     if("OISST" %in% unique(df_full$product)){
-      polar_plots(filter(df, product == "OISST"), sum_stat, plot_name = paste(plot_name,"_OISST"), 
-                  plot_title = paste(plot_title, "OISST"),  chosen_palette = "pretty", 
+      if(sum_stat == "dt"){
+        OISST_palette <- "red-blue"
+      } else {
+        OISST_palette <- "pretty"
+      }
+      polar_plots(filter(df, product == "OISST"), sum_stat, plot_name = paste0(plot_name,"_OISST"), 
+                  plot_title = paste(plot_title, "OISST"),  chosen_palette = OISST_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
     }
     # AVISO
     if("AVISO" %in% unique(df_full$product)){
-      polar_plots(filter(df, product == "AVISO"), sum_stat, plot_name = paste(plot_name,"_AVISO"), 
+      polar_plots(filter(df, product == "AVISO"), sum_stat, plot_name = paste0(plot_name,"_AVISO"), 
                   plot_title = paste(plot_title, "AVISO"),  chosen_palette = chosen_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
@@ -124,74 +141,19 @@ polar_plot_output <- function(df, sum_stat, plot_name = NA, plot_title = NA,
 }
 
 
-
-
-df <- filter(OISST_NAPA_SST_summary, product == "difference", month == "daily")
-ice_OISST <- filter(OISST_NAPA_ice_round, product == "OISST", month == "daily", ice_round == 0.5)
-ice_OISST_edge <- ice_OISST[chull(ice_OISST[,1:2]),]
-ice_NAPA <- filter(OISST_NAPA_ice_round, month == "daily", product == "NAPA", ice_round == 0.5)
-ice_sub_5 <- filter(ice_sub, month == "daily", product == "OISST", ice_round == 0.5) 
-ice_sub_all <- filter(ice_sub, month == "daily", product == "OISST") %>%
-  # mutate(nav_lon = round(nav_lon, 0),
-  #        nav_lat = round(nav_lat, 0)) %>%
-  group_by(nav_lon, nav_lat, month, product) %>%
-  summarise(ice_round = mean(ice_round, na.rm = T)) %>% 
-  filter(ice_round %in% c(0.4, 0.5, 0.6))
-sum_stat <- "min"
-plot_name <- "min_difference"
-plot_title <- "min difference"
-chosen_palette <- "red-blue"
-colour_range <- c(-5, 5)
-# colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
-#                   max(df[,colnames(df) == sum_stat], na.rm = T))
-legend_title <- "Model - Obs\nTemperature (°C)"
-legend_position <- c(0.9, 0.1)
-
-# colour = stat(level))
-
-ggplot() + theme_void() +
-  # geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
-  # stat_density_2d(data = ice_sub_all, aes(x = nav_lon, y = nav_lat, colour = ice_round)) +
-  # geom_raster(data = ice_sub_all, aes(x = nav_lon, y = nav_lat, fill = ice_round)) +
-  # geom_contour(data = ice_sub_all, aes(x = nav_lon, y = nav_lat, z = ice_round), breaks = 0.5) +
-  # geom_hex() +
-  # geom_point(data = ice_OISST, aes(x = nav_lon, y = nav_lat), colour = "green", size = 0.1, alpha = 0.1) +
-  # geom_point(data = ice_NAPA, aes(x = nav_lon, y = nav_lat), colour = "yellow", size = 0.1, alpha = 0.1) +
-  # geom_point(data = ice_sub, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3) +
-  # geom_line(data = ice_sub, aes(x = nav_lon, y = nav_lat, group = product)) +
-  # geom_polygon(data = ice_OISST_edge, aes(x = nav_lon, y = nav_lat), colour = "green", size = 0.1, alpha = 0.3) +
-  # geom_contour(data = ice_OISST, aes(z = ice_round, x = nav_lon, y = nav_lat), breaks = 0.5) +
-  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  coord_map("ortho", orientation = c(90, 0, 0)) +
-  # scale_fill_manual(values = c("green", "yellow")) +
-  labs(x = "", y = "", colour = legend_title, title = paste0(plot_title,"\n")) +
-  # guides(colour = guide_colourbar(title.position = "top", direction = "horizontal"),
-  #        fill = guide_legend(title.position = "top", direction = "horizontal",
-  #                            override.aes = list(size = 5, alpha = 1))) +
-  theme(legend.background = element_blank(),
-        legend.text = element_text(colour = "black"),
-        legend.position = legend_position,
-        axis.text = element_blank(),
-        plot.title = element_text(hjust = 0.5, size = 25),
-        strip.text = element_text(size = 18),
-        panel.border = element_rect(colour = "black", fill = NA),
-        panel.spacing.x = unit(0,"cm"),
-        panel.spacing.y = unit(0.5,"cm"),
-        strip.background = element_rect(fill = "grey80")) #+
-  # scale_colour_gradient2(low = "blue", mid = "white", high = "red",
-  #                        midpoint = 0, limits = colour_range)
-
-
-
-
-
 # Plotting function
 polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette, 
                         colour_range,  legend_title, legend_position, ice = F){
+  
+  # Prep
   if(is.na(colour_range[1])){
     colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
                       max(df[,colnames(df) == sum_stat], na.rm = T))
   }
+  ice_sub_sub <- ice_sub %>% 
+    filter(month %in% unique(df$month))
+  
+  # Figure
   pp <- ggplot(data = df) + theme_void() +
     geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
     # geom_point(data = ice, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3) +
@@ -234,27 +196,27 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
 # Distance visual ---------------------------------------------------------
 
 # Map of distance between pixels
-med_dist <- paste("Median dist. (km)\n", round(median(lon_lat_NAPA_OISST_no_land$dist),1))
-dp <- ggplot() + theme_void() +
-  geom_point(data = lon_lat_NAPA_OISST_no_land,
-             aes(x = nav_lon, y = nav_lat, colour = dist), size = 0.001) +
-  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  # geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
-  # scale_colour_viridis_c() +
-  scale_color_distiller(palette = "BuPu") +
-  # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-  # coord_polar() +
-  geom_text(aes(x = 88, y = 53, label = med_dist), colour = "grey90") +
-  coord_map("ortho", orientation = c(90, 0, 0)) +
-  labs(x = "", y = "", title = "Distance (km) between nearest pixels") +
-  theme(legend.position = "bottom",
-        legend.background = element_blank(),
-        legend.title = element_blank(),
-        legend.text = element_text(colour = "black"),
-        axis.text = element_blank(),
-        plot.title = element_text(hjust = 0.5))
-dp
-ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
+# med_dist <- paste("Median dist. (km)\n", round(median(lon_lat_NAPA_OISST_no_land$dist),1))
+# dp <- ggplot() + theme_void() +
+#   geom_point(data = lon_lat_NAPA_OISST_no_land,
+#              aes(x = nav_lon, y = nav_lat, colour = dist), size = 0.001) +
+#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+#   # geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
+#   # scale_colour_viridis_c() +
+#   scale_color_distiller(palette = "BuPu") +
+#   # scale_colour_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+#   # coord_polar() +
+#   geom_text(aes(x = 88, y = 53, label = med_dist), colour = "grey90") +
+#   coord_map("ortho", orientation = c(90, 0, 0)) +
+#   labs(x = "", y = "", title = "Distance (km) between nearest pixels") +
+#   theme(legend.position = "bottom",
+#         legend.background = element_blank(),
+#         legend.title = element_blank(),
+#         legend.text = element_text(colour = "black"),
+#         axis.text = element_blank(),
+#         plot.title = element_text(hjust = 0.5))
+# dp
+# ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
 # rm(dp)
 
 # Histogram of distanes between pixels
@@ -262,78 +224,37 @@ ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
 # Line graphs showing relationship between summary stats and pixel distance
 
 
-# Difference visuals ------------------------------------------------------
+# Summary visuals ---------------------------------------------------------
 
-polar_plot_output(OISST_NAPA_SST_summary, "min")
-polar_plot_output(OISST_NAPA_difference_only, "quant_10")
-polar_plot_output(OISST_NAPA_difference_only, "quant_25")
-polar_plot_output(OISST_NAPA_difference_only,"quant_50")
-polar_plot_output(OISST_NAPA_difference_only, "quant_75")
-polar_plot_output(OISST_NAPA_difference_only, "quant_90")
-polar_plot_output(OISST_NAPA_difference_only, "max")
-polar_plot_output(OISST_NAPA_difference_only, "mean")
-polar_plot_output(OISST_NAPA_difference_only, "sd")
-polar_plot_output(OISST_NAPA_difference_only, "dt")
+# Run Thursday, November 22nd, 2018
+plyr::ldply(colnames(OISST_NAPA_SST_summary[-c(1:4)]), .fun = polar_plot_output,
+            .parallel = T, OISST_NAPA_SST_summary)
 
 
-# Correlation visuals -----------------------------------------------------
+# Skewness visuals --------------------------------------------------------
+
+# Run Thursday, November 22nd, 2018
+polar_plot_output("skewness", AVISO_NAPA_skewness_summary)
 
 
+# MHW visuals -------------------------------------------------------------
 
-# Skewness visual ---------------------------------------------------------
-
-polar_plot_output("skewness", AVISO_NAPA_skewness_diff)
-polar_plot_output("skewness", filter(AVISO_NAPA_skewness_diff, product == "AVISO"), "skewness_AVISO")
-polar_plot_output("skewness", filter(AVISO_NAPA_skewness_diff, product == "NAPA"), "skewness_NAPA")
-
-
-# MHW difference visuals --------------------------------------------------
-
-# Visuals for the clim stat differences
-polar_plot_output("seas_min", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("seas_mean", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("seas_max", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("thresh_min", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("thresh_mean", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("thresh_max", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the clim t-tests and KS-tests
-polar_plot_output("seas_t_test", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("thresh_t_test", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("seas_KS_test", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("thresh_KS_test", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event count differences
-polar_plot_output("count", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event stat differences
-polar_plot_output("duration_min", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("duration_mean", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("duration_max", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("intensity_max_min", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("intensity_max_mean", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("intensity_max_max", OISST_NAPA_MHW_summary_diff)
-
-# Visuals for the event t-tests
-polar_plot_output("duration_t_test", OISST_NAPA_MHW_summary_diff)
-polar_plot_output("intensity_max_t_test", OISST_NAPA_MHW_summary_diff)
-
-# Visualise duration and maximum intensity values for just NAPA and OISST
-polar_plot_output("duration_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
-               "duration_mean_NAPA", "pretty")
-polar_plot_output("duration_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
-               "duration_mean_OISST", "pretty")
-polar_plot_output("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "NAPA"), 
-               "intensity_max_mean_NAPA", "pretty")
-polar_plot_output("intensity_max_mean", filter(OISST_NAPA_MHW_summary, product == "OISST"), 
-               "intensity_max_mean_OISST", "pretty")
+# Run Thursday, November 22nd, 2018
+plyr::ldply(colnames(OISST_NAPA_MHW_summary[-c(1:4)]), .fun = polar_plot_output,
+            .parallel = T, OISST_NAPA_MHW_summary_corrected)
 
 
 # Ice visuals -------------------------------------------------------------
 
+# Run Thursday, November 22nd, 2018
+plyr::ldply(colnames(OISST_NAPA_ice_summary[-c(1:4)]), .fun = polar_plot_output,
+            .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.")
+
 
 # Gulf Stream visuals -----------------------------------------------------
-#
+
+# Due to the custom nature of these visuals, the code for them may be found
+# in the script "gulf_stream.R"
 
 # Full visuals for one summary stat ---------------------------------------
 

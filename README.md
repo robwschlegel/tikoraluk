@@ -7,7 +7,7 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 * November 21, 2018
   * Re-calculated ice to remove land ice in the OISST data
-  * More work on visuals
+  * First-draft of all visuals sorted
 
 * November 20, 2018
   * Recalculated the ice and skewness values as well

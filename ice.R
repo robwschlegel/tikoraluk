@@ -94,7 +94,7 @@ ice_diff <- function(df){
   ice_sum <- df %>% 
     group_by(nav_lon, nav_lat, month, product) %>%
     summarise_if(is.numeric, .funs = c("min", "median", "mean", "max", "sd"), na.rm = T) %>%
-    replace(is.na(.), NA) %>% 
+    replace(is.na(.), NA) %>%
     left_join(ice_dt, by = c("nav_lon", "nav_lat", "month", "product")) %>% 
     rename_at(vars(-(nav_lon:product)), ~ paste0("ice_",.))
   is.na(ice_sum) <- sapply(ice_sum, is.infinite)
@@ -103,6 +103,7 @@ ice_diff <- function(df){
   ice_sum_dif <- left_join(filter(ice_sum, product == "NAPA"), 
                             filter(ice_sum, product == "OISST"),
                             by = c("nav_lon", "nav_lat", "month")) %>%
+    replace(is.na(.), 0) %>% # This allows comparison of co-located pixels with no ice against those with ice
     mutate(ice_min = ice_min.x - ice_min.y,
            ice_median = ice_median.x - ice_median.y,
            ice_mean = ice_mean.x - ice_mean.y,
@@ -110,7 +111,7 @@ ice_diff <- function(df){
            ice_sd = ice_sd.x - ice_sd.y, 
            ice_dt = ice_dt.x - ice_dt.y, 
            product = "difference") %>% 
-    select(nav_lon, nav_lat, product, month, ice_min:ice_max) %>% 
+    select(nav_lon, nav_lat, product, month, ice_min:ice_dt) %>% 
     rbind(ice_sum)
   return(ice_sum_dif)
 }
@@ -178,6 +179,6 @@ ice_ON <- function(lon_row){
 # ) # 13 seconds
 
 # Re-run on Thursday, November 16th, 2018
-# OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)
-# save(OISST_NAPA_ice_summary, file = "../data/OISST_NAPA_ice_summary.RData")
+OISST_NAPA_ice_summary <- plyr::ldply(1:1440, .fun = ice_ON, .parallel = T)
+save(OISST_NAPA_ice_summary, file = "../data/OISST_NAPA_ice_summary.RData")
 
