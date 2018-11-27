@@ -32,7 +32,6 @@ pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcf
 # The base map
 map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long) %>% 
-  # filter(lat >= 25.6, lon <= 180) #%>%
   filter(lat >= 25.6) %>%
   mutate(group = ifelse(lon > 180, group+9999, group),
          lon = ifelse(lon > 180, lon-360, lon))
@@ -43,12 +42,14 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 # Ice dataframes for easier contour plotting
 ## NB: Only needs to be run once
 ## Is loaded above
-# OISST_NAPA_ice_round <- OISST_NAPA_ice_summary %>% 
-#   na.omit() %>% 
-#   filter(product != "difference") %>% 
-#   group_by(nav_lon, nav_lat, month, product) %>% 
-#   summarise(ice_round = round(ice_mean, 1)) %>% 
-#   as.data.frame()
+# OISST_NAPA_ice_round <- OISST_NAPA_ice_summary %>%
+#   left_join(only_water, by = c("nav_lon", "nav_lat")) %>% 
+#   na.omit() %>%
+#   filter(product != "difference") %>%
+#   group_by(lon_O, lat_O, month, product) %>%
+#   summarise(ice_round = mean(ice_mean, na.rm = T)) %>%
+#   mutate(lon_O_corrected = ifelse(lon_O >= 180, lon_O-360, lon_O)) %>% 
+#   data.frame()
 # save(OISST_NAPA_ice_round, file = "../data/OISST_NAPA_ice_round.RData")
 
 # No-land mask
@@ -56,31 +57,30 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 ## Is loaded above
 # only_water <- OISST_NAPA_SST_summary %>%
 #   select(nav_lon, nav_lat) %>%
-#   dplyr::distinct()
+#   dplyr::distinct() %>% 
+#   left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>%
+#   arrange(dist)
 # save(only_water, file = "metadata/only_water.RData")
-
-lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST,
-                                        by = c("nav_lon", "nav_lat")) %>%
-  arrange(dist)
-
-# Only the 0.5 ice coverage pixels
-ice_sub <- filter(OISST_NAPA_ice_round, ice_round == 0.5) %>% 
-  right_join(only_water, by = c("nav_lon", "nav_lat")) %>%
-  na.omit()
-  # select(nav_lon, nav_lat, month, product, ice_round) %>% 
-  # na.omit()
 
 # Only overall MHW data for plotting
 OISST_NAPA_MHW_summary_corrected <- OISST_NAPA_MHW_summary %>% 
   filter(month == "overall") %>% 
-  mutate(month == as.character(month),
+  mutate(month = as.character(month),
          month = "daily")
 
 
 # Functions ---------------------------------------------------------------
 
 # df <- OISST_NAPA_SST_summary
-
+# df <- OISST_NAPA_MHW_summary_corrected
+# sum_stat <- "mean"
+# sum_stat <- "intensity_max_max"
+# plot_name = NA
+# plot_title = NA
+# chosen_palette = "red-blue"
+# colour_range = NA
+# legend_title = NA
+# legend_position = c(0.9, 0.1)
 # Function that creates and saves multiple plots from one input dataframe
 polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
                               chosen_palette = "red-blue", colour_range = NA, 
@@ -97,35 +97,39 @@ polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
   if(!(is.nan(mean(filter(df, product != "difference")[,colnames(df) == sum_stat], na.rm = T)))){
     # Prep
     df_full <- filter(df, product != "difference")
+    if(is.na(colour_range)[1]){
     colour_range_full <- c(min(df_full[,colnames(df_full) == sum_stat], na.rm = T),
                            max(df_full[,colnames(df_full) == sum_stat], na.rm = T))
+    } else {
+      colour_range_full <- colour_range
+    }
     # NAPA
     if("NAPA" %in% unique(df_full$product)){
-      if("AVISO" %in% unique(df_full$product) | sum_stat == "dt"){
+      if("AVISO" %in% unique(df_full$product) | sum_stat == "dt" | sum_stat == "ice_dt"){
         NAPA_palette <- "red-blue"
       } else {
         NAPA_palette <- "pretty"
       }
-      polar_plots(filter(df, product == "NAPA"), sum_stat, plot_name = paste0(plot_name,"_NAPA"), 
+      polar_plots(filter(df_full, product == "NAPA"), sum_stat, plot_name = paste0(plot_name,"_NAPA"), 
                   plot_title = paste(plot_title, "NAPA"),  chosen_palette = NAPA_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
     }
     # OISST
     if("OISST" %in% unique(df_full$product)){
-      if(sum_stat == "dt"){
+      if(sum_stat == "dt" | sum_stat == "ice_dt"){
         OISST_palette <- "red-blue"
       } else {
         OISST_palette <- "pretty"
       }
-      polar_plots(filter(df, product == "OISST"), sum_stat, plot_name = paste0(plot_name,"_OISST"), 
+      polar_plots(filter(df_full, product == "OISST"), sum_stat, plot_name = paste0(plot_name,"_OISST"), 
                   plot_title = paste(plot_title, "OISST"),  chosen_palette = OISST_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
     }
     # AVISO
     if("AVISO" %in% unique(df_full$product)){
-      polar_plots(filter(df, product == "AVISO"), sum_stat, plot_name = paste0(plot_name,"_AVISO"), 
+      polar_plots(filter(df_full, product == "AVISO"), sum_stat, plot_name = paste0(plot_name,"_AVISO"), 
                   plot_title = paste(plot_title, "AVISO"),  chosen_palette = chosen_palette, 
                   colour_range = colour_range_full,  legend_title = legend_title, 
                   legend_position = legend_position)
@@ -133,9 +137,15 @@ polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
   }
   # difference
   if("difference" %in% unique(df$product)){
+    if(sum_stat %in% c("cor_norm", "cor_flat", "seas_t_test", "thresh_t_test", 
+                       "seas_KS_test", "thresh_KS_test", "duration_t_test", "intensity_max_t_test")){
+      legend_title_diff <- legend_title
+      } else {
+        legend_title_diff <- paste("Model - Obs\n", legend_title)
+        }
     polar_plots(filter(df, product == "difference"), sum_stat, plot_name = paste0(plot_name,"_difference"), 
                 plot_title = paste(plot_title, "difference"),  chosen_palette = chosen_palette, 
-                colour_range = NA,  legend_title = paste("Model - Obs\n", legend_title), 
+                colour_range = colour_range,  legend_title = legend_title_diff, 
                 legend_position = legend_position, ice = TRUE)
   }
 }
@@ -146,17 +156,23 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
                         colour_range,  legend_title, legend_position, ice = F){
   
   # Prep
+  df_complete <- df[complete.cases(colnames(df) == sum_stat),]
+  # df_complete <- na.omit(df)
+  # df_complete <- df
   if(is.na(colour_range[1])){
-    colour_range <- c(min(df[,colnames(df) == sum_stat], na.rm = T),
-                      max(df[,colnames(df) == sum_stat], na.rm = T))
+    colour_range <- c(min(df_complete[,colnames(df_complete) == sum_stat], na.rm = T),
+                      max(df_complete[,colnames(df_complete) == sum_stat], na.rm = T))
   }
-  ice_sub_sub <- ice_sub %>% 
-    filter(month %in% unique(df$month))
+  ice_sub <- OISST_NAPA_ice_round %>% 
+    filter(month %in% unique(df_complete$month))
+  if(length(unique(df_complete$month)) == 1){
+    ice_sub <- ice_sub %>% 
+      mutate(month = as.character(month))
+  }
   
   # Figure
-  pp <- ggplot(data = df) + theme_void() +
+  pp <- ggplot(data = df_complete) + theme_void() +
     geom_point(size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
-    # geom_point(data = ice, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     coord_map("ortho", orientation = c(90, 0, 0)) +
     scale_fill_manual(values = c("green", "yellow")) +
@@ -187,18 +203,26 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
   }
   if(ice){
     pp_col <- pp_col + 
-      geom_point(data = ice_sub, aes(x = nav_lon, y = nav_lat, fill = product), shape = 21, stroke = 0, size = 0.01, alpha = 0.3)
+      # geom_contour(data = ice_sub, breaks = 0.5, colour = "grey30", lineend = "round", size = 1.1,
+      #              aes(x = lon_O_corrected, y = lat_O, z = ice_round, 
+      #                  linetype = product, colour = as.factor(product)))
+      geom_contour(data = filter(ice_sub, product == "NAPA"), size = 0.1,
+                   breaks = 0.5, colour = "grey30", lineend = "round", alpha = 0.3,
+                   aes(x = lon_O_corrected, y = lat_O, z = ice_round)) +
+      geom_contour(data = filter(ice_sub, product == "OISST"), size = 0.1,
+                   breaks = 0.5, colour = "black", lineend = "round", alpha = 0.3,
+                   aes(x = lon_O_corrected, y = lat_O, z = ice_round))
   }
   ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
-}#
+}
 
 
 # Distance visual ---------------------------------------------------------
 
 # Map of distance between pixels
-# med_dist <- paste("Median dist. (km)\n", round(median(lon_lat_NAPA_OISST_no_land$dist),1))
+# med_dist <- paste("Median dist. (km)\n", round(median(only_water$dist),1))
 # dp <- ggplot() + theme_void() +
-#   geom_point(data = lon_lat_NAPA_OISST_no_land,
+#   geom_point(data = only_water,
 #              aes(x = nav_lon, y = nav_lat, colour = dist), size = 0.001) +
 #   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
 #   # geom_polygon(data = map_base, aes(x = -lon, y = -lat, group = group)) +
@@ -224,37 +248,40 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
 # Line graphs showing relationship between summary stats and pixel distance
 
 
-# Summary visuals ---------------------------------------------------------
+# SST visuals -------------------------------------------------------------
 
-# Run Thursday, November 22nd, 2018
-plyr::ldply(colnames(OISST_NAPA_SST_summary[-c(1:4)]), .fun = polar_plot_output,
-            .parallel = T, OISST_NAPA_SST_summary)
-
+# plyr::ldply(colnames(OISST_NAPA_SST_summary[-c(1:4,10)]), .fun = polar_plot_output,
+#             .parallel = T, OISST_NAPA_SST_summary)
+# dt only due to different colour range caused by large outlying trends
+# plyr::ldply(colnames(OISST_NAPA_SST_summary[14]), .fun = polar_plot_output,
+#             .parallel = T, df = OISST_NAPA_SST_summary, colour_range = c(-0.2, 0.2))
 
 # Skewness visuals --------------------------------------------------------
 
-# Run Thursday, November 22nd, 2018
-polar_plot_output("skewness", AVISO_NAPA_skewness_summary)
+# polar_plot_output("skewness", AVISO_NAPA_skewness_summary)
 
 
 # MHW visuals -------------------------------------------------------------
 
-# Run Thursday, November 22nd, 2018
-plyr::ldply(colnames(OISST_NAPA_MHW_summary[-c(1:4)]), .fun = polar_plot_output,
-            .parallel = T, OISST_NAPA_MHW_summary_corrected)
+# plyr::ldply(colnames(OISST_NAPA_MHW_summary_corrected[-c(1:4)]), .fun = polar_plot_output,
+#             .parallel = T, OISST_NAPA_MHW_summary_corrected)
 
 
 # Ice visuals -------------------------------------------------------------
 
-# Run Thursday, November 22nd, 2018
-plyr::ldply(colnames(OISST_NAPA_ice_summary[-c(1:4)]), .fun = polar_plot_output,
-            .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.")
+# plyr::ldply(colnames(OISST_NAPA_ice_summary[-c(1:4,10)]), .fun = polar_plot_output,
+#             .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.")
+# ice_dt only due to different colour range caused by large outlying trends
+# plyr::ldply(colnames(OISST_NAPA_ice_summary[10]), .fun = polar_plot_output,
+#             .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.", 
+#             colour_range = c(-0.1, 0.1))
 
 
 # Gulf Stream visuals -----------------------------------------------------
 
 # Due to the custom nature of these visuals, the code for them may be found
 # in the script "gulf_stream.R"
+
 
 # Full visuals for one summary stat ---------------------------------------
 

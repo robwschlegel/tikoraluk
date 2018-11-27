@@ -5,11 +5,15 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
-* November 21, 2018
+* November 27, 2018
+  * Ice contours sorted
+  * Working on balance between ice contours and figures
+
+* November 22, 2018
   * Re-calculated ice to remove land ice in the OISST data
   * First-draft of all visuals sorted
 
-* November 20, 2018
+* November 21, 2018
   * Recalculated the ice and skewness values as well
   * More work on visuals
 
