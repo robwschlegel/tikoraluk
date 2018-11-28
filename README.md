@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* November 28, 2018
+  * All figures re-created with lekker ice contours
+
 * November 27, 2018
   * Ice contours sorted
   * Working on balance between ice contours and figures

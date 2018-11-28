@@ -1,5 +1,5 @@
 ---
-title: "NAPA OISST comparisons"
+title: "NAPA OISST/AVISO comparisons"
 author: "Robert Schlegel"
 date: "`r Sys.Date()`"
 output:
@@ -64,7 +64,7 @@ We see that the model tends to give much larger proportions of ice coverage over
 
 ## Median {.tabset}
 
-Here we see more agreement between model and obs, but the tendency for the model to underestimate ice coverage further from the pole persists. The exception being that the model thinks the ice shelf to the east of Greenland is much more consistent than the obs.
+Here we see more agreement between model and obs, but the tendency for the model to underestimate ice coverage further from the pole persists. The exception being that the model thinks the ice to the east of Greenland is much more consistent than the obs.
 
 ### Model
 ![](graph/diff_figs/ice_median_NAPA.png)
@@ -92,7 +92,7 @@ The patterns seen here are the same as for the median values, but model and obs 
 
 ## Max {.tabset}
 
-The same patterns seen throughout persist here, but the dissagreements along the edges of the ice fields are more dramatic, while the coverage over the pole is in bettere agreement (not surprisingly).
+The same patterns seen throughout persist here, but the dissagreements along the edges of the ice are more dramatic, while the coverage over the pole is in bettere agreement (not surprisingly).
 
 ### Model
 ![](graph/diff_figs/ice_max_NAPA.png)
@@ -106,7 +106,7 @@ The same patterns seen throughout persist here, but the dissagreements along the
 
 ## SD {.tabset}
 
-The differences in the patterns for variance are similar to the first moment stats above. The model shows less variance around the pole than the obs do. The model however tends to show more variance for ice near the edge of the shelf than the obs do. I'm not sure if this is an artifact of the models or the obs.
+The differences in the patterns for variance are similar to the first moment stats above. The model shows less variance around the pole than the obs do. The model however tends to show more variance for ice near the edge than the obs do. I'm not sure if this is an artifact of the models or the obs.
 
 ### Model
 ![](graph/diff_figs/ice_sd_NAPA.png)
@@ -224,7 +224,7 @@ The mean differences are shown here to highlight what is a rather consistent pat
 ### Observation
 ![](graph/diff_figs/max_OISST.png)
 
-### Comparison
+### Difference
 ![](graph/diff_figs/max_difference.png)
 
 ## SD {.tabset}
@@ -237,7 +237,7 @@ The variance (shown here as standard deviation) of the Gulf Stream and Labrador 
 ### Obs
 ![](graph/diff_figs/sd_OISST.png)
 
-### Comparison
+### Difference
 ![](graph/diff_figs/sd_difference.png)
 
 
@@ -529,7 +529,7 @@ Upon cursory analysis it appears as though this may be due to the duration of ev
 
 # Conclusion
 
-These two products are not dramatically different, but enough so that important features are statistically differently when using several statistical approaches.
+These products are not dramatically different, but enough so that important features are statistically differently when using several statistical approaches.
 
 The temperatures for the Gulf Stream and Labrador Current appear to be the most dissimilar. In order to determine why the Gulf Stream appeared to be out of place in the NAPA data, the SLA skewness per pixel was compared between NAPA and AVISO. It was found that the path of the Gulf Stream is not as crisp in the NAPA data, but that it is not clearly running north of where the OISST data put it. This then implies that the warmer signal around the Scotian Shelf is perhaps not due to the Gulf Stream but rather the Labrador Current being underrepresented. This would also explain why this current is warmer in the NAPA data compared against the OISST data.
 

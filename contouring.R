@@ -39,19 +39,20 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 
 # Prep --------------------------------------------------------------------
 
-lon_lat_NAPA_OISST_no_land <- left_join(only_water, lon_lat_NAPA_OISST,
-                                        by = c("nav_lon", "nav_lat")) %>%
-  arrange(dist)
 
-# Only the 0.5 ice coverage pixels
-ice_sub <- OISST_NAPA_ice_round %>% 
-  left_join(lon_lat_NAPA_OISST_no_land, by = c("nav_lon", "nav_lat")) %>% 
-  na.omit() %>% 
-  group_by(lon_O, lat_O, product, month) %>% 
-  summarise(ice_round = mean(ice_round, na.rm = T)) %>% 
-  mutate(lon_O_corrected = ifelse(lon_O >= 180, lon_O-360, lon_O))
-# select(nav_lon, nav_lat, month, product, ice_round) %>% 
-# na.omit()
+# Condense ice coverage for smoother contours
+# OISST_NAPA_ice_round <- OISST_NAPA_ice_summary %>%
+#   # left_join(only_water, by = c("nav_lon", "nav_lat")) %>%
+#   na.omit() %>%
+#   filter(product != "difference") %>%
+#   mutate(nav_lon = round(nav_lon, 0), 
+#          nav_lat = round(nav_lat, 0)) %>% 
+#   # group_by(lon_O, lat_O, month, product) %>%
+#   group_by(nav_lon, nav_lat, month, product) %>%
+#   summarise(ice_round = mean(ice_mean, na.rm = T)) %>%
+#   # mutate(lon_O_corrected = ifelse(lon_O >= 180, lon_O-360, lon_O)) %>%
+#   data.frame()
+# save(OISST_NAPA_ice_round, file = "../data/OISST_NAPA_ice_round.RData")
 
 
 # testing -----------------------------------------------------------------
@@ -60,8 +61,8 @@ df <- filter(OISST_NAPA_SST_summary, product == "difference", month == "daily")
 # ice_OISST <- filter(OISST_NAPA_ice_round, product == "OISST", month == "daily", ice_round == 0.5)
 # ice_OISST_edge <- ice_OISST[chull(ice_OISST[,1:2]),]
 # ice_NAPA <- filter(OISST_NAPA_ice_round, month == "daily", product == "NAPA", ice_round == 0.5)
-ice_sub_5 <- filter(ice_sub, month == "daily", ice_round == 0.5)
-ice_sub_all <- filter(ice_sub, month == "daily") #%>%
+# ice_sub_5 <- filter(ice_sub, month == "daily", ice_round == 0.5)
+ice_sub_all <- filter(OISST_NAPA_ice_round, month == "daily") #%>%
   # mutate(nav_lon = round(nav_lon, 0),
   #        nav_lat = round(nav_lat, 0)) %>%
   # group_by(nav_lon, nav_lat, month, product) %>%
@@ -81,11 +82,13 @@ legend_position <- c(0.9, 0.1)
 
 
 ggplot() + theme_void() +
-  geom_point(data = df, size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
+  # geom_point(data = df, size = 0.001, aes_string(x = "nav_lon", y = "nav_lat", colour = sum_stat)) +
   # stat_density_2d(data = ice_sub_all, aes(x = nav_lon, y = nav_lat, colour = ice_round)) +
   # geom_raster(data = ice_sub_all, aes(x = nav_lon, y = nav_lat, fill = ice_round)) +
+  # geom_contour(data = ice_sub_all, breaks = 0.5, colour = "grey30",
+  #              aes(x = lon_O_corrected, y = lat_O, z = ice_round, linetype = product)) +
   geom_contour(data = ice_sub_all, breaks = 0.5, colour = "grey30",
-               aes(x = lon_O_corrected, y = lat_O, z = ice_round, linetype = product)) +
+               aes(x = nav_lon, y = nav_lat, z = ice_round, linetype = product)) +
   # stat_contour(data = ice_sub_5, aes(x = lon_O, y = lat_O, z = ice_round, linetype = product)) +
   # geom_
   # geom_hex() +

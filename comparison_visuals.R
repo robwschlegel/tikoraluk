@@ -43,12 +43,12 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 ## NB: Only needs to be run once
 ## Is loaded above
 # OISST_NAPA_ice_round <- OISST_NAPA_ice_summary %>%
-#   left_join(only_water, by = c("nav_lon", "nav_lat")) %>% 
 #   na.omit() %>%
 #   filter(product != "difference") %>%
-#   group_by(lon_O, lat_O, month, product) %>%
+#   mutate(nav_lon = round(nav_lon, 0), 
+#          nav_lat = round(nav_lat, 0)) %>% 
+#   group_by(nav_lon, nav_lat, month, product) %>%
 #   summarise(ice_round = mean(ice_mean, na.rm = T)) %>%
-#   mutate(lon_O_corrected = ifelse(lon_O >= 180, lon_O-360, lon_O)) %>% 
 #   data.frame()
 # save(OISST_NAPA_ice_round, file = "../data/OISST_NAPA_ice_round.RData")
 
@@ -73,6 +73,7 @@ OISST_NAPA_MHW_summary_corrected <- OISST_NAPA_MHW_summary %>%
 
 # df <- OISST_NAPA_SST_summary
 # df <- OISST_NAPA_MHW_summary_corrected
+# sum_stat <- "quant_90"
 # sum_stat <- "mean"
 # sum_stat <- "intensity_max_max"
 # plot_name = NA
@@ -88,7 +89,8 @@ polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
   if(is.na(legend_title)) legend_title <- "Temperature (°C)"
   if(sum_stat %in% c("dt", "ice_dt")) legend_title <- "Temp./dec (°C)"
   if(sum_stat == "count") legend_title <- "Events (n)"
-  if(sum_stat == "duration") legend_title <- "Duration (days)"
+  if(sum_stat %in% c("duration_min", "duration_mean", "duration_max")) legend_title <- "Duration (days)"
+  if(sum_stat %in% c("cor_flat", "cor_norm")) legend_title <- "Correlation (r)"
   if(sum_stat %in% c("seas_t_test", "thresh_t_test", "seas_KS_test", "thresh_KS_test", 
                      "duration_t_test", "intensity_max_t_test")) legend_title <- "Probability (p)"
   if(is.na(plot_name)) plot_name <- sum_stat
@@ -201,17 +203,20 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
   }else if(chosen_palette == "pretty"){
     pp_col <- pp + scale_colour_gradientn(colours = pretty_palette, limits = colour_range)
   }
-  if(ice){
+  if(ice & length(unique(df_complete$month)) == 1){
     pp_col <- pp_col + 
-      # geom_contour(data = ice_sub, breaks = 0.5, colour = "grey30", lineend = "round", size = 1.1,
-      #              aes(x = lon_O_corrected, y = lat_O, z = ice_round, 
-      #                  linetype = product, colour = as.factor(product)))
-      geom_contour(data = filter(ice_sub, product == "NAPA"), size = 0.1,
-                   breaks = 0.5, colour = "grey30", lineend = "round", alpha = 0.3,
-                   aes(x = lon_O_corrected, y = lat_O, z = ice_round)) +
-      geom_contour(data = filter(ice_sub, product == "OISST"), size = 0.1,
-                   breaks = 0.5, colour = "black", lineend = "round", alpha = 0.3,
-                   aes(x = lon_O_corrected, y = lat_O, z = ice_round))
+      geom_contour(data = ice_sub, breaks = 0.5, colour = "black", 
+                   lineend = "round", size = 1.0, alpha = 0.5,
+                   aes(x = nav_lon, y = nav_lat, z = ice_round, linetype = product)) +
+      scale_linetype_manual(values = c("dotted", "solid"), "Product") +
+      theme(legend.background = element_rect(fill = "white", colour = NA, size = 0.5))
+  }
+  if(ice & length(unique(df_complete$month)) > 1){
+    pp_col <- pp_col + 
+      geom_contour(data = ice_sub, breaks = 0.5, colour = "black", 
+                   lineend = "round", size = 0.2, alpha = 0.5,
+                   aes(x = nav_lon, y = nav_lat, z = ice_round, linetype = product)) +
+      scale_linetype_manual(values = c("dotted", "solid"), "Product")
   }
   ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
 }
@@ -256,6 +261,7 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
 # plyr::ldply(colnames(OISST_NAPA_SST_summary[14]), .fun = polar_plot_output,
 #             .parallel = T, df = OISST_NAPA_SST_summary, colour_range = c(-0.2, 0.2))
 
+
 # Skewness visuals --------------------------------------------------------
 
 # polar_plot_output("skewness", AVISO_NAPA_skewness_summary)
@@ -273,7 +279,7 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
 #             .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.")
 # ice_dt only due to different colour range caused by large outlying trends
 # plyr::ldply(colnames(OISST_NAPA_ice_summary[10]), .fun = polar_plot_output,
-#             .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.", 
+#             .parallel = T, df = OISST_NAPA_ice_summary, legend_title = "Ice prop.",
 #             colour_range = c(-0.1, 0.1))
 
 
