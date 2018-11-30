@@ -5,6 +5,10 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* November 29, 2018
+  * All MCSs calculated from OISST
+  * A bit of work on MCS visualisations
+  
 * November 28, 2018
   * All figures re-created with lekker ice contours
 

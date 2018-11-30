@@ -1,8 +1,6 @@
 # The purpose of this script is to keep track of which
 # OISST files had their MHW's calculated when
 
-# My current thinking is that this is easier with a simple for loop...
-
 # I haven't presently put in any failsafes for oversaving...
 
 
