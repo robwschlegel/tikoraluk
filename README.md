@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* December 5, 2018
+  * Working on script for converting MHW results to NetCDF files
+
 * November 29, 2018
   * All MCSs calculated from OISST
   * A bit of work on MCS visualisations
