@@ -5,6 +5,10 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* December 6, 2018
+  * Created rough draft for NAPA OISST comparison presentation slides
+  * Fully edited results found in the larger comparison document
+
 * December 5, 2018
   * Working on script for converting MHW results to NetCDF files
 

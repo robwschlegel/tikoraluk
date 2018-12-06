@@ -289,6 +289,26 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
 # in the script "gulf_stream.R"
 
 
+# Labrador Sea visuals ----------------------------------------------------
+
+# Due to the custom nature of these visuals, the code for them may be found
+# in the script "labrador_sea.R"
+
+
+# Greenland Sea visuals ---------------------------------------------------
+
+# Due to the custom nature of these visuals, the code for them may be found
+# in the script "greenland_sea.R"
+
+
+# Slide-show visuals ------------------------------------------------------
+
+## TO DO
+# Create single panel figure for the daily SST DT differences
+## Also show next to it the single panels for OISST and NAPA DT
+
+
+
 # Full visuals for one summary stat ---------------------------------------
 
 # # Remove NA and 0 rows for now...

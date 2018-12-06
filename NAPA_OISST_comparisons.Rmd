@@ -31,7 +31,7 @@ One may use the table of contents tab on the left side of this document to jump 
 
 Most of the figures below consist of 15 panels. The first 12 panels (4x3) will show the statistic labelled at the top of the figure for only a given month at the native daily resolution, as labelled at the top of the panel. This is done in lieu of showing seasons so as to provide more insight into the data and not artificially constrain the results. The last three panels at the bottom of most figures show the resultant statistic when the entire datasets are compared at daily (native), monthly, and yearly means.
 
-There are three versions of each 15 panel figure: The model data (NAPA), the satellite observations (OISST/AVISO), and the model minus the observations. This means that any blue (red) seen in the difference figures is showing that the model values are less (greater) than the obesrvations. These difference panels will also show the pixels that have 50% ice coverage highlighted in yellow for the observation data, and green for the model data. Contours are unfortunately not used as the graphics software used is not able to connect points around the top of the geoid.
+There are three versions of each 15 panel figure: The model data (NAPA), the satellite observations (OISST/AVISO), and the model minus the observations. This means that any blue (red) seen in the difference figures is showing that the model values are less (greater) than the observations. These difference panels will also show the pixels that have 50% ice coverage highlighted in solid lines for the observation data, and dashed lines for the model data.
 
 
 # Distances
@@ -45,13 +45,21 @@ It should be noted here that the OISST and AVISO products have the same lon/lat 
 
 # Ice comparisons {.tabset}
 
-Before looking at SST comparisons it is useful to look at how ice proportion coverage of pixels differs between the NAPA and OISST products beign compared. Below is a series of tabs showing several different statistics. DT is short for decadal trend, which shows the overall linear trend (slope) in the ~25 years of data being compared, but expressed as °C/dec.
+Before looking at SST comparisons it is useful to look at how ice proportion coverage of pixels differs between the NAPA and OISST products being compared. Below is a series of tabs showing several different statistics. DT is short for decadal trend, which shows the overall linear trend (slope) in the ~25 years of data being compared, but expressed as °C/dec.
 
-Any noteworthy observations in the figures are mentioned in the corresponding tabs below.
+We see that the model tends to give much larger proportions of minimum ice coverage over the pole, while showing complete lacks of minimum ice coverage further from the pole.
+
+The median ice coverage shows more agreement between model and obs, but the tendency for the model to underestimate ice coverage further from the pole persists. The exception being that the model thinks the median ice to the east of Greenland is much more consistent than the obs.
+
+The patterns seen for the mean ice coverage are the same as for the median values, but model and obs are in closer agreement with one another. This must then be due to similar ranges of values, but a differing central tendency.
+
+The same patterns seen throughout persist for maximum ice coverage, but the disagreements along the edges of the ice are more dramatic, while the coverage over the pole is in better agreement (not surprisingly).
+
+The differences in the patterns for ice coverage variance are similar to the first moment stats above. The model shows less variance around the pole than the obs do. The model however tends to show more variance for ice near the edge than the obs do. I'm not sure if this is an artifact of the models or the obs.
+
+There appears to be little difference in the decadal trends for ice coverage.
 
 ## Min {.tabset}
-
-We see that the model tends to give much larger proportions of ice coverage over the  pole, while showing complete lacks of ice coverage further from the pole.
 
 ### Model
 ![](graph/diff_figs/ice_min_NAPA.png)
@@ -63,8 +71,6 @@ We see that the model tends to give much larger proportions of ice coverage over
 ![](graph/diff_figs/ice_min_difference.png)
 
 ## Median {.tabset}
-
-Here we see more agreement between model and obs, but the tendency for the model to underestimate ice coverage further from the pole persists. The exception being that the model thinks the ice to the east of Greenland is much more consistent than the obs.
 
 ### Model
 ![](graph/diff_figs/ice_median_NAPA.png)
@@ -78,8 +84,6 @@ Here we see more agreement between model and obs, but the tendency for the model
 
 ## Mean {.tabset}
 
-The patterns seen here are the same as for the median values, but model and obs are in closer agreement with one another. This must then be due to similar ranges of values, but a differing central tendency.
-
 ### Model
 ![](graph/diff_figs/ice_mean_NAPA.png)
 
@@ -91,8 +95,6 @@ The patterns seen here are the same as for the median values, but model and obs 
 
 
 ## Max {.tabset}
-
-The same patterns seen throughout persist here, but the dissagreements along the edges of the ice are more dramatic, while the coverage over the pole is in bettere agreement (not surprisingly).
 
 ### Model
 ![](graph/diff_figs/ice_max_NAPA.png)
@@ -106,8 +108,6 @@ The same patterns seen throughout persist here, but the dissagreements along the
 
 ## SD {.tabset}
 
-The differences in the patterns for variance are similar to the first moment stats above. The model shows less variance around the pole than the obs do. The model however tends to show more variance for ice near the edge than the obs do. I'm not sure if this is an artifact of the models or the obs.
-
 ### Model
 ![](graph/diff_figs/ice_sd_NAPA.png)
 
@@ -120,7 +120,6 @@ The differences in the patterns for variance are similar to the first moment sta
 
 ## DT {.tabset}
 
-
 ### Model
 ![](graph/diff_figs/ice_dt_NAPA.png)
 
@@ -130,11 +129,17 @@ The differences in the patterns for variance are similar to the first moment sta
 ### Difference
 ![](graph/diff_figs/ice_dt_difference.png)
 
-
-
 # SST comparisons {.tabset}
 
 The following subsections show the results of comparing SST statistics between the NAPA and OISST/AVISO data for each co-located pixel as seen in the distances section above.
+
+The mean differences highlight what is a rather consistent pattern between these two products. The NAPA values are either putting the Gulf Stream North of were the OISST has it, or is thinking it is much warmer. The NAPA data also show the Labrador Sea as warmer than in the OISST data. The Greenland Sea is cooler in the NAPA data, as well as the Atlantic south of where it thinks the Gulf Stream is. These patterns tend to hold rather consistent throughout all months, with the exception of the ocean north of Hudson Bay being warmer in the NAPA data during late summer.
+
+The variance (shown here as standard deviation) of the Labrador Current, the Greenland Sea, and the waters north of Hudson Bay are greater in the NAPA data. The variance of the Gulf Stream is larger in the OISST data. There is a much larger range of seasonal differences in the variance than the mean SST and on a month by month basis there is usually more variance observed in the OISST data.
+
+We see long-term cooling trends in the waters surrounding Scandinavia and the maritimes in the NAPA data. The OISST data also show a similar cooling pattern around Scandinavia, but not the maritimes (with the exception of the area just south of Nova Scotia). The OISST data otherwise generally agree with the IPCC findings on long-term climate trends. That being that the oceans generally are warming at ~0.1C/dec.
+
+We see that correlations for the normal (i.e. not detrended) data are best with monthly means with. Much of the arctic circle shows negative correlations with the yearly values. This implies that the interannual variability matches well between the datasets, but that the annual signals in some areas are showing opposite long-term trends. We also see that the negative correlations within the Arctic circle vary seasonally. The same patterns tend to hold when the data are detrended, but reduced in their agreement.
 
 ## 10th quantile {.tabset}
 
@@ -204,7 +209,6 @@ The following subsections show the results of comparing SST statistics between t
 ![](graph/diff_figs/min_difference.png)
 
 ## Mean {.tabset}
-The mean differences are shown here to highlight what is a rather consistent pattern between these two products. The NAPA values are either putting the Gulf Stream North of were the OISST has it, or is thinking it is much warmer. The NAPA data also show the Labrador Sea as warmer than in the OISST data. The Arctic Ocean north of Scandinavia is cooler in the NAPA data, as well as the Atlantic south of where it thinks the Gulf Stream is. These patterns tend to hold rather consistent throughout all months, with the exception of the ocean north of Hudson Bay being warmer in the NAPA data during late summer.
 
 ### Model
 ![](graph/diff_figs/mean_NAPA.png)
@@ -229,8 +233,6 @@ The mean differences are shown here to highlight what is a rather consistent pat
 
 ## SD {.tabset}
 
-The variance (shown here as standard deviation) of the Gulf Stream and Labrador Current are greater in the NAPA data, as well as the oceans above Scandinavia and the Hudson Bay, similar to the mean differences. There is a much larger range of seasonal differences however and on a month by month basis there is usually more variance observed in the OISST data.
-
 ### Model
 ![](graph/diff_figs/sd_NAPA.png)
 
@@ -244,15 +246,9 @@ The variance (shown here as standard deviation) of the Gulf Stream and Labrador 
 ## DT {.tabset}
 
 ### Model
-
-First looking at the NAPA data we see it has the waters of the diffuse end of the Gulf Stream having a long-term cooling trend. The NAPA data also show that the Gulf Stream jet has a strong (~0.15C/dec) warming trend. Much of the Atlantic shows a slight cooling trend, too.
-
 ![](graph/diff_figs/dt_NAPA.png)
 
 ### Obs
-
-The OISST data agree with the IPCC findings on long-term climate trends. That being that the oceans generally are warming at ~0.1C/dec. We do however see some strong cooling patterns along the south Atlantic coast of the US during winter months. There is also an overall cooling trend in the Gulf Stream that is likely caused by changes to the meandering of the current as it approaches Europe.
-
 ![](graph/diff_figs/dt_OISST.png)
 
 ### Difference
@@ -266,14 +262,9 @@ When we compare these two products we see that the NAPA data are showing a much 
 
 ### Normal data
 
-We see that correlations are better with monthly means than either daily, with much of the arctic circle showing negative correlations with the yearly values. This implies that the interannual variability matches well between the datasets, but that the annual signals in some areas are showing opposite long-term trends. We also see that the negative correlations within the Arctic circle vary seasonally.
-
 ![](graph/diff_figs/cor_norm_difference.png)
 
 ### Decomposed data
-
-The same patterns tend to hold, but reduced in their agreement.
-
 ![](graph/diff_figs/cor_flat_difference.png)
 
 
@@ -281,30 +272,29 @@ The same patterns tend to hold, but reduced in their agreement.
 
 In many of the figures above one will notice that the Gulf Stream is consistently different between the NAPA and OISST data. In order to better visualise this, AVISO+ data were downloaded so that the difference in the per pixel skewness of sea level anomalies (SLA) between the data could be determined. The skewness of SLA is a useful tool for determining large-scale persistent oceanographic feature, particularly the Gulf Stream.
 
+The Arctic circle shows a consistent positive skewness in the NAPA data while there appear to be two or three dipole structures moving east across the Atlantic. One may see the very clear dipole in SLA skewness in the AVISO data that clearly highlights the path of the Gulf Stream. In these two figures one may see that the path of the Gulf Stream is more clear in the AVISO data than the NAPA data however, when we compare the two products the resultant values do not create a new dipole indicating the positional difference in the Gulf Stream between the two products. This implies that the NAPA data are not placing the bulk of the Gulf Stream further north than the OISST data, but that rather the NAPA data are simply calculating the waters north of the Gulf Stream to be warmer due to some other reason. Perhaps they underestimate the influx of cold equatorward flowing water from the Labrador current. Or rather they are underestimating the mixing that occurs in the Gulf Stream waters that appraoch the Scotian Shelf.
+
 ## SLA {.tabset}
 
 ### Model
-
-The Arctic circle shows a consistent positive skewness while there appear to be two or three dipole structures moving east across the Atlantic.
-
 ![](graph/diff_figs/skewness_NAPA.png)
 
 ### Obs
-
-One may see the very clear dipole in SLA skewness that clearly highlights the path of the Gulf Stream.
-
 ![](graph/diff_figs/skewness_AVISO.png)
 
 ### Difference
-
-In the two figures above one may see that the path of the Gulf Stream is more clear in the AVISO data than the NAPA data however, when we compare the two products the resultant values do not create a new dipole indicating the positional difference in the Gulf Stream between the two products. This implies that the NAPA data are not placing the bulk of the Gulf Stream further north than the OISST data, but that rather the NAPA data are simply calculating the waters north of the Gulf Stream to be warmer due to some other reason. Perhaps they underestimate the influx of cold equatorward flowing water from the Labrador current.
-
 ![](graph/diff_figs/skewness_difference.png)
 
 
 ## Gulf stream {.tabset}
 
 In this section we take a few different looks at the Gulf Stream with various layers visuals with one another. Note that these figures are on a normal Cartesian grid so there are a few "dead" pixels that are not filled due to these data having been calculated on the tri-polar grid.
+
+In the figure showing SLA only, we see that the overall mean path of the Gulf Stream is fairly similar between the two products but that there is a very distinct "bump" in the NAPA data where the current diverges from the continent.
+
+In the third panel of the second figure, where the SLA values are overlaid, it is made more clear how similar the majority of the trajectory of the Gulf Stream is for both products. Looking at the two SST panels on the left however we are able to see possible SLA caused differences in SST. In the lefthand panel we see that there is a negative SLA inshore of the Gulf Stream and south of the Gulf of Maine that appears to be related to the cooler waters present in the OISST data that are not produced in the NAPA (centre panel) data.
+
+More interesting, though slightly more difficult to interpret, is that there is a gradient in difference bewteen the NAPA and OISST data for SST as the SLA difference between the products go from agreement at the mean Gulf Stream pathway, to where the SLA anomaly inverts between the data. But that once the NAPA SLA becomes negative, while the aviso SLA remains positive, the difference in SST immeidately increases. I'm not certain what this SLA feature is, but it seems to be related to the SST differences in this Grand Banks region.
 
 ### SLA
 
@@ -319,7 +309,13 @@ In this section we take a few different looks at the Gulf Stream with various la
 
 ## Seasonal climatology {.tabset}
 
-As these values are not terribly useful when broken down by month the data in the following figures are show only the daily (native) data and so there are not multiple panels.
+As these values are not terribly useful when broken down by month the data in the following figures are show only in the daily (native) data and so there are not multiple panels.
+
+Generally the patterns in the differences between seasonal climatologies reflect the differences seen in the mean SST figure above.
+
+When looking at the difference in the seasonal signal using _t_-tests we see some interesting artifacts emerge. Overall we see that the open oceans tend not to have significantly different seasonal signals, but that the areas with some ice coverage do. Additionally we see the outlines of particular features, such as the Gulf Stream and Labrador Current/Sea were the edges upon which these meso-scale features would be abutting something else do not differ significantly between the datasets, but they do almost everywhere else. I'm not certain why this would be, but it is very pronounced. Perhaps the model calculates thee variance of the "interior" of these features differently than what is observed, but that the interactions between these features area modelled more accurately.
+
+When we look at the difference in the distribution of the seasonal climatologies using Kolmogorov-Smirnov tests we still see that the borders of meso-scale features stand out, but now the overall agreement between the datasets plummets. If one were to look at the monthly outputs it becomes clear that the warmer months of the year are resolved differently in the model than the OISST data, but that wintermonths tend to be much more similar.
 
 ### Min {.tabset}
 
@@ -357,23 +353,17 @@ As these values are not terribly useful when broken down by month the data in th
 ### Tests {.tabset}
 
 #### t-test 
-
-The difference of the measurement of central tendency for the seasonal and threshold climatologies per pixel were determined using simple _t_-tests.
-
-When looking at the difference in the seasonal signal below we see some interesting artifacts emerge, particularly in the seasonal panels. Overall we see that the open oceans tend not to have significantly different seasonal signals, but that the areas with some ice coverage do. Additionally, the monthly panels seem to show outlines of particular features, such as the Gulf Stream and Labrador Current/Sea were the edges upon which these meso-scale features would be abutting something else do not differ significantly between the datasets, but they do almost everywhere else. I'm not certain why this would be, but it is very pronounced.
-
 ![](graph/diff_figs/seas_t_test_difference.png)
 
 #### KS-test
-
-When we look at the difference in the distribution of the seasonal and threshold climatologies using Kolmogorov-Smirnov tests we still see that the borders of meso-scale features stand out, but now the overall agreement between the datasets plummets, while the monthly agreement increases dramatically. This is most clear in the winter months. This implies that the warmer months of the year are resolved differently in the model than the OISST data, but that winter is much more similar. 
-
-The patterns are relatively similar for both the seasonal climatologies, as seen in the following figure, and for the threshold climatologies, as seen in the figure after that.
-
 ![](graph/diff_figs/seas_KS_test_difference.png)
 
 
 ## Threshold climatology {.tabset}
+
+The patterns seen in these figures differ little from the seasonal climatologies above.
+
+Surprisingly, the overall _t_-test results are generally more similar here than the for the seasonal signals. The KS test results however appear to be slightly weaker.
 
 ### Min {.tabset}
 
@@ -411,10 +401,7 @@ The patterns are relatively similar for both the seasonal climatologies, as seen
 
 ### Tests {.tabset}
 
-#### t-test 
-
-The following figure shows _t_-test results for the 90th percentile threshold climatology at each pixel. Surprisingly, the overall results are generally more similar than the seasonal signals. The monthly patterns differ but the general pattern of meso-scale borders being similar remains.
-
+#### t-test
 ![](graph/diff_figs/thresh_t_test_difference.png)
 
 #### KS-test
@@ -423,17 +410,13 @@ The following figure shows _t_-test results for the 90th percentile threshold cl
 
 # MHW comparisons
 
-With many summary statistic and applied statistical comparisons of the products complete, the results from calculating marine heatwaves (MHWs) were then compared.
-
-Of primary interest are the duration and intensity of events, and so the 20+ other metrics generated by the detection function were discarded.
-
-The Min, Mean, and Max were calculated for the duration and maximum intensity of all MHWs per pixel, as well as a _t_-test.
-
-Also note that because many pixels did not have more than three events detected per pixel in any given month, it would not be helpful to display these data in the monthly output. Instead they are only shown in the daily (native) resolution.
+With many summary statistic and applied statistical comparisons of the products complete, the results from calculating marine heatwaves (MHWs) were then compared. Of primary interest are the duration and intensity of events, and so the 20+ other metrics generated by the detection function were discarded. The Min, Mean, and Max were calculated for the duration and maximum intensity of all MHWs per pixel, as well as a _t_-test. Also note that because many pixels did not have more than three events detected per pixel in any given month, it would not be helpful to display these data in the monthly output. Instead they are only shown in the daily (native) resolution.
 
 ## Count {.tabset}
 
 No _t_-test was performed for the count of events per pixel as this would not be possible.
+
+One may see rather clearly that the model sees far fewer events around the pole than the obs. This difference declines for much of the open ocean. Along the edges of the model one may see how the edge-forcing creates a halo of higher event counts.
 
 ### Model
 ![](graph/diff_figs/count_NAPA.png)
@@ -446,7 +429,9 @@ No _t_-test was performed for the count of events per pixel as this would not be
 
 ## Duration {.tabset}
 
-The following figure shows that on a month by month basis the duration of detected events do not tend to differ significantly, but when we look at overall time series per pixel they do. Furthermore, the open oceans tend to be in better agreement than areas with ice coverage.
+The following figures show that the there are large differences in the patterns of min, mean, and max duration between the products. This is largely due to the force-halo in the model. I've not corrected for this as I think it is useful to highlight it here. Also please note that the scale bars are _very_ different between the min, mean, and max figures. The difference in the maximum duration of events in the NAPA data at the poles is more than a year in length over the OISST data.
+
+A _t_-test of the durations per pixel show that there is rather good agreement between the prducts. That being said, the duration of events in the Gulf Stream is conspicuously different between the products.
 
 ### Min {.tabset}
 
@@ -488,6 +473,8 @@ The following figure shows that on a month by month basis the duration of detect
 
 When we look at the maximum intensities for all of the MHWs that occurred per pixel (not the overall maximum intensity of the one largest event) we see that the areas that do and do not agree between datasets are almost inverted. This means that the NAPA and OISST data are seeing significantly different sized events in the open ocean as opposed to the areas with sea ice, though of similar lengths. This is perhaps one of the more interesting findings and may be worth investigating in more detail.
 
+Upon cursory analysis it appears as though this may be due to the duration of events being so much longer in the NAPA than OISST data, with events being somewhat more intense in the OISST data.
+
 ### Min {.tabset}
 
 #### Model
@@ -524,16 +511,14 @@ When we look at the maximum intensities for all of the MHWs that occurred per pi
 ### Test
 ![](graph/diff_figs/intensity_max_t_test_difference.png)
 
-Upon cursory analysis it appears as though this may be due to the duration of events being so much longer in the NAPA than OISST data, with events being somewhat more intense in the OISST data.
-
 
 # Conclusion
 
 These products are not dramatically different, but enough so that important features are statistically differently when using several statistical approaches.
 
-The temperatures for the Gulf Stream and Labrador Current appear to be the most dissimilar. In order to determine why the Gulf Stream appeared to be out of place in the NAPA data, the SLA skewness per pixel was compared between NAPA and AVISO. It was found that the path of the Gulf Stream is not as crisp in the NAPA data, but that it is not clearly running north of where the OISST data put it. This then implies that the warmer signal around the Scotian Shelf is perhaps not due to the Gulf Stream but rather the Labrador Current being underrepresented. This would also explain why this current is warmer in the NAPA data compared against the OISST data.
+The temperatures for the Gulf Stream, the Labrador Current, and the Greenland Sea appear to be the most dissimilar. In order to determine why the Gulf Stream appeared to be out of place in the NAPA data, the SLA skewness per pixel was compared between NAPA and AVISO. It was found that the path of the Gulf Stream is not as crisp in the NAPA data, but that its mean pathway is very similar. This then implies that the warmer signal around the Scotian Shelf is not due to the Gulf Stream being out of place, but it does appear that it may be due to the Gulf Stream having a wider pathway. This is further implied by the fact that the Labrador Sea is warmer in the NAPA data, but this does not appear to be flowing southwestward to the Gulf of Maine as much as in the OISST data, which are cooler there. This may all be due to the "bump" in the mean path of the Gulf Stream in the NAPA data as it diverges from the continent.
 
 The seasonal signals per pixel are more similar per month than they are overall, with most pixels being significantly different overall, but similar by month. In areas where the overall signals are significantly different we still see the borders of meso-scale features highlighted as not significantly different. This implies that the model is resolving the different meso-scale features in the study area accurately spatially, but that the seasonal timing of the temperatures differ.
 
-Of the pixels that had three or more MHWs detected for any given month, most pixels show an agreement between the mean duration and intensity of these events. When taken as an overall time series however these differences are mostly significant. Interestingly, the overall spatial agreement of MHW durations is almost inverted from the spatial agreement of pixels that share similar MHW maximum intensities. This is likely due to the very large difference in the duration of events between the datasets, with NAPA having much longer events on average.
+Most pixels show an agreement between the mean duration and intensity of MHWs. When taken as an overall time series however these differences are mostly significant. Interestingly, the overall spatial agreement of durations is almost inverted from the spatial agreement of pixels that share similar maximum intensities. This is likely due to the very large difference in the duration of events between the datasets, with NAPA having much longer events on average that are less intense. This is very typical of model data as they tend to be less noisy than observations.
 
