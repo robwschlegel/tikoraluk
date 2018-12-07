@@ -1,11 +1,18 @@
 # The purpose of this script is to define the area of interest around
-# thh Gulf Stream, and then to create useful visuals
+# the Gulf Stream, and then to create useful visuals
 
 
 # Libraries ---------------------------------------------------------------
 
 library(tidyverse)
-library(directlabels)
+# library(directlabels)
+
+
+# Meta-data ---------------------------------------------------------------
+
+load("metadata/lon_lat_NAPA_OISST.RData")
+load("metadata/lon_OISST.RData")
+GS_bound <- c(25, 50, -80, -40)
 
 
 # Data --------------------------------------------------------------------
@@ -15,7 +22,7 @@ load("../data/AVISO_NAPA_skewness_summary.RData")
 GS_skew <- AVISO_NAPA_skewness_summary %>% 
   # na.omit() %>% 
   left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>% 
-  mutate(lon_O_corrected = ifelse(lon_O > 0, lon_O-360, lon_O),
+  mutate(lon_O_corrected = ifelse(lon_O > 180, lon_O-360, lon_O),
          product = factor(product, levels = c("AVISO", "NAPA", "difference"))) %>% 
   filter(lon_O_corrected <= -40, lon_O_corrected >= -85,
          lat_O <= 50, lat_O >= 25,
@@ -30,7 +37,7 @@ load("../data/OISST_NAPA_SST_summary.RData")
 GS_summary <- OISST_NAPA_SST_summary %>% 
   # na.omit() %>% 
   left_join(lon_lat_NAPA_OISST, by = c("nav_lon", "nav_lat")) %>%
-  mutate(lon_O_corrected = ifelse(lon_O > 0, lon_O-360, lon_O)) %>% 
+  mutate(lon_O_corrected = ifelse(lon_O > 180, lon_O-360, lon_O)) %>% 
   filter(lon_O_corrected <= -40, lon_O_corrected >= -85,
          lat_O <= 50, lat_O >= 25,
          min != 0,
@@ -39,10 +46,6 @@ GS_summary <- OISST_NAPA_SST_summary %>%
   group_by(lon_O_corrected, lat_O, month, product) %>%
   summarise_all(.funs = "mean")
 
-# Metadata
-load("metadata/lon_lat_NAPA_OISST.RData")
-load("metadata/lon_OISST.RData")
-GS_bound <- c(25, 50, -80, -40)
 
 # The base map
 map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
