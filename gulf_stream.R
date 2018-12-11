@@ -74,22 +74,13 @@ GS_grid <- expand.grid(seq(GS_grid_base$lon_O_corrected_min, GS_grid_base$lon_O_
                        seq(GS_grid_base$lat_O_min, GS_grid_base$lat_O_max, by = 0.25)) %>% 
   dplyr::rename(lon_O_corrected = Var1, lat_O = Var2)
 
-# GS_summary <- right_join(GS_summary, GS_grid)
-# GS_skew <- right_join(GS_skew, GS_grid)
-
-# df_base <- GS_summary %>%
-  # filter(product == "OISST")
-# df_base <- GS_skew %>%
-  # filter(product == "difference")
-# df_grid <- GS_grid
-# interpp_stat <- "mean"
-# interpp_stat <- "skewness"
+# Function for interpolating while nested
 interpp_data <- function(df_base, df_grid, interpp_stat){
   df_base <- data.frame(df_base)
   suppressWarnings(
   res <- as.data.frame(interpp(x = as.vector(df_base$lon_O_corrected), y = as.vector(df_base$lat_O), 
                  as.vector(df_base[,colnames(df_base) == interpp_stat]),
-                    xo = as.vector(GS_grid$lon_O_corrected), yo = as.vector(GS_grid$lat_O), linear = T,
+                    xo = as.vector(df_grid$lon_O_corrected), yo = as.vector(df_grid$lat_O), linear = T,
                     extrap = FALSE, duplicate = "mean"))
   )
   colnames(res) <- c("lon_O_corrected", "lat_O", "interp")
