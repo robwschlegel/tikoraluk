@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* December 11, 2018
+  * Made most changes for upcoming NAPA - OISST presentation
+
 * December 7, 2018
   * More work on the slide-show
 

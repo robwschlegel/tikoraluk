@@ -28,45 +28,36 @@ Please provide me with a USB stick or hard drive if you would like the full outp
 We are interested in ocean temperature extremes (OTE). And so the main focus of this presentation is on potential biases in the model w.r.t. SST and ice coverage.
 
 
-## Distance between pixels
+## Product Introduction
+
+- NAPA model
+    - Tri-polar grid system
+    - From mid Atlantic to northern Pacific
+    - Daily SST
+    - Other values at 5 day steps
+- NOAA Optimally Interpolated Sea Surface Temperature (hereafter OISST)
+    - 1/4 degree even global grid
+    - Daily SST
+- AVISO+ Sea Level Anomalies (hereafter AVISO)
+    - Same grid as OISST
+    - Daily SLA
 
 ```{r, echo = FALSE, fig.align='center'}
 include_graphics("graph/diff_figs/distance.png")
 ```
 
 
-## Ice Coverage Minimum 
-
-```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/ice_min_difference.png")
-```
-
-
-## Ice Coverage Maximum
-
-```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/ice_max_difference.png")
-```
-
-
 ## SST Mean
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/mean_difference.png")
+include_graphics("graph/diff_figs/mean_tri_panel.png")
 ```
 
 
 ## SST Decadal Trend
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/dt_difference.png")
-```
-
-
-## Correlations - normal
-
-```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/cor_norm_difference.png")
+include_graphics("graph/diff_figs/dt_tri_panel.png")
 ```
 
 
@@ -83,14 +74,25 @@ include_graphics("graph/diff_figs/cor_flat_difference.png")
 include_graphics("graph/diff_figs/seas_mean_difference.png")
 ```
 
+
 ## Seasonal Climatology - Kolmogorov-Smirnov
 
 ```{r, echo = FALSE, fig.align='center'}
 include_graphics("graph/diff_figs/seas_KS_test_difference.png")
 ```
 
+## Ice Coverage Mean
+
+```{r, echo = FALSE, fig.align='center'}
+include_graphics("graph/diff_figs/ice_mean_difference.png")
+```
+
 
 ## Problem Area - Gulf Stream 1/2
+
+- Large persistent ocean features, such as the Gulf Stream seen below, may be visualised through skewness in spatial distribution of sea surface height (SSH) anomalies (Thompson & Demirov 2006)  
+- We may therefor visualise the difference in the path of the Gulf Stream between model vs. obs by comparing maps of SLA skewness
+
 ### SLA Only
 
 ```{r, echo = FALSE, fig.align='center'}
@@ -104,6 +106,7 @@ include_graphics("graph/GS/skewness.png")
 ```{r, echo = FALSE, fig.align='center'}
 include_graphics("graph/GS/SST_SSH.png")
 ```
+
 
 ## Problem Area - Labrador Sea
 
@@ -154,28 +157,28 @@ include_graphics("graph/presentations/MHW.png")
 ## Marine Heatwave Count
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/count_difference.png")
+include_graphics("graph/diff_figs/count_tri_panel.png")
 ```
 
 
 ## Marine Heatwave Duration - Min
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/duration_min_difference.png")
+include_graphics("graph/diff_figs/duration_min_tri_panel.png")
 ```
 
 
 ## Marine Heatwave Duration - Mean
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/duration_mean_difference.png")
+include_graphics("graph/diff_figs/duration_mean_tri_panel.png")
 ```
 
 
 ## Marine Heatwave Duration - Max
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/duration_max_difference.png")
+include_graphics("graph/diff_figs/duration_max_tri_panel.png")
 ```
 
 
@@ -189,7 +192,7 @@ include_graphics("graph/diff_figs/duration_t_test_difference.png")
 ## Marine Heatwave Intensity - Mean
 
 ```{r, echo = FALSE, fig.align='center'}
-include_graphics("graph/diff_figs/intensity_max_mean_difference.png")
+include_graphics("graph/diff_figs/intensity_max_mean_tri_panel.png")
 ```
 
 
@@ -203,6 +206,7 @@ include_graphics("graph/diff_figs/intensity_max_t_test_difference.png")
 ## Conclusions - SST
 
 ```{r, echo=FALSE, eval=FALSE}
+# Expand on this... monthly stats for example
 OISST_NAPA_SST_summary %>% 
   filter(product == "difference") %>% 
   summarise(min(mean, na.rm = T),
