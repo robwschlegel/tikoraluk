@@ -94,6 +94,8 @@ polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
   if(sum_stat %in% c("cor_flat", "cor_norm")) legend_title <- "Correlation (r)"
   if(sum_stat %in% c("seas_t_test", "thresh_t_test", "seas_KS_test", "thresh_KS_test", 
                      "duration_t_test", "intensity_max_t_test")) legend_title <- "Probability (p)"
+  if(sum_stat %in% c("ice_min", "ice_median", "ice_mean", 
+                     "ice_max", "ice_sd")) legend_title <- "Prop. ice cover"
   if(is.na(plot_name)) plot_name <- sum_stat
   if(is.na(plot_title)) plot_title <- sum_stat
   
@@ -101,11 +103,15 @@ polar_plot_output <- function(sum_stat, df, plot_name = NA, plot_title = NA,
     # Prep
     df_full <- filter(df, product != "difference")
     if(is.na(colour_range)[1]){
-    colour_range_full <- c(min(df_full[,colnames(df_full) == sum_stat], na.rm = T),
-                           max(df_full[,colnames(df_full) == sum_stat], na.rm = T))
-    } else {
-      colour_range_full <- colour_range
-    }
+      if(legend_title == "Temperature (°C)"){
+        colour_range_full <- c(-2, 30)
+        } else {
+          colour_range_full <- c(min(df_full[,colnames(df_full) == sum_stat], na.rm = T),
+                                 max(df_full[,colnames(df_full) == sum_stat], na.rm = T))
+          } 
+      } else {
+        colour_range_full <- colour_range
+      }
     # NAPA
     if("NAPA" %in% unique(df_full$product)){
       if("AVISO" %in% unique(df_full$product) | sum_stat == "dt" | sum_stat == "ice_dt"){
@@ -218,10 +224,16 @@ polar_plots <- function(df, sum_stat, plot_name, plot_title, chosen_palette,
                    aes(x = nav_lon, y = nav_lat, z = ice_round, linetype = product)) +
       scale_linetype_manual(values = c("dotted", "solid"), "Product")
   }
-  if(length(unique(df_complete$month)) == 3){
-    ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 4)
+  if(length(unique(df_complete$month)) == 1){
+    pp_col <- pp_col +
+      theme(legend.position = "bottom")
+    ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 6, height = 7)
+  } else if(length(unique(df_complete$month)) == 3){
+    pp_col <- pp_col +
+      theme(legend.position = "bottom")
+    ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 12, height = 5)
   } else {
-    ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 9, height = 10)
+    ggsave(pp_col, filename = paste0("graph/diff_figs/",plot_name,".png"), width = 12, height = 14)
   }
 }
 
@@ -249,10 +261,11 @@ polar_plot_single <- function(sum_stat, df, chosen_palette = "pretty",
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     coord_map("ortho", orientation = c(90, 0, 0)) +
     labs(x = "", y = "", colour = legend_title) +
+    guides(fcolour = guide_colourbar(barheight = 5)) +
     theme(legend.position = c(0.8, 0.5),
           legend.background = element_blank(),
-          legend.title = element_text(colour = "white"),
-          legend.text = element_text(colour = "white"),
+          legend.title = element_text(colour = "white", size = 8),
+          legend.text = element_text(colour = "white", size = 7),
           axis.text = element_blank()
     )
   if(chosen_palette == "red-blue"){
@@ -270,8 +283,7 @@ polar_plot_single <- function(sum_stat, df, chosen_palette = "pretty",
       geom_contour(data = ice_sub, breaks = 0.5, colour = "black", 
                    lineend = "round", size = 1.0, alpha = 0.5,
                    aes(x = nav_lon, y = nav_lat, z = ice_round, linetype = product)) +
-      scale_linetype_manual(values = c("dotted", "solid"), "Product") +
-      theme(legend.background = element_rect(fill = "white", colour = NA, size = 0.5))
+      scale_linetype_manual(values = c("dotted", "solid"), "Product")
   }
   return(pp_col)
 }
@@ -317,27 +329,27 @@ tri_panel <- function(sum_stat, df, chosen_palette = "pretty",
     scale_x_continuous(limits = c(0.1, 2.9)) +
     scale_y_continuous(limits = c(0.1,0.9)) +
     annotation_custom(grob = ggplotGrob(oisst_map),
-                      xmin = -0.1, xmax = 1.1,
+                      xmin = 0, xmax = 1,
                       ymin = 0, ymax = 1) +
     annotation_custom(grob = oisst_title,
-                      xmin = -0.1, xmax = 1.1,
-                      ymin = 0.8, ymax = 0.9) +
+                      xmin = 0, xmax = 1,
+                      ymin = 0.9, ymax = 0.9) +
     annotation_custom(grob = ggplotGrob(napa_map),
-                      xmin = 0.9, xmax = 2.1,
+                      xmin = 1, xmax = 2,
                       ymin = 0, ymax = 1) +
     annotation_custom(grob = napa_title,
-                      xmin = 0.9, xmax = 2.1,
-                      ymin = 0.8, ymax = 0.9) +
+                      xmin = 1, xmax = 2,
+                      ymin = 0.9, ymax = 0.9) +
     annotation_custom(grob = ggplotGrob(diff_map),
-                      xmin = 1.9, xmax = 3.1,
+                      xmin = 2, xmax = 3,
                       ymin = 0, ymax = 1) +
     annotation_custom(grob = diff_title,
-                      xmin = 1.9, xmax = 3.1,
-                      ymin = 0.8, ymax = 0.9)
+                      xmin = 2, xmax = 3,
+                      ymin = 0.9, ymax = 0.9)
   
   # ggarrange(oisst_map, napa_map, diff_map, nrow = 1, ncol = 3)
   # grid.arrange(napa_title, napa_map, ncol = 1, heights = c(2,15))
-  ggsave(plot = tri_plot, filename = paste0("graph/diff_figs/",sum_stat,"_tri_panel.png"), height = 8, width = 22)
+  ggsave(plot = tri_plot, filename = paste0("graph/diff_figs/",sum_stat,"_tri_panel.png"), height = 4, width = 12)
 }
 
 #
@@ -364,7 +376,7 @@ tri_panel <- function(sum_stat, df, chosen_palette = "pretty",
 #         axis.text = element_blank(),
 #         plot.title = element_text(hjust = 0.5))
 # dp
-# ggsave(dp, filename = "graph/diff_figs/distance.png", width = 4, height = 5)
+# ggsave(dp, filename = "graph/diff_figs/distance.png", width = 6, height = 7)
 # rm(dp)
 
 # Histogram of distanes between pixels
@@ -380,6 +392,7 @@ tri_panel <- function(sum_stat, df, chosen_palette = "pretty",
 # plyr::ldply(colnames(OISST_NAPA_SST_summary[14]), .fun = polar_plot_output,
 #             .parallel = T, df = OISST_NAPA_SST_summary, colour_range = c(-0.2, 0.2))
 
+
 # Skewness visuals --------------------------------------------------------
 
 # polar_plot_output("skewness", AVISO_NAPA_skewness_summary)
@@ -389,7 +402,9 @@ tri_panel <- function(sum_stat, df, chosen_palette = "pretty",
 
 # plyr::ldply(colnames(OISST_NAPA_MHW_summary_corrected[-c(1:4)]), .fun = polar_plot_output,
 #             .parallel = T, OISST_NAPA_MHW_summary_corrected)
-
+# Re-print seas clim, KS test, duration t-test, intensity max t-test
+# plyr::ldply(colnames(OISST_NAPA_MHW_summary_corrected[c(6,11,22,23)]), .fun = polar_plot_output,
+#             .parallel = T, OISST_NAPA_MHW_summary_corrected)
 
 # Ice visuals -------------------------------------------------------------
 
@@ -427,15 +442,15 @@ OISST_NAPA_SST_custom_mean <- OISST_NAPA_SST_summary %>%
   select(nav_lon:month, mean) #%>% 
   # mutate(dt = ifelse(dt > 0.2, 0.2, dt),
   #        dt = ifelse(dt < -0.2, -0.2, dt))
-tri_panel("mean", OISST_NAPA_SST_custom_mean, chosen_palette = "pretty",
-          colour_range = c(-2.0, 30), diff_range = NA)
+# tri_panel("mean", OISST_NAPA_SST_custom_mean, chosen_palette = "pretty",
+#           colour_range = c(-2.0, 30), diff_range = NA)
 
 # Change the ice_mean_difference colour bar to make the signals more clear
 OISST_NAPA_ice_custom <- OISST_NAPA_ice_summary %>% 
   filter(product == "difference") %>% 
   mutate(ice_mean = ifelse(ice_mean > 0.5, 0.5, ice_mean),
          ice_mean = ifelse(ice_mean < -0.5, -0.5, ice_mean))
-polar_plot_output("ice_mean", OISST_NAPA_ice_custom, colour_range = c(-0.5, 0.5))
+# polar_plot_output("ice_mean", OISST_NAPA_ice_custom, colour_range = c(-0.5, 0.5))
 
 # Show just the daily decadal trend panels of obs, model, diff
 OISST_NAPA_SST_custom_DT <- OISST_NAPA_SST_summary %>% 
@@ -443,27 +458,28 @@ OISST_NAPA_SST_custom_DT <- OISST_NAPA_SST_summary %>%
   select(nav_lon:month, dt) %>% 
   mutate(dt = ifelse(dt > 0.2, 0.2, dt),
          dt = ifelse(dt < -0.2, -0.2, dt))
-tri_panel("dt", OISST_NAPA_SST_custom_DT, chosen_palette = "red-blue",
-                      colour_range = c(-0.2, 0.2), diff_range = c(-0.2, 0.2))
+# tri_panel("dt", OISST_NAPA_SST_custom_DT, chosen_palette = "red-blue",
+#                       colour_range = c(-0.2, 0.2), diff_range = c(-0.2, 0.2))
 
 # Don’t show monthly panels for detrended correlation figure
-plyr::ldply(colnames(OISST_NAPA_SST_summary[15:16]), .fun = polar_plot_output, .parallel = T, 
-            df = filter(OISST_NAPA_SST_summary, month %in% c("daily", "monthly", "yearly")))
+# plyr::ldply(colnames(OISST_NAPA_SST_summary[15:16]), .fun = polar_plot_output, .parallel = T,
+#             df = filter(OISST_NAPA_SST_summary, month %in% c("daily", "monthly", "yearly")))
 
 # Show three panel figures for the three different MHW metrics
 ## More narrowly control for colour bar
-# OISST_NAPA_SST_summary_corrected_custom <- OISST_NAPA_MHW_summary_corrected %>% 
-  # filter(month == "monthly") %>% 
-  # select(nav_lon:month, dt) %>% 
-  # mutate(dt = ifelse(dt > 0.2, 0.2, dt),
-  #        dt = ifelse(dt < -0.2, -0.2, dt))
-tri_panel("count", OISST_NAPA_MHW_summary_corrected,
-          colour_range = NA, diff_range = NA)
-tri_panel("duration_min", OISST_NAPA_MHW_summary_corrected,
-          colour_range = NA, diff_range = NA)
-tri_panel("duration_mean", OISST_NAPA_MHW_summary_corrected,
-          colour_range = NA, diff_range = NA)
-tri_panel("duration_max", OISST_NAPA_MHW_summary_corrected,
-          colour_range = NA, diff_range = NA)
-tri_panel("intensity_max_mean", OISST_NAPA_MHW_summary_corrected,
-          colour_range = NA, diff_range = NA)
+OISST_NAPA_MHW_corrected_custom <- OISST_NAPA_MHW_summary_corrected %>%
+  mutate(count = ifelse(count > 50, 50, count),
+         duration_min = ifelse(duration_min > 10, 10, duration_min),
+         duration_mean = ifelse(duration_mean > 50, 50, duration_mean),
+         duration_max = ifelse(duration_max > 300, 300, duration_max))
+tri_panel("count", OISST_NAPA_MHW_corrected_custom,
+          colour_range = c(0, 50), diff_range = NA)
+tri_panel("duration_min", OISST_NAPA_MHW_corrected_custom,
+          colour_range = c(5, 10), diff_range = NA)
+tri_panel("duration_mean", OISST_NAPA_MHW_corrected_custom,
+          colour_range = c(5, 50), diff_range = NA)
+tri_panel("duration_max", OISST_NAPA_MHW_corrected_custom,
+          colour_range = c(5, 300), diff_range = NA)
+tri_panel("intensity_max_mean", OISST_NAPA_MHW_corrected_custom,
+          colour_range = c(0, 7), diff_range = NA)
+

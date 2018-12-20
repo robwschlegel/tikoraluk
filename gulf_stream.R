@@ -121,13 +121,15 @@ plot_1 <- ggplot(GS_skew_interp, aes(x = lon_O_corrected, y = lat_O)) +
   geom_contour(aes(z = interp), breaks = c(-1, 1), colour = "grey 50") +
   geom_contour(aes(z = interp), breaks = 0, colour = "black") +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       guide = guide_colourbar(direction = "horizontal",
+                         title.position = "top")) +
   coord_cartesian(xlim = GS_bound[3:4], ylim = GS_bound[1:2], expand = F) +
-  labs(x = "", y = "") +
+  labs(x = "", y = "", fill = "SLA skewness") +
   facet_wrap(~product) +
   theme(legend.position = "bottom")
 plot_1
-ggsave(plot_1, filename = "graph/GS/skewness.png", width = 10, height = 3)
+ggsave(plot_1, filename = "graph/GS/skewness.png", width = 12, height = 4)
 
 # Visualise AVISO and NAPA contours together
 plot_2 <- ggplot(filter(GS_skew_interp, product != "difference"), 
@@ -169,8 +171,12 @@ plot_5 <- ggplot(filter(GS_skew_interp, product != "difference"),
   geom_raster(data = filter(GS_summary_interp, product == "difference"), aes(fill = interp)) +
   geom_contour(aes(z = interp, colour = product), breaks = 0) +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
-  scale_colour_manual(values = c("black", "purple")) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0,
+                       guide = guide_colourbar(direction = "horizontal",
+                                               title.position = "top")) +
+  scale_colour_manual(values = c("black", "purple"),
+                      guide = guide_legend(direction = "horizontal",
+                                              title.position = "top")) +
   coord_cartesian(xlim = GS_bound[3:4], ylim = GS_bound[1:2], expand = F) +
   labs(x = "", y = "", title = "NAPA - OISST", fill = "Mean\ndifference (°C)") +
   theme(legend.position = "bottom")
@@ -179,5 +185,5 @@ plot_5
 plot_combi_1 <- ggpubr::ggarrange(plot_3, plot_4, common.legend = T, legend = "bottom")
 plot_combi_2 <- ggpubr::ggarrange(plot_combi_1, plot_5, widths = c(2, 1))
 plot_combi_2
-ggsave(plot_combi_2, filename = "graph/GS/SST_SSH.png", height = 4, width = 15)
+ggsave(plot_combi_2, filename = "graph/GS/SST_SSH.png", height = 5, width = 12)
 

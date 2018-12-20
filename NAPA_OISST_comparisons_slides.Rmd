@@ -5,15 +5,18 @@ author: "Robert W. Schlegel"
 date: "December 13th, 2018"
 output:
   slidy_presentation:
-    incremental: true
+    incremental: false
     highlight: pygments
+    widescreen: true
     # css: template_2.css
 width: 1920
 height: 1080
 # runtime: shiny
 ---
-```{r, echo = FALSE}
+```{r, echo = FALSE, message=FALSE, warning=F}
 library(knitr)
+library(tidyverse)
+load("../data/OISST_NAPA_SST_summary.RData")
 ```
 
 
@@ -31,7 +34,7 @@ We are interested in ocean temperature extremes (OTE). And so the main focus of 
 ## Product Introduction
 
 - NAPA model
-    - Tri-polar grid system
+    - Tri-polar grid system; ~1/4 degree uneven grid
     - From mid Atlantic to northern Pacific
     - Daily SST
     - Other values at 5 day steps
@@ -41,6 +44,9 @@ We are interested in ocean temperature extremes (OTE). And so the main focus of 
 - AVISO+ Sea Level Anomalies (hereafter AVISO)
     - Same grid as OISST
     - Daily SLA
+
+
+## Distance between pixels
 
 ```{r, echo = FALSE, fig.align='center'}
 include_graphics("graph/diff_figs/distance.png")
@@ -90,7 +96,7 @@ include_graphics("graph/diff_figs/ice_mean_difference.png")
 
 ## Problem Area - Gulf Stream 1/2
 
-- Large persistent ocean features, such as the Gulf Stream seen below, may be visualised through skewness in spatial distribution of sea surface height (SSH) anomalies (Thompson & Demirov 2006)  
+- Large persistent ocean features, such as the Gulf Stream seen below, may be visualised through skewness in spatial distribution of sea surface height (SSH) anomalies (Thompson and Demirov 2006)  
 - We may therefor visualise the difference in the path of the Gulf Stream between model vs. obs by comparing maps of SLA skewness
 
 ### SLA Only
@@ -203,21 +209,27 @@ include_graphics("graph/diff_figs/intensity_max_t_test_difference.png")
 ```
 
 
-## Conclusions - SST
+## Summary statistics
 
-```{r, echo=FALSE, eval=FALSE}
+```{r, echo=FALSE}
 # Expand on this... monthly stats for example
+knitr::kable(format = "html", digits = 2,
 OISST_NAPA_SST_summary %>% 
   filter(product == "difference") %>% 
-  summarise(min(mean, na.rm = T),
-            mean(mean, na.rm = T),
-            max(mean, na.rm = T))
+  group_by(month) %>% 
+  select(month, mean, dt, cor_flat) %>% 
+  summarise_if(is.numeric, .funs = c("min", "mean", "max"), na.rm = T)
+)
 ```
+
+## Conclusions - SST
 
 * Overall mean difference is -0.2°C  
 * Mean differences per pixel range from -9 -- 10°C  
 * Correlations between pixels are generally strong, with the exception of the arctic ice covered area
     * The strength of the correlations has a seasonal cycle, with winter months being the weakest
+* Large seasoanl differences in decadal trends
+    * Overall differencce only -0.01°C /dec
 * Three important problem areas:  
     * Gulf Stream
     * Labrador Sea
