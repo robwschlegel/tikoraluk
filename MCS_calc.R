@@ -42,8 +42,8 @@ MCS_calc <- function(lon_row){
   MCS_res <- SST %>% 
     group_by(lon, lat) %>%
     nest() %>% 
-    mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1993-10-01", "2015-12-29")),
-           event = purrr::map(clim, detect_event)) %>% 
+    mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
+           event = purrr::map(clim, detect_event, coldSpells = T)) %>% 
            # cat = purrr::map(event, category, climatology = TRUE)) %>% # Curently the code for detecting MCS categories does not work...
     select(-data, -clim)
   

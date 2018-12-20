@@ -3,7 +3,10 @@
 
 # Libraries ---------------------------------------------------------------
 
+.libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
+library(heatwaveR)
+library(gganimate)
 doMC::registerDoMC(cores = 50)
 source("MHW_prep.R")
 
@@ -18,8 +21,19 @@ load("metadata/lon_OISST.RData")
 lon_OISST <- ifelse(lon_OISST > 180, lon_OISST-360, lon_OISST)
 
 
+# The base map
+map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
+  dplyr::rename(lon = long)
+
+# Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
+# Gulf Stream boundary from 'gulf_stream.R'
+# GS_bound <- c(25, 50, -85, -40)
+YHZ_bound <- c(42, 47, -75, -55)
+
+
 # Functions ---------------------------------------------------------------
 
+# Subset event metric files
 load_MCS_event_sub <- function(file_name, date_range,
                          lon_range = NA, lat_range){
   load(file_name)
@@ -32,6 +46,7 @@ load_MCS_event_sub <- function(file_name, date_range,
   return(res)
 }
 
+# Subset climatology files
 load_MCS_clim_sub <- function(file_name, date_range,
                                lon_range = NA, lat_range){
   load(file_name)
@@ -45,73 +60,140 @@ load_MCS_clim_sub <- function(file_name, date_range,
 }
 
 
-# Data --------------------------------------------------------------------
+# Event data --------------------------------------------------------------
 
-# The base map
-map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
-  dplyr::rename(lon = long)
-
-# Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
-# Gulf Stream boundary from 'gulf_stream.R'
-# GS_bound <- c(25, 50, -85, -40)
-YHZ_bound <- c(42, 47, -75, -55)
-
+# Extract event metrics
 MCS_event_YHZ <- plyr::ldply(MCS_RData[which(lon_OISST >= YHZ_bound[3] & lon_OISST <= YHZ_bound[4])], 
                              .fun = load_MCS_event_sub, .parallel = T, 
-                             date_range = c("2015-01-01", "2017-01-01"),
+                             date_range = c("2016-06-01", "2017-06-01"),
                              lat_range = c(YHZ_bound[1], YHZ_bound[2]))
 
+# edit lat/lon
+MCS_event_YHZ <- MCS_event_YHZ %>% 
+  mutate(lon = ifelse(lon > 180, lon-360, lon),
+         lon = round(lon, 3), lat = round(lat, 3))
+
+# Subset for plotting
 MCS_event_YHZ_sub <- MCS_event_YHZ %>% 
-  mutate(lon = ifelse(lon > 180, lon-360, lon)) %>% 
-  filter(date_start >= "2016-12-10", date_start <= "2016-12-20")#,
-         # lat >= YHZ_bound[1], lat <= YHZ_bound[2],
-         # lon >= YHZ_bound[3], lon <= YHZ_bound[4])
+  filter(date_start >= "2016-12-10", date_start <= "2016-12-20")
 
+# One pixel for time series example
+MCS_event_YHZ_one <- MCS_event_YHZ %>% 
+  filter(lon == -66.875, lat == 42.875)
 
-
-
-# Visuals -----------------------------------------------------------------
+# Event visuals -----------------------------------------------------------
 
 # Maximum intensity
-plot_max <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
+event_max <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   geom_raster(aes(fill = intensity_max)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
   labs(x = "", y = "", fill = "Max. Intensity (°C)") +
   scale_fill_gradient(low = "grey", high = "navy") +
   theme(legend.position = "bottom")
-plot_max
+event_max
 
 # Cumulative intensity
-plot_cum <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
+event_cum <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   geom_raster(aes(fill = intensity_max)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
   labs(x = "", y = "", fill = "Cum. Intensity (°C x days)") +
   scale_fill_gradient(low = "grey", high = "deepskyblue") +
   theme(legend.position = "bottom")
-plot_cum
+# event_cum
 
 # Rate of onset
-plot_onset <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
+event_onset <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   geom_raster(aes(fill = rate_onset)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
-  labs(x = "", y = "", fill = "Max.Intensity (°C/days)") +
+  labs(x = "", y = "", fill = "Rate onset (°C/days)") +
   scale_fill_gradient(low = "grey", high = "darkorchid") +
   theme(legend.position = "bottom")
-plot_onset
+# event_onset
 
 # Duration
-plot_duration <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
+event_duration <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   geom_raster(aes(fill = duration)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
   labs(x = "", y = "", fill = "Duration (days)") +
-  scale_fill_gradient(low = "grey", high = "purple") +
+  scale_fill_gradient(low = "grey", high = "steelblue") +
   theme(legend.position = "bottom")
-plot_duration
+# event_duration
 
 # Combine
-plot_all <- ggpubr::ggarrange(plot_max, plot_cum, plot_onset, plot_duration)
-plot_all
+event_all <- ggpubr::ggarrange(event_max, event_cum, event_onset, event_duration)
+event_all
+ggsave(event_all, filename = "graph/MCS/YHZ_2016_12.png", width = 18, height = 12)
+
+ggplot(MCS_event_YHZ_one, aes(x = date_start, y = intensity_max)) +
+  geom_lolli(colour = "steelblue3", colour_n = "navy", n = 0) +
+  labs(x = "Start Date",
+       y = expression(paste("Max. intensity [", degree, "C]")))
+
+
+# Clim data ---------------------------------------------------------------
+
+# Extract event metrics
+MCS_clim_YHZ <- plyr::ldply(MCS_RData[which(lon_OISST >= YHZ_bound[3] & lon_OISST <= YHZ_bound[4])], 
+                            .fun = load_MCS_clim_sub, .parallel = T, 
+                            date_range = c("2016-06-01", "2017-06-01"),
+                            lat_range = c(YHZ_bound[1], YHZ_bound[2]))
+
+# Subset for plotting
+MCS_clim_YHZ_sub <- MCS_clim_YHZ %>% 
+  mutate(lon = ifelse(lon > 180, lon-360, lon),
+         intensity = thresh-temp) %>% 
+  filter(t == "2016-12-18")
+
+# One pixel for time series example
+MCS_clim_YHZ_one <- MCS_clim_YHZ %>% 
+  mutate(lon = round(lon, 3), lat = round(lat, 3),
+         lon = ifelse(lon > 180, lon-360, lon)) %>% 
+  filter(lon == -56.875, lat == 42.875)
+
+
+# Clim visuals ------------------------------------------------------------
+
+load(MCS_RData[1])
+MCS_clim <- MHW_clim(MCS_res)
+MCS_clim_one <- MCS_clim %>% 
+  mutate(lon = round(lon, 3), lat = round(lat, 3),
+         lon = ifelse(lon > 180, lon-360, lon),
+         intensity = thresh-temp) %>% 
+  filter(lon == 0.125, lat == 39.625,
+         t >= "1984-01-01", t <= "1984-12-31")
+
+MCS_clim_top <- MCS_clim_one %>% 
+  slice()
+
+ggplot(MCS_clim_one, aes(x = t, y = thresh, y2 = temp)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "all"), show.legend = T) +
+  geom_flame(data = MCS_clim_top, aes(y = thresh, y2 = temp, fill = "top"), show.legend = T) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+  geom_line(aes(y = seas, colour = "seas"), size = 1.2) +
+  scale_colour_manual(name = "Line Colour",
+                      values = c("temp" = "black", "thresh" =  "forestgreen", "seas" = "grey80")) +
+  scale_y_continuous(limits = c(10, 30))
+
+yhz_base <- ggplot(map_base, aes(x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group)) +
+  coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F)
+yhz_base
+
+yhz_anim <- yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
+  scale_fill_gradient(low = "grey", high = "navy") +
+  labs(title = 'Date: {frame_time}', x = '', y = '', fill = "°C below threshold") +
+  transition_time(t)
+yhz_anim
+
+clim_temp <- ggplot(MCS_clim_YHZ_sub, aes(x = lon, y = lat)) +
+  geom_raster(aes(fill = intensity)) +
+  geom_polygon(data = map_base, aes(group = group)) +
+  coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
+  scale_fill_gradient(low = "grey", high = "steelblue") +
+  theme(legend.position = "bottom")
+clim_temp

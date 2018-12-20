@@ -6,7 +6,7 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 ## Updates  
 
 * December 20, 2018
-  * Playing around with MCS visuals
+  * Playing around with MCS visuals for the Halifax areas
 
 * December 11, 2018
   * Made most changes for upcoming NAPA - OISST presentation
