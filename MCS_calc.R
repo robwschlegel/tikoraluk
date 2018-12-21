@@ -19,7 +19,7 @@ doMC::registerDoMC(cores = 50)
 # Data --------------------------------------------------------------------
 
 # The OISST RData files
-OISST_RData <-  c(file = dir(path = "../data", pattern = "MHW.calc.*.RData", full.names = T))
+OISST_RData <- c(file = dir(path = "../data", pattern = "MHW.calc.*.RData", full.names = T))
 
 
 # Functions ---------------------------------------------------------------

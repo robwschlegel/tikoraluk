@@ -146,7 +146,7 @@ MCS_clim_YHZ <- plyr::ldply(MCS_RData[which(lon_OISST >= YHZ_bound[3] & lon_OISS
 MCS_clim_YHZ_sub <- MCS_clim_YHZ %>% 
   mutate(lon = ifelse(lon > 180, lon-360, lon),
          intensity = thresh-temp) %>% 
-  filter(t == "2016-12-18")
+  filter(t >= "2016-12-01", t <= "2016-12-31")
 
 # One pixel for time series example
 MCS_clim_YHZ_one <- MCS_clim_YHZ %>% 
@@ -154,46 +154,45 @@ MCS_clim_YHZ_one <- MCS_clim_YHZ %>%
          lon = ifelse(lon > 180, lon-360, lon)) %>% 
   filter(lon == -56.875, lat == 42.875)
 
+# Top event from above dataframe
+MCS_clim_YHZ_top <- MCS_clim_YHZ_one %>% 
+  slice(223:239)
+
 
 # Clim visuals ------------------------------------------------------------
 
-load(MCS_RData[1])
-MCS_clim <- MHW_clim(MCS_res)
-MCS_clim_one <- MCS_clim %>% 
-  mutate(lon = round(lon, 3), lat = round(lat, 3),
-         lon = ifelse(lon > 180, lon-360, lon),
-         intensity = thresh-temp) %>% 
-  filter(lon == 0.125, lat == 39.625,
-         t >= "1984-01-01", t <= "1984-12-31")
-
-MCS_clim_top <- MCS_clim_one %>% 
-  slice()
-
-ggplot(MCS_clim_one, aes(x = t, y = thresh, y2 = temp)) +
+# Time series
+ggplot(MCS_clim_YHZ_one, aes(x = t, y = thresh, y2 = temp)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "all"), show.legend = T) +
-  geom_flame(data = MCS_clim_top, aes(y = thresh, y2 = temp, fill = "top"), show.legend = T) +
+  geom_flame(data = MCS_clim_YHZ_top, aes(y = thresh, y2 = temp, fill = "top"), show.legend = T) +
   geom_line(aes(y = temp, colour = "temp")) +
   geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
   geom_line(aes(y = seas, colour = "seas"), size = 1.2) +
   scale_colour_manual(name = "Line Colour",
                       values = c("temp" = "black", "thresh" =  "forestgreen", "seas" = "grey80")) +
-  scale_y_continuous(limits = c(10, 30))
+  scale_fill_manual(name = "Event Colour", values = c("all" = "steelblue3", "top" = "navy")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  scale_y_continuous(limits = c(2, 25))
 
-yhz_base <- ggplot(map_base, aes(x = lon, y = lat)) +
-  geom_polygon(data = map_base, aes(group = group)) +
-  coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F)
-yhz_base
-
-yhz_anim <- yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
-  scale_fill_gradient(low = "grey", high = "navy") +
-  labs(title = 'Date: {frame_time}', x = '', y = '', fill = "°C below threshold") +
-  transition_time(t)
-yhz_anim
-
-clim_temp <- ggplot(MCS_clim_YHZ_sub, aes(x = lon, y = lat)) +
+# A map
+clim_temp <- ggplot(filter(MCS_clim_YHZ_sub, t == "2016-12-18"), aes(x = lon, y = lat)) +
   geom_raster(aes(fill = intensity)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
   scale_fill_gradient(low = "grey", high = "steelblue") +
   theme(legend.position = "bottom")
 clim_temp
+
+# Base map
+yhz_base <- ggplot(map_base, aes(x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group)) +
+  coord_cartesian(xlim = YHZ_bound[3:4], ylim = YHZ_bound[1:2], expand = F) +
+  theme(legend.position = "bottom")
+yhz_base
+
+# Animation for December 2016
+yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
+  scale_fill_gradient(low = "navy", high = "grey") +
+  labs(title = 'Date: {frame_time}', x = '', y = '', fill = "°C below threshold") +
+  transition_time(t)
+anim_save("graph/MCS/YHZ_2016_12.gif")
