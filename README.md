@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* January 26, 2019
+  * Prepping script for downloading 2018 NOAA data
+
 * December 21, 2018
   * Some minor edits
 
