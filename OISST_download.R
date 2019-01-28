@@ -22,8 +22,8 @@ OISST_dl <- function(times){
                        url = "https://www.ncei.noaa.gov/erddap/", 
                        time = times, 
                        depth = c(0, 0),
-                       latitude = c(-90, 90),
-                       longitude = c(-180, 180),
+                       latitude = c(-89.875, 89.875),
+                       longitude = c(0.125, 359.875),
                        fields = "sst")
 }
 
@@ -62,11 +62,31 @@ OISST_save <- function(OISST_data){
 
 # Download ----------------------------------------------------------------
 
+OISST_2018_1 <- OISST_dl(c("2018-01-01T00:00:00Z", "2018-06-30T00:00:00Z"))
+OISST_2018_2 <- OISST_dl(c("2018-07-01T00:00:00Z", "2018-12-31T00:00:00Z"))
+
 # 2018 dates
 dates_2018 <- seq(as.Date("2018-01-01"), as.Date("2018-12-31"), by = "day")
 
 # Loop ALL the data!
-for(i in length(dates_2018)){
-  OISST_step_1 <- OISST_dl(paste0(as.character(dates_2018)[i],"T00:00:00Z"))
-  OISST_step_2 <- OISST_prep(OISST_step_1)
-}
+# for(i in length(dates_2018)){
+  # OISST_step_1 <- OISST_dl(paste0(as.character(dates_2018)[i],"T00:00:00Z"))
+  # OISST_step_2 <- OISST_prep(OISST_step_1)
+# }
+
+
+# Prep --------------------------------------------------------------------
+
+OISST_2018_prep_1 <- OISST_prep(OISST_2018_1)
+OISST_2018_prep_2 <- OISST_prep(OISST_2018_2)
+
+OISST_2018_prep <- rbind(OISST_2018_prep_1, OISST_2018_prep_2)
+
+# OISST_check <- OISST_2018_prep_1 %>% 
+#   filter(t == "2018-02-14")
+
+# ggplot(data = OISST_check, aes(x = lon, y = lat, fill = temp)) +
+#   geom_raster() +
+#   ggtitle("Date = 2018-02-14") +
+#   scale_fill_viridis_c() +
+#   labs(fill = "sst")
