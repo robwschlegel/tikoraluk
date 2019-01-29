@@ -11,7 +11,7 @@
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(heatwaveR)
-if(packageVersion("heatwaveR") != "0.3.5"){
+if(packageVersion("heatwaveR") != "0.3.6"){
   devtools::install_github("robwschlegel/heatwaveR")
   library(heatwaveR)
 }

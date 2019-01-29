@@ -6,6 +6,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 ## Updates  
 
 * January 28, 2019
+  * Added 2018 data to NetCDF files
+
+* January 28, 2019
   * Downloaded NOAA OISST 2018 data
 
 * January 26, 2019
