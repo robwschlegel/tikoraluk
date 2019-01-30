@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* January 30, 2019
+  * Fixed NetCDF time indexing error
+
 * January 28, 2019
   * Added 2018 data to NetCDF files
 

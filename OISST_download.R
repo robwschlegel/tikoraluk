@@ -25,7 +25,7 @@ lon_lat_OISST <- dplyr::arrange(lon_lat_OISST, lon, lat)
 OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
 
 # Current date range
-load()
+# load()
 
 # Functions ---------------------------------------------------------------
 
@@ -162,7 +162,7 @@ rm(OISST_2018_prep_1, OISST_2018_prep_2)
 #   OISST_merge_2018(lon_OISST[1], df = OISST_2018_prep)
 # ) # 10 seconds for one
 
-plyr::ldply(lon_OISST, .fun = OISST_merge_2018, .parallel = TRUE, df = OISST_2018_prep)
+# plyr::ldply(lon_OISST, .fun = OISST_merge_2018, .parallel = TRUE, df = OISST_2018_prep)
 
 
 # Load and visualise ------------------------------------------------------
