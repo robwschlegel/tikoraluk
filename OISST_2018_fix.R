@@ -8,10 +8,7 @@ library(rerddap)
 library(ncdf4)
 library(abind)
 # library(tidync)
-doMC::registerDoMC(cores = 25) # 50 cores exceeds available RAM
-
-# The information for the NOAA OISST data
-# info(datasetid = "ncdc_oisst_v2_avhrr_by_time_zlev_lat_lon", url = "https://www.ncei.noaa.gov/erddap/")
+doMC::registerDoMC(cores = 50)
 
 
 # Meta-data ---------------------------------------------------------------
@@ -28,29 +25,44 @@ dates_2018_int <- as.integer(dates_2018)
 
 # OISST_file <- OISST_files[1]
 fix_2018 <- function(OISST_file){
-  # nc <- nc_open(OISST_file, write = T)
-  nc <- nc_open("../data/OISST/avhrr-only-v2.ts.0001-test.nc", write = T)
+  nc <- nc_open(OISST_file, write = T)
   time_old <- as.vector(nc$dim$time$vals)
-  tail(time_old, 500)
-  as.Date(tail(time_old,1), origin = "1970-01-01")
   time_old_good <- as.vector(nc$dim$time$vals)[nc$dim$time$vals > 0]
-  ncatt_get(nc = nc, varid = "time")
-  # for (i in 1:length(dates_2018_int)) {
-  #   ncatt_put(nc = nc, varid = "time", attval = )
-  # }
-  tail(ncvar_get(nc, "time"), 500)
-  # 17531 # Last good date
-  ncvar_put(nc = nc, varid = "time", vals = dates_2018_int, verbose = TRUE,
-            start = length(time_old_good)+1)
-  as.Date(17896, origin = "1970-01-01")
-  # for(i in 1:length(dates_2018_int)){
-  #   ncvar_put(nc = nc, varid = "time", vals = dates_2018_int, verbose = FALSE,
-  #             start = c(length(nc$dim$time$vals)+i), count = c(-1))
-  # }
+  if(length(time_old) > length(time_old_good)){
+    dates_2018_int_sub <- dates_2018_int[!dates_2018_int %in% time_old_good]
+    ncvar_put(nc = nc, varid = "time", vals = dates_2018_int_sub,
+              start = length(time_old_good)+1, verbose = FALSE)
+  }
   nc_close(nc)
+  return()
 }
 
 
 # Fix ---------------------------------------------------------------------
 
+# fix_2018(OISST_files[1])
 
+# plyr::ldply(OISST_files, .fun = fix_2018, .parallel = T)
+
+
+# Load and visualise ------------------------------------------------------
+
+# nc <- nc_open("../data/OISST/avhrr-only-v2.ts.0720.nc")
+# # nc_close(nc)
+# #
+# res <- ncvar_get(nc, varid = "sst")
+# dimnames(res) <- list(lat = nc$dim$lat$vals,
+#                       # lon = nc$dim$lon$vals,
+#                       t = as.vector(nc$dim$time$vals))
+# nc_close(nc)
+# 
+# res2 <- as.data.frame(reshape2::melt(res, value.name = "temp"), row.names = NULL) %>%
+#   filter(lat == 36.125) %>%
+#   # dplyr::rename(t = Var2) %>%
+#   # mutate(t = as.Date(t, origin = "1981-12-31")) %>%
+#   mutate(t = as.Date(t, origin = "1970-01-01")) %>%
+#   # select(lon, everything()) %>%
+#   na.omit()
+# 
+# ggplot(res2, aes(x = t, y = temp)) +
+#   geom_line()
