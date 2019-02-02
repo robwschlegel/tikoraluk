@@ -10,11 +10,8 @@
 
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
-library(heatwaveR)
-if(packageVersion("heatwaveR") != "0.3.6"){
-  devtools::install_github("robwschlegel/heatwaveR")
-  library(heatwaveR)
-}
+library(heatwaveR, lib.loc = "../R-packages/")
+cat(paste0("heatwaveR version = ",packageDescription("heatwaveR")$Version))
 
 
 # Source scripts ----------------------------------------------------------

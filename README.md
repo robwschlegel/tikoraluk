@@ -5,10 +5,13 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* February 02, 2019
+  * Working on fix to MHE event data files
+
 * January 30, 2019
   * Fixed NetCDF time indexing error
 
-* January 28, 2019
+* January 29, 2019
   * Added 2018 data to NetCDF files
 
 * January 28, 2019
