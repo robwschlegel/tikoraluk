@@ -48,7 +48,7 @@ load_AVISO_anom_sub <- function(file_name, coords){
   return(res)
 }
 
-# Function for combining and saving the subsetted NAPA SST data
+# Function for combining and saving the subsetted AVISO data
 save_AVISO_anom_sub <- function(coords){
   AVISO_anom_sub <- plyr::ldply(AVISO_files,
                                 .fun = load_AVISO_anom_sub, 
