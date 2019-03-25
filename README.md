@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* March 25, 2019
+  * Wrote a script for easily subsetting OISST data
+
 * February 02, 2019
   * Working on fix to MHE event data files
 
