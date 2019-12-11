@@ -17,9 +17,6 @@ lat_OISST <- seq(-89.875, 89.875, by = 0.25)
 
 npz1 <- np$load("../../oliver/data/MHW/Trends/mhw_census.2017.npz")
 
-# View data layers
-npz1$files
-
 
 # Prep a layer ------------------------------------------------------------
 
@@ -31,17 +28,31 @@ layer_prep <- function(data_layer){
     mutate(lon = as.numeric(as.character(lon)))
 }
 
+layer_plot <- function(df){
+  ggplot(df, aes(x = lon, y = lat)) +
+    geom_tile(aes(fill = df[,3])) +
+    scale_fill_gradient2(low = "blue", high = "red") +
+    coord_cartesian(expand = F) +
+    labs(x = NULL, y = NULL, fill = colnames(df)[3])
+}
 
 # Extract layers ----------------------------------------------------------
 
+# View data layers
+npz1$files
+
 max_trend <- layer_prep("MHW_max_tr")
+
+dur_trend <- layer_prep("MHW_dur_tr")
+
+mean_trend <- layer_prep("MHW_mean_tr")
 
 
 # Visualise ---------------------------------------------------------------
 
-ggplot(max_trend, aes(x = lon, y = lat)) +
-  geom_tile(aes(fill = MHW_max_tr)) +
-  scale_fill_gradient2(low = "blue", high = "red") +
-  coord_cartesian(expand = F) +
-  labs(x = NULL, y = NULL)
+layer_plot(max_trend)
+
+layer_plot(dur_trend)
+
+layer_plot(mean_trend)
 
