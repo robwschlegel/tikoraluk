@@ -23,16 +23,16 @@ source("MHW_prep.R")
 # File locations ----------------------------------------------------------
 
 # The OISST RData files
-OISST_RData <-  data.frame(file = dir(path = "../data", pattern = "MHW.calc.*.RData", full.names = T),
+OISST_RData <-  data.frame(file = dir(path = "../data/MHW", pattern = "MHW.calc.*.RData", full.names = T),
                           file_num = sapply(strsplit(sapply(strsplit(
-                            dir(path = "../data", pattern = "MHW.calc.", full.names = T), 
+                            dir(path = "../data/MHW", pattern = "MHW.calc.", full.names = T), 
                             "calc."), "[[", 2), ".RData"), "[[", 1))
 
 
 # The NAPA RData files
-NAPA_RData <-  data.frame(file = dir(path = "../data", pattern = "NAPA_sst_sub", full.names = T),
+NAPA_RData <-  data.frame(file = dir(path = "../data/NAPA", pattern = "NAPA_sst_sub", full.names = T),
            file_num = sapply(strsplit(sapply(strsplit(
-             dir(path = "../data", pattern = "NAPA_sst_sub", full.names = T), 
+             dir(path = "../data/NAPA", pattern = "NAPA_sst_sub", full.names = T), 
              "sub_"), "[[", 2), ".RData"), "[[", 1))
 
 
@@ -93,6 +93,7 @@ MHW_NAPA_calc <- function(df){
   save(MHW_res, file = paste0("../data/MHW.NAPA.calc.", df$file_num,".RData"))
 }
 
+
 # Distance functions ------------------------------------------------------
 
 # Convert degrees to radians
@@ -108,3 +109,4 @@ gcd.hf <- function(long1, lat1, long2, lat2) {
   d = R * c
   return(d) # Distance in km
 }
+

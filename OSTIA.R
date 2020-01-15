@@ -8,14 +8,14 @@ source("MHW_func.R")
 library(FNN)
 library(lubridate)
 library(ncdf4)
-doMC::registerDoMC(cores = 50)
+doParallel::registerDoParallel(cores = 50)
 
 
 # Data --------------------------------------------------------------------
 
 OSTIA_files <- dir("../data", pattern = "MET", full.names = T)
 
-OISST_files <- dir("../data", pattern = "MHW.calc", full.names = T)
+OISST_files <- dir("../data/MHW", pattern = "MHW.calc", full.names = T)
 
 pretty_palette <- c("#fefefe", "#f963fa", "#020135", "#00efe1", "#057400", "#fcfd00", "#ed0000", "#3d0000")
 
@@ -150,3 +150,4 @@ diff_world <- ggplot(OO_diff, aes(x = lon, y = lat, fill = sst_diff)) +
   labs(x = "", y = "", title = paste0("OSTIA-OISST: 2007-12-31"))
 # diff_world
 ggsave(diff_world, filename = "graph/OSTIA_OISST_world_diff.png", height = 10, width = 14)
+
