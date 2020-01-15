@@ -36,16 +36,18 @@ fillCol <- c(
 
 # Absolute threshold
 fig2A <- ggplot(data = sst_WA, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = 25, fill = "All"), show.legend = F) +
+  geom_flame(aes(y = temp, y2 = 25, fill = "All"), n = 5, n_gap = 2, show.legend = F) +
   # geom_flame(data = mhw_top, aes(y = temp, y2 = 25, fill = "top"),  show.legend = T) +
   geom_line(aes(y = temp, colour = "Temperature")) +
   geom_line(aes(y = 25, colour = "Threshold"), size = 1.0) +
+  geom_line(aes(y = quantile(temp, 0.9), colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = mean(temp), colour = "Climatology"), size = 1.2) +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
                limits = c(as.Date("2010-10-02"), as.Date("2011-06-30"))) +
-  scale_y_continuous(limits = c(19, 30.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+                     breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) #+
   # formatting for multi-panel figure
@@ -68,7 +70,8 @@ fig2B <- ggplot(data = ts_Hobday, aes(x = t)) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
                limits = c(as.Date("2010-10-02"), as.Date("2011-06-30"))) +
-  scale_y_continuous(limits = c(19, 30.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+                     breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
@@ -90,7 +93,8 @@ fig2C <- ggplot(data = ts_Froehlicher, aes(x = t)) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
                limits = c(as.Date("2010-10-02"), as.Date("2011-06-30"))) +
-  scale_y_continuous(limits = c(19, 30.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+                     breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
@@ -124,7 +128,8 @@ fig2D <- ggplot(data = ts_Hobday_cat, aes(x = t, y = temp)) +
   scale_fill_manual(name = "Event colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
                limits = c(as.Date("2010-10-02"), as.Date("2011-06-30"))) +
-  scale_y_continuous(limits = c(19, 30.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+                     breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                 "dashed", "dotdash", "dotted")))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
@@ -137,6 +142,6 @@ fig2D
 # Combine all panels
 fig2 <- ggpubr::ggarrange(fig2A, fig2B, fig2C, fig2D,
                           labels = c("A)", "B)", "C)", "D)"),
-                          ncol = 4, nrow = 1, common.legend = T, align = "v")
+                          ncol = 4, nrow = 1, common.legend = T, legend = "bottom", align = "v")
 fig2
 ggsave("graph/MHW_review_fig2.png", height = 4, width = 16)
