@@ -37,12 +37,6 @@ doParallel::registerDoParallel(cores = 50)
 # CMEMS.download(cfg)
 
 
-# FTP option --------------------------------------------------------------
-
-# OSTIA_URL <- "ftp://nrt.cmems-du.eu/Core/SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001/METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2/2020/01/20200101120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc"
-# download_ftp_file(OSTIA_URL, "~/data/OSTIA/test.nc", verbose = TRUE, credentials = "rschlegel1:RobertCMEMS2018")
-
-
 # Prep --------------------------------------------------------------------
 
 # The URL where the data are housed for FTP
@@ -56,11 +50,6 @@ date_range <- seq(as.Date("2019-01-01"), as.Date(Sys.time())-1, by = "day")
 
 # Download function -------------------------------------------------------
 
-# Check URL for new data
-OSTIA_files_year <- list_files_ftp(paste0(base_URL), credentials = "rschlegel1:RobertCMEMS2018")
-OSTIA_files_month <- plyr::llply(OSTIA_files_year[-length(OSTIA_files_year)], list_files_ftp)
-OSTIA_files_day <- lapply(OSTIA_files_month[-length(OSTIA_files_month)], list_files_ftp)
-
 # date_choice <- date_range[1]
 # date_choice <- "2021-02-01"
 download_OSTIA <- function(date_choice){
@@ -68,13 +57,11 @@ download_OSTIA <- function(date_choice){
   # Prep the necessary URL pieces
   date_slash <- strtrim(str_replace_all(date_choice, "-", "/"), width = 7)
   date_nogap_day <- str_replace_all(date_choice, "-", "")
-  # date_nogap <- strtrim(date_nogap_day, width = 6)
   
   tail_chunk <- "120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc"
 
   complete_URL <- paste0(base_URL,"/",date_slash,"/",date_nogap_day,tail_chunk)
   file_name <- paste0("~/data/OSTIA/",date_nogap_day,tail_chunk)
-  # file_name <- paste0(date_nogap,tail_chunk)
   
   # Download and save the file if needed
   if(file.exists(file_name)){

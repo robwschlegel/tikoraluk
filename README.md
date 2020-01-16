@@ -6,7 +6,8 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 ## Updates  
 
 * January 16, 2020
-  * Wrote script for downloading OSTIA data
+  * Wrote a script for downloading OSTIA data
+  * Wrote a script for downloading GLORYS data
   
 * January 13, 2020
   * Wrote script for downloading CCI data
