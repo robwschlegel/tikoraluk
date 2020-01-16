@@ -20,18 +20,10 @@ library(lubridate)
 
 # Prep --------------------------------------------------------------------
 
-# Example complete old URL
-# "http://data.ceda.ac.uk/neodc/esacci/sst/data/CDR_v2/Analysis/L4/v2.1/1981/09/01/19810901120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc"
-
-# Example complete new URL
-# "http://data.ceda.ac.uk/neodc/c3s_sst/data/ICDR_v2/Analysis/L4/v2.0/2017/01/01/20170101120000-C3S-L4_GHRSST-SSTdepth-OSTIA-GLOB_ICDR2.0-v02.0-fv01.0.nc"
-
-# The URLs where the data are housed for FTP
+# The URLs where the data are housed for direct download
   # NB: Note that the versions are different; v2.1 vs. v2.0
   # NB: It looks like going straight through the thredds server is a more stable option
-# base_URL_old <- "http://data.ceda.ac.uk/neodc/esacci/sst/data/CDR_v2/Analysis/L4/v2.1"
 base_URL_old <- "http://dap.ceda.ac.uk/thredds/fileServer/neodc/esacci/sst/data/CDR_v2/Analysis/L4/v2.1"
-# base_URL_new <- "http://data.ceda.ac.uk/neodc/c3s_sst/data/ICDR_v2/Analysis/L4/v2.0"
 base_URL_new <- "http://dap.ceda.ac.uk/thredds/fileServer/neodc/c3s_sst/data/ICDR_v2/Analysis/L4/v2.0"
 
 # The date ranges that are housed therein
@@ -92,13 +84,6 @@ plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .paral
 
 # file.info("../data/CCI/19850410120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc")$size
 # file.remove("../data/CCI/19850410120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc")
-
-
-# Download GLORYS data ----------------------------------------------------
-
-# library(reticulate)
-
-# py_run_file("../GLORYS_quarter_degree_loop_on_date.py")
 
 
 # Test visuals ------------------------------------------------------------

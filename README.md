@@ -5,6 +5,12 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* January 16, 2020
+  * Wrote script for downloading OSTIA data
+  
+* January 13, 2020
+  * Wrote script for downloading CCI data
+
 * March 25, 2019
   * Wrote a script for easily subsetting OISST data
 
