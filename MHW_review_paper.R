@@ -144,4 +144,6 @@ fig2 <- ggpubr::ggarrange(fig2A, fig2B, fig2C, fig2D,
                           labels = c("A)", "B)", "C)", "D)"),
                           ncol = 4, nrow = 1, common.legend = T, legend = "bottom", align = "v")
 fig2
-ggsave("graph/MHW_review_fig2.png", height = 4, width = 16)
+ggsave("graph/MHW_review_fig2.png", fig2, height = 4, width = 16)
+ggsave("graph/MHW_review_fig2.pdf", fig2, height = 4, width = 16)
+
