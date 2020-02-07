@@ -30,6 +30,20 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 # GS_bound <- c(25, 50, -85, -40)
 YHZ_bound <- c(42, 47, -75, -55)
 
+## Potential colour palettes
+# https://www.w3schools.com/colors/colors_groups.asp
+
+#1cb5e0, #000046
+
+#0575e6, #021b79 
+
+#B0E0E6, #6495ED, #0000CD, #191970
+
+## RcolorBrewer palettes
+# Blues
+# PuBu
+# RdBu
+
 
 # Functions ---------------------------------------------------------------
 
