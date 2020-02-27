@@ -36,15 +36,15 @@ fillCol <- c(
 
 # Absolute threshold
 fig2A <- ggplot(data = sst_WA, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = quantile(temp, 0.9)), fill = "salmon", n = 5, n_gap = 2, show.legend = F) +
-  geom_flame(aes(y = temp, y2 = 25), fill = "red", n = 5, n_gap = 2, show.legend = F) +
+  geom_flame(aes(y = temp, y2 = quantile(temp, 0.9)), fill = "salmon", n = 1, n_gap = 2, show.legend = F) +
+  geom_flame(aes(y = temp, y2 = 25), fill = "red", n = 1, n_gap = 2, show.legend = F) +
   # geom_flame(data = mhw_top, aes(y = temp, y2 = 25, fill = "top"),  show.legend = T) +
   geom_line(aes(y = temp, colour = "Temperature")) +
   geom_line(aes(y = 25, colour = "Threshold"), size = 1.0, linetype = "dashed") +
   geom_line(aes(y = quantile(temp, 0.9), colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = mean(temp), colour = "Climatology"), size = 1.2) +
   geom_point(data = filter(sst_WA, temp == max(sst_WA$temp)), aes(y = temp),
-             size = 1.5, colour = "darkmagenta") +
+             size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
@@ -52,10 +52,7 @@ fig2A <- ggplot(data = sst_WA, aes(x = t)) +
   scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
                      breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
-  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) #+
-  # formatting for multi-panel figure
-  # theme(axis.text.x = element_blank(),
-  #       axis.ticks.x = element_blank())
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
 fig2A
 
 # Hobday definition
@@ -70,7 +67,7 @@ fig2B <- ggplot(data = ts_Hobday, aes(x = t)) +
   geom_line(aes(y = thresh, colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = seas, colour = "Climatology"), size = 1.2) +
   geom_point(data = filter(sst_WA, temp == max(sst_WA$temp)), aes(y = temp),
-             size = 1.5, colour = "darkmagenta") +
+             size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
@@ -95,7 +92,7 @@ fig2C <- ggplot(data = ts_Froehlicher, aes(x = t)) +
   geom_line(aes(y = thresh, colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = seas, colour = "Climatology"), size = 1.2) +
   geom_point(data = filter(sst_WA, temp == max(sst_WA$temp)), aes(y = temp),
-             size = 1.5, colour = "darkmagenta") +
+             size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
@@ -130,7 +127,7 @@ fig2D <- ggplot(data = ts_Hobday_cat, aes(x = t, y = temp)) +
   geom_line(aes(y = thresh, col = "Threshold"), size = 1.0) +
   geom_line(aes(y = temp, col = "Temperature")) +
   geom_point(data = filter(sst_WA, temp == max(sst_WA$temp)), aes(y = temp),
-             size = 1.5, colour = "darkmagenta") +
+             size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line colour", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
@@ -164,52 +161,47 @@ sst_WA_cats <- category(detect_event(ts_Hobday))
 sst_Med_cats <- category(detect_event(ts2clm(sst_Med, climatologyPeriod = c("1983-01-01", "2012-12-31"))), S = F)
 sst_NWA_cats <- category(detect_event(ts2clm(sst_NW_Atl, climatologyPeriod = c("1983-01-01", "2012-12-31"))), S = F)
 
-# It looks like we want event 49 from the NWA
-sst_Med_events <- detect_event(ts2clm(sst_Med, climatologyPeriod = c("1983-01-01", "2012-12-31")))$event
+# It looks like we want event 50 from the NWA
+sst_NWA_clim <- detect_event(ts2clm(sst_NW_Atl, climatologyPeriod = c("1983-01-01", "2012-12-31")))$climatology
 sst_NWA_events <- detect_event(ts2clm(sst_NW_Atl, climatologyPeriod = c("1983-01-01", "2012-12-31")))$event
 
 # Absolute threshold
-figW2A <- ggplot(data = sst_NW_Atl, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = quantile(temp, 0.9)), fill = "salmon", n = 5, n_gap = 2, show.legend = F) +
-  geom_flame(aes(y = temp, y2 = 25), fill = "red", n = 5, n_gap = 2, show.legend = F) +
+figW2A <- ggplot(data = sst_NWA_clim, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = quantile(temp, 0.9)), fill = "salmon", n = 1, n_gap = 2, show.legend = F) +
+  geom_flame(aes(y = temp, y2 = 17), fill = "red", n = 1, n_gap = 2, show.legend = F) +
   geom_line(aes(y = temp, colour = "Temperature")) +
   geom_line(aes(y = 17, colour = "Threshold"), size = 1.0, linetype = "dashed") +
   geom_line(aes(y = quantile(temp, 0.9), colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = mean(temp), colour = "Climatology"), size = 1.2) +
-  geom_point(data = filter(sst_NWA_events, event_no == 49), 
-             aes(y = intensity_max_abs, x = date_peak), size = 1.5, colour = "darkmagenta") +
+  geom_point(data = filter(sst_NWA_clim, t == sst_NWA_cats$peak_date[sst_NWA_cats$event_no == 50]),
+             aes(y = temp), size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("2012-01-02"), as.Date("2012-05-30"))) +
-  # scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
-                     # breaks = seq(20, 30, by = 5)) +
+               limits = c(as.Date("2011-12-02"), as.Date("2012-08-30"))) +
+  scale_y_continuous(limits = c(0, 20), expand = c(0, 0),
+                     breaks = seq(2, 18, by = 4)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
-  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) #+
-# formatting for multi-panel figure
-# theme(axis.text.x = element_blank(),
-#       axis.ticks.x = element_blank())
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL)
 figW2A
 
 # Hobday definition
-ts_Hobday <- ts2clm(sst_WA, climatologyPeriod = c("1983-01-01", "2012-01-01"))
-# ts_Hobday_top <- ts_Hobday %>% 
-  # slice(10585:10696)
+ts_Hobday_top <- sst_NWA_clim[11057:11114]
 
-figW2B <- ggplot(data = sst_NW_Atl, aes(x = t)) +
-  geom_flame(aes(y = temp, y2 = thresh, fill = "Top"), n = 5, n_gap = 2, show.legend = F) +
-  # geom_flame(data = ts_Hobday_top, aes(y = temp, y2 = thresh, fill = "Top"),  show.legend = F) +
+figW2B <- ggplot(data = sst_NWA_clim, aes(x = t)) +
+  geom_flame(aes(y = temp, y2 = thresh), fill = "salmon", n = 5, n_gap = 2, show.legend = F) +
+  geom_flame(data = ts_Hobday_top, aes(y = temp, y2 = thresh, fill = "Top"),  show.legend = F) +
   geom_line(aes(y = temp, colour = "Temperature")) +
   geom_line(aes(y = thresh, colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = seas, colour = "Climatology"), size = 1.2) +
-  # geom_point(data = filter(sst_WA, t == sst_WA_cats$peak_date[sst_WA_cats$event_no == 29]), 
-             # aes(y = temp), size = 1.5, colour = "darkmagenta") +
+  geom_point(data = filter(sst_NWA_clim, t == sst_NWA_cats$peak_date[sst_NWA_cats$event_no == 50]),
+             aes(y = temp), size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("2012-01-02"), as.Date("2012-05-30"))) +
-  # scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
-                     # breaks = seq(20, 30, by = 5)) +
+               limits = c(as.Date("2011-12-02"), as.Date("2012-08-30"))) +
+  scale_y_continuous(limits = c(0, 20), expand = c(0, 0),
+                     breaks = seq(2, 18, by = 4)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
@@ -219,7 +211,7 @@ figW2B <- ggplot(data = sst_NW_Atl, aes(x = t)) +
 figW2B
 
 # Froehlicher definition
-ts_Froehlicher <- ts2clm(sst_WA, climatologyPeriod = c("1983-01-01", "2012-01-01"), pctile = 99)
+ts_Froehlicher <- ts2clm(sst_NW_Atl, climatologyPeriod = c("1983-01-01", "2012-01-01"), pctile = 99)
 
 figW2C <- ggplot(data = ts_Froehlicher, aes(x = t)) +
   geom_flame(aes(y = temp, y2 = thresh, fill = "All"), show.legend = F) +
@@ -227,14 +219,14 @@ figW2C <- ggplot(data = ts_Froehlicher, aes(x = t)) +
   geom_line(aes(y = temp, colour = "Temperature")) +
   geom_line(aes(y = thresh, colour = "Threshold"), size = 1.0) +
   geom_line(aes(y = seas, colour = "Climatology"), size = 1.2) +
-  geom_point(data = filter(sst_WA, t == sst_WA_cats$peak_date[sst_WA_cats$event_no == 29]), 
-             aes(y = temp), size = 1.5, colour = "darkmagenta") +
+  geom_point(data = filter(sst_NWA_clim, t == sst_NWA_cats$peak_date[sst_NWA_cats$event_no == 50]),
+             aes(y = temp), size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line Colour", values = lineCol) +
   scale_fill_manual(name = "Event Colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("1999-04-02"), as.Date("1999-08-30"))) +
-  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
-                     breaks = seq(20, 30, by = 5)) +
+               limits = c(as.Date("2011-12-02"), as.Date("2012-08-30"))) +
+  scale_y_continuous(limits = c(0, 20), expand = c(0, 0),
+                     breaks = seq(2, 18, by = 4)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
@@ -244,7 +236,7 @@ figW2C <- ggplot(data = ts_Froehlicher, aes(x = t)) +
 figW2C
 
 # Hobday categories
-ts_Hobday_cat <- ts_Hobday %>%
+ts_Hobday_cat <- sst_NWA_clim %>%
   dplyr::mutate(diff = thresh - seas,
                 thresh_2x = thresh + diff,
                 thresh_3x = thresh_2x + diff,
@@ -262,16 +254,17 @@ figW2D <- ggplot(data = ts_Hobday_cat, aes(x = t, y = temp)) +
   geom_line(aes(y = seas, col = "Climatology"), size = 1.2) +
   geom_line(aes(y = thresh, col = "Threshold"), size = 1.0) +
   geom_line(aes(y = temp, col = "Temperature")) +
-  geom_point(data = filter(sst_WA, t == sst_WA_cats$peak_date[sst_WA_cats$event_no == 29]), 
-             aes(y = temp), size = 1.5, colour = "darkmagenta") +
+  geom_point(data = filter(sst_NWA_clim, t == sst_NWA_cats$peak_date[sst_NWA_cats$event_no == 50]),
+             aes(y = temp), size = 2, colour = "darkmagenta") +
   scale_colour_manual(name = "Line colour", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Event colour", values = fillCol) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("1999-04-02"), as.Date("1999-08-30"))) +
-  scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
-                     breaks = seq(20, 30, by = 5)) +
+               limits = c(as.Date("2011-12-02"), as.Date("2012-08-30"))) +
+  scale_y_continuous(limits = c(0, 20), expand = c(0, 0),
+                     breaks = seq(2, 18, by = 4)) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                 "dashed", "dotdash", "dotted")))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
