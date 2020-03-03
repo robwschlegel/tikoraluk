@@ -7,7 +7,8 @@
 library(tidyverse)
 library(heatwaveR)
 library(gganimate)
-doMC::registerDoMC(cores = 50)
+library(XML)
+library(doParallel); registerDoParallel(cores = 50)
 source("MHW_prep.R")
 
 
@@ -20,7 +21,6 @@ MCS_RData <-  c(file = dir(path = "../data", pattern = "MCS.calc.*.RData", full.
 load("metadata/lon_OISST.RData")
 lon_OISST <- ifelse(lon_OISST > 180, lon_OISST-360, lon_OISST)
 
-
 # The base map
 map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
   dplyr::rename(lon = long)
@@ -32,6 +32,9 @@ YHZ_bound <- c(42, 47, -75, -55)
 
 ## Potential colour palettes
 # https://www.w3schools.com/colors/colors_groups.asp
+# https://sciviscolor.org/home/colormaps/contrasting-divergent-colormaps/
+
+#474E73
 
 #1cb5e0, #000046
 
@@ -39,10 +42,90 @@ YHZ_bound <- c(42, 47, -75, -55)
 
 #B0E0E6, #6495ED, #0000CD, #191970
 
+#1fa2ff #12d8fa #a6ffcb 
+
+#1a2980 #26d0ce 
+
+#5433ff #20bdff #a5fecb 
+
 ## RcolorBrewer palettes
 # Blues
 # PuBu
 # RdBu
+
+# Load an XML file containing weird rgb vlaues and convert to hex
+rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
+
+BlueSpectrum <- t(data.frame(xmlToList(xmlParse("metadata/BlueSpectrum.xml"))$ColorMap[1:27], stringsAsFactors = F)) %>% 
+  data.frame(., stringsAsFactors = F) %>% 
+  remove_rownames(.) %>% 
+  select(r, g, b) %>% 
+  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
+         hex = rgb2hex(r, g, b))
+write_csv(BlueSpectrum, "metadata/BlueSpecturm.csv")
+
+# This is negotiable...
+MCS_palette <- c(BlueSpectrum$hex[6], BlueSpectrum$hex[13], BlueSpectrum$hex[20], BlueSpectrum$hex[27])
+
+# Find extreme MCSs
+  # NB: No extreme MCS in Med, NWA, WA
+  # NB: 2 severe days in Med, 0 in the others
+sst_MCS <- detect_event(ts2clm(sst_Med, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10), coldSpells = T)$climatology %>% 
+  dplyr::mutate(diff = thresh - seas,
+                thresh_2x = thresh + diff,
+                thresh_3x = thresh_2x + diff,
+                thresh_4x = thresh_3x + diff,
+                temp = temp/1.2) # Cook the books to get the desired colour range 
+filter(sst_MCS, temp < thresh_4x)
+
+# Set line colours
+lineCol <- c(
+  "Temperature" = "black",
+  "Climatology" = "black",
+  "Threshold" = "black",
+  "2x Threshold" = "black",
+  "3x Threshold" = "black",
+  "4x Threshold" = "black"
+)
+
+# Set category fill colours
+fillCol <- c(
+  "Moderate" = MCS_palette[1],
+  "Strong" = MCS_palette[2],
+  "Severe" = MCS_palette[3],
+  "Extreme" = MCS_palette[4]
+)
+
+# Centre a line plot on 1994-01-09 
+ggplot(data = sst_MCS, aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2, show.legend = F) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong"), show.legend = F) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe"), show.legend = F) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme"), show.legend = F) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 1.0, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 1.0, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 1.0, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 1.2) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 1.0) +
+  geom_line(aes(y = temp, col = "Temperature")) +
+  scale_colour_manual(name = "Line colour", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Event colour", values = fillCol) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
+               limits = c(as.Date("1993-10-02"), as.Date("1994-03-30"))) +
+  # scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+                     # breaks = seq(20, 30, by = 5)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
+  # formatting for multi-panel figure
+  labs(y = NULL) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
+ggsave("graph/MCS_test_palette.png", width = 6, height = 4)
+ggsave("graph/MCS_test_palette.pdf", width = 6, height = 4)
 
 
 # Functions ---------------------------------------------------------------

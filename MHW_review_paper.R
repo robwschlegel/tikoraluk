@@ -137,7 +137,8 @@ fig2D <- ggplot(data = ts_Hobday_cat, aes(x = t, y = temp)) +
   scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
                      breaks = seq(20, 30, by = 5)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
-                                                                "dashed", "dotdash", "dotted")))) +
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
   labs(y = NULL) +
@@ -266,7 +267,8 @@ figW2D <- ggplot(data = ts_Hobday_cat, aes(x = t, y = temp)) +
                      breaks = seq(2, 18, by = 4)) +
   guides(colour = guide_legend(override.aes = list(fill = NA))) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
-                                                                "dashed", "dotdash", "dotted")))) +
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
   # formatting for multi-panel figure
   labs(y = NULL) +
