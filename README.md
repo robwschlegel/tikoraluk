@@ -5,6 +5,9 @@ Many of the file pathways will not work when not run on Robert Schlegel's userna
 
 ## Updates  
 
+* March 18, 2020
+  * Recalculated all of the MCSs
+
 * January 16, 2020
   * Wrote a script for downloading OSTIA data
   * Wrote a script for downloading GLORYS data

@@ -8,18 +8,19 @@
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(heatwaveR)
-if(packageVersion("heatwaveR") != "0.3.6"){
+library(tidync)
+if(packageVersion("heatwaveR") != "0.4.2.9001"){
   devtools::install_github("robwschlegel/heatwaveR")
   library(heatwaveR)
 }
 source("MHW_prep.R")
-doMC::registerDoMC(cores = 50)
+library(doParallel); registerDoParallel(cores = 50)
 
 
 # Data --------------------------------------------------------------------
 
-# The OISST RData files
-OISST_RData <- c(file = dir(path = "../data", pattern = "MHW.calc.*.RData", full.names = T))
+# The OISST files
+OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
 
 
 # Functions ---------------------------------------------------------------
@@ -33,10 +34,10 @@ MCS_calc <- function(lon_row){
   print(paste("Began run", lon_row_pad, "at", Sys.time()))
   
   # Load data
-  load(OISST_RData[lon_row])
-  SST <- MHW_clim(MHW_res) %>% 
-    select(lon, lat, t, temp)
-  rm(MHW_res)
+  SST <- tidync(OISST_files[lon_row]) %>% 
+    hyper_tibble() %>% 
+    mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+    dplyr::rename(t = time, temp = sst)
   
   # Make calculations
   MCS_res <- SST %>% 
@@ -48,7 +49,7 @@ MCS_calc <- function(lon_row){
     select(-data, -clim)
   
   # Finish
-  save(MCS_res, file = paste0("../data/MCS.calc", lon_row_pad,".RData"))
+  save(MCS_res, file = paste0("../data/MCS/MCS.calc", lon_row_pad,".RData"))
   print(paste("Completed run",lon_row_pad,"at",Sys.time()))
 }
 
@@ -56,8 +57,8 @@ MCS_calc <- function(lon_row){
 # Calculations ------------------------------------------------------------
 
 # system.time(
-#   MCS_calc(100)
-# ) # 47 seconds
+  # MCS_calc(2)
+# ) # 111 seconds
 
-# Run on Wednesday, November 28th, 2018
-plyr::ldply(1:1440, .fun = MCS_calc, .parallel = T)
+# Ran on Wednesday, March 18th, 2020
+plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
