@@ -50,6 +50,7 @@ MCS_calc <- function(lon_row){
   
   # Finish
   save(MCS_res, file = paste0("../data/MCS/MCS.calc", lon_row_pad,".RData"))
+  rm(SST, MCS_res); gc()
   print(paste("Completed run",lon_row_pad,"at",Sys.time()))
 }
 
