@@ -5,6 +5,7 @@
 
 # Libraries ---------------------------------------------------------------
 
+.libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(reticulate)
 np <- import("numpy")
@@ -15,7 +16,7 @@ lat_OISST <- seq(-89.875, 89.875, by = 0.25)
 
 # Load data ---------------------------------------------------------------
 
-npz1 <- np$load("../../oliver/data/MHW/Trends/mhw_census.2017.npz")
+npz1 <- np$load("../../oliver/data/MHW/Trends/mhw_census.2019.npz")
 
 
 # Prep a layer ------------------------------------------------------------
@@ -24,8 +25,10 @@ layer_prep <- function(data_layer){
   res <- as.data.frame(npz1$f[[data_layer]]) %>% 
     `colnames<-`(lon_OISST) %>% 
     mutate(lat = lat_OISST) %>% 
-    reshape2::melt(id = "lat", variable.name = "lon", value.name = data_layer) %>% 
-    mutate(lon = as.numeric(as.character(lon)))
+    reshape2::melt(id = "lat", variable.name = "lon", value.name = "value") %>% 
+    mutate(lon = as.numeric(as.character(lon)),
+           value = replace_na(value, NA)) %>% 
+    `colnames<-`(c("lon", "lat", {{data_layer}})) 
 }
 
 layer_plot <- function(df){
