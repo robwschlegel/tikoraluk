@@ -16,6 +16,8 @@ library(tidyverse)
 library(tidync)
 library(ncdf4)
 library(lubridate)
+library(raster)
+library(doParallel); registerDoParallel(cores = 50)
 
 
 # Prep --------------------------------------------------------------------
@@ -98,4 +100,38 @@ plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .paral
 #   scale_fill_viridis_c() +
 #   coord_cartesian(expand = F) +
 #   theme_void()
+
+# Load data ---------------------------------------------------------------
+
+# Files
+CCI_files <- dir("../data/CCI", full.names = T)
+tidync("../data/CCI/19820620120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc") 
+
+# Load function
+load_CCI_region <- function(file_name, lon_min, lon_max, lat_min, lat_max){
+  res <- tidync(file_name) %>%
+    hyper_filter(lat = dplyr::between(lat, lat_min, lat_max),
+                 lon = dplyr::between(lon, lon_min, lon_max)) %>%
+    hyper_tibble() %>%
+    dplyr::rename(t = time, temp = analysed_sst) %>%
+    mutate(t = as.Date(as.POSIXct(t, origin = '1981-01-01', tz = "GMT")),
+           temp = round(temp-273.15, 2)) %>%
+    dplyr::select(lon, lat, t, temp)
+  return(res)
+}
+
+# Shelburne harbour and Jordan Bay. Late feb / early march 2015 (approx. 24th Feb – march 3rd). 
+# Top left = -65.5843, 43.568. Top right = -65.1896, 43.8499. Bottom right = -64.8205, 43.567. Bottom left = -65.2871, 43.3256. 
+shelbourne_harbour <- plyr::ldply(CCI_files[12175:12325], load_CCI_region, .parallel = T,
+                                  lon_min = -65.5843, lon_max = -64.8205,
+                                  lat_min = 43.3256, lat_max = 43.8499)
+write_csv(shelbourne_harbour, "extracts/shelbourne_harbour.csv")
+
+# Test visual
+ggplot(data = filter(shelbourne_harbour, t == "2015-02-22"), aes(x = lon, y = lat)) +
+  geom_tile(aes(fill = temp)) +
+  borders(colour = "black") +
+  coord_quickmap(xlim = c(-65.5843, -64.8205),
+                 ylim = c(43.3256, 43.8499), expand = F)
+
 

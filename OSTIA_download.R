@@ -110,3 +110,34 @@ plyr::l_ply(date_range, .fun = download_OSTIA, .parallel = T)
 #   coord_cartesian(expand = F) +
 #   theme_void()
 
+
+# Load data ---------------------------------------------------------------
+
+# Load CCI data (1982 - 2018)
+
+# Load OSTIA (2019 - present)
+OSTIA_files <- dir("../data/OSTIA", full.names = T)
+tidync("../data/OSTIA/20190101120000-UKMO-L4_GHRSST-SSTfnd-OSTIA-GLOB-v02.0-fv02.0.nc") 
+
+# Load function
+load_OSTIA_region <- function(file_name, lon_min, lon_max, lat_min, lat_max){
+  res <- tidync(file_name) %>%
+    hyper_filter(lat = dplyr::between(lat, lat_min, lat_max),
+                 lon = dplyr::between(lon, lon_min, lon_max)) %>%
+    hyper_tibble() %>%
+    dplyr::rename(t = time, temp = analysed_sst) %>%
+    mutate(t = as.Date(as.POSIXct(t, origin = '1981-01-01', tz = "GMT")),
+           temp = round(temp-273.15, 2)) %>%
+    dplyr::select(lon, lat, t, temp)
+  return(res)
+}
+
+# Liverpool Bay. Mid march 2019 (approx. 17th – 24th March). 
+# Top left = -64.8629, 43.92. Top right = -64.5901, 44.1836. Bottom left = -64.5416, 43.7676 decimal degrees. Bottom right = -64.2799, 44.0253. 
+liverpool_bay <- plyr::ldply(OSTIA_files[1:151], load_CCI_region, .parallel = T,
+                             lon_min = -64.8629, lon_max = -64.2799,
+                             lat_min = 43.7676, lat_max = 44.1836)
+write_csv(liverpool_bay, "extracts/liverpool_bay.csv")
+
+
+
