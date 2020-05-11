@@ -74,8 +74,6 @@ download_CCI <- function(date_choice, base_URL){
 doParallel::registerDoParallel(cores = 50)
 
 # Download all old data: 1981-09-01 to 2016-12-31
-  # NB: 1985/04/10 will not download. 504 timeout every time...
-  # It won't download manually either
 plyr::l_ply(date_range_old, .fun = download_CCI, base_URL = base_URL_old, .parallel = T)
 
 # Download all new data: 2016-01-01 to 2018-12-31
