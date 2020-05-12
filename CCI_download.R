@@ -11,7 +11,6 @@
 # Setup -------------------------------------------------------------------
 
 .libPaths(c("~/R-packages", .libPaths()))
-
 library(tidyverse)
 library(tidync)
 library(ncdf4)
@@ -82,8 +81,14 @@ plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .paral
 
 # Check file sizes and remove failed downloads ----------------------------
 
-# file.info("../data/CCI/19850410120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc")$size
-# file.remove("../data/CCI/19850410120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc")
+# Find files that are under a certain size
+# file_sizes <- file.info(dir("../data/CCI", full.names = T)) %>%
+#   mutate(file_name = row.names(.)) %>%
+#   filter(size < 15000000)
+
+# file.remove(file_sizes$file_name)
+
+# NB: If files are removed, run the above code again
 
 
 # Test visuals ------------------------------------------------------------
@@ -120,16 +125,16 @@ load_CCI_region <- function(file_name, lon_min, lon_max, lat_min, lat_max){
 
 # Shelburne harbour and Jordan Bay. Late feb / early march 2015 (approx. 24th Feb – march 3rd). 
 # Top left = -65.5843, 43.568. Top right = -65.1896, 43.8499. Bottom right = -64.8205, 43.567. Bottom left = -65.2871, 43.3256. 
-shelbourne_harbour <- plyr::ldply(CCI_files[12175:12325], load_CCI_region, .parallel = T,
-                                  lon_min = -65.5843, lon_max = -64.8205,
-                                  lat_min = 43.3256, lat_max = 43.8499)
-write_csv(shelbourne_harbour, "extracts/shelbourne_harbour.csv")
+# shelbourne_harbour <- plyr::ldply(CCI_files[12175:12325], load_CCI_region, .parallel = T,
+#                                   lon_min = -65.5843, lon_max = -64.8205,
+#                                   lat_min = 43.3256, lat_max = 43.8499)
+# write_csv(shelbourne_harbour, "extracts/shelbourne_harbour.csv")
 
 # Test visual
-ggplot(data = filter(shelbourne_harbour, t == "2015-02-22"), aes(x = lon, y = lat)) +
-  geom_tile(aes(fill = temp)) +
-  borders(colour = "black") +
-  coord_quickmap(xlim = c(-65.5843, -64.8205),
-                 ylim = c(43.3256, 43.8499), expand = F)
+# ggplot(data = filter(shelbourne_harbour, t == "2015-02-22"), aes(x = lon, y = lat)) +
+#   geom_tile(aes(fill = temp)) +
+#   borders(colour = "black") +
+#   coord_quickmap(xlim = c(-65.5843, -64.8205),
+#                  ylim = c(43.3256, 43.8499), expand = F)
 
 
