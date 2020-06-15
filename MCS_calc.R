@@ -7,12 +7,9 @@
 
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
-library(heatwaveR)
 library(tidync)
-if(packageVersion("heatwaveR") != "0.4.2.9001"){
-  devtools::install_github("robwschlegel/heatwaveR")
-  library(heatwaveR)
-}
+# remotes::install_github("robwschlegel/heatwaveR")
+library(heatwaveR); packageVersion("heatwaveR")
 source("MHW_prep.R")
 library(doParallel); registerDoParallel(cores = 50)
 
@@ -44,8 +41,8 @@ MCS_calc <- function(lon_row){
     group_by(lon, lat) %>%
     nest() %>% 
     mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
-           event = purrr::map(clim, detect_event, coldSpells = T)) %>% 
-           # cat = purrr::map(event, category, climatology = TRUE)) %>% # Curently the code for detecting MCS categories does not work...
+           event = purrr::map(clim, detect_event, coldSpells = T), 
+           cat = purrr::map(event, category, climatology = T, season = "peak")) %>%
     select(-data, -clim)
   
   # Finish
@@ -58,8 +55,13 @@ MCS_calc <- function(lon_row){
 # Calculations ------------------------------------------------------------
 
 # system.time(
-  # MCS_calc(2)
-# ) # 111 seconds
+#   MCS_calc(2)
+# ) # 150 seconds
 
-# Ran on Wednesday, March 18th, 2020
+# Ran on Monday, June 15th, 2020
 plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
+
+
+# Trends ------------------------------------------------------------------
+
+

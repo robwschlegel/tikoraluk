@@ -7,6 +7,7 @@
 library(tidyverse)
 library(heatwaveR)
 library(gganimate)
+library(ggpubr)
 library(XML)
 library(doParallel); registerDoParallel(cores = 50)
 source("MHW_prep.R")
@@ -15,7 +16,7 @@ source("MHW_prep.R")
 # Meta-data ---------------------------------------------------------------
 
 # The MCS results
-MCS_RData <-  c(file = dir(path = "../data", pattern = "MCS.calc.*.RData", full.names = T))
+MCS_RData <-  c(file = dir(path = "../data/MCS", pattern = "MCS.calc.*.RData", full.names = T))
 
 # The lon coords for the OISST data
 load("metadata/lon_OISST.RData")
@@ -31,8 +32,8 @@ map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>%
 YHZ_bound <- c(42, 47, -75, -55)
 
 ## Potential colour palettes
-# https://www.w3schools.com/colors/colors_groups.asp
-# https://sciviscolor.org/home/colormaps/contrasting-divergent-colormaps/
+# w3schools.com/colors/colors_groups.asp
+# sciviscolor.org/home/environmental-palettes/
 
 #474E73
 
@@ -53,9 +54,16 @@ YHZ_bound <- c(42, 47, -75, -55)
 # PuBu
 # RdBu
 
+# Consider ROYGBIV
+# Because MHWs use ROY it could be good to use GBIV for MCSs
+# Maybe don't worry about perceptual symetry
+# Just pick the best colours from a colour wheel
+
+
 # Load an XML file containing weird rgb vlaues and convert to hex
 rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
 
+# BlueSpectrum colour palette from sciviscolor.org/home/environmental-palettes/
 BlueSpectrum <- t(data.frame(xmlToList(xmlParse("metadata/BlueSpectrum.xml"))$ColorMap[1:27], stringsAsFactors = F)) %>% 
   data.frame(., stringsAsFactors = F) %>% 
   remove_rownames(.) %>% 
@@ -64,19 +72,18 @@ BlueSpectrum <- t(data.frame(xmlToList(xmlParse("metadata/BlueSpectrum.xml"))$Co
          hex = rgb2hex(r, g, b))
 write_csv(BlueSpectrum, "metadata/BlueSpecturm.csv")
 
-# This is negotiable...
-MCS_palette <- c(BlueSpectrum$hex[6], BlueSpectrum$hex[13], BlueSpectrum$hex[20], BlueSpectrum$hex[27])
+# BlueWater colour palette from sciviscolor.org/home/environmental-palettes/
+BlueWater <- t(data.frame(xmlToList(xmlParse("metadata/BlueWater.xml"))$ColorMap[1:12], stringsAsFactors = F)) %>% 
+  data.frame(., stringsAsFactors = F) %>% 
+  remove_rownames(.) %>% 
+  select(r, g, b) %>% 
+  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
+         hex = rgb2hex(r, g, b))
+write_csv(BlueWater, "metadata/BlueWater.csv")
 
-# Find extreme MCSs
-  # NB: No extreme MCS in Med, NWA, WA
-  # NB: 2 severe days in Med, 0 in the others
-sst_MCS <- detect_event(ts2clm(sst_Med, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10), coldSpells = T)$climatology %>% 
-  dplyr::mutate(diff = thresh - seas,
-                thresh_2x = thresh + diff,
-                thresh_3x = thresh_2x + diff,
-                thresh_4x = thresh_3x + diff,
-                temp = temp/1.2) # Cook the books to get the desired colour range 
-filter(sst_MCS, temp < thresh_4x)
+# This is negotiable...
+# MCS_palette <- c(BlueSpectrum$hex[6], BlueSpectrum$hex[13], BlueSpectrum$hex[20], BlueSpectrum$hex[27])
+MCS_palette <- c(BlueWater$hex[10], BlueWater$hex[7], BlueWater$hex[4], BlueWater$hex[2])
 
 # Set line colours
 lineCol <- c(
@@ -96,19 +103,42 @@ fillCol <- c(
   "Extreme" = MCS_palette[4]
 )
 
+# The MHW colour palette
+MHW_colours <- c(
+  "Moderate" = "#ffc866",
+  "Strong" = "#ff6900",
+  "Severe" = "#9e0000",
+  "Extreme" = "#2d0000"
+)
+
+
+
+# Colour palette comparison figure ----------------------------------------
+
+# Find extreme MCSs
+  # NB: No extreme MCS in Med, NWA, WA
+  # NB: 2 severe days in Med, 0 in the others
+sst_MCS <- detect_event(ts2clm(sst_Med, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10), coldSpells = T)$climatology %>% 
+  dplyr::mutate(diff = thresh - seas,
+                thresh_2x = thresh + diff,
+                thresh_3x = thresh_2x + diff,
+                thresh_4x = thresh_3x + diff,
+                temp = temp/1.2) # Cook the books to get the desired colour range 
+# filter(sst_MCS, temp < thresh_4x)
+
 # Centre a line plot on 1994-01-09 
-ggplot(data = sst_MCS, aes(x = t)) +
+MCS_test_palette <- ggplot(data = sst_MCS, aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2, show.legend = F) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong"), show.legend = F) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe"), show.legend = F) +
   geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme"), show.legend = F) +
-  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 1.0, linetype = "dashed") +
-  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 1.0, linetype = "dotdash") +
-  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 1.0, linetype = "dotted") +
-  geom_line(aes(y = seas, col = "Climatology"), size = 1.2) +
-  geom_line(aes(y = thresh, col = "Threshold"), size = 1.0) +
-  geom_line(aes(y = temp, col = "Temperature")) +
-  scale_colour_manual(name = "Line colour", values = lineCol,
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = NULL, values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Event colour", values = fillCol) +
@@ -119,13 +149,64 @@ ggplot(data = sst_MCS, aes(x = t)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                 "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
-  labs(y = expression(paste("Temperature [", degree, "C]")), x = NULL) +
+  labs(y = "Temp. [°C]", x = NULL) #+
   # formatting for multi-panel figure
-  labs(y = NULL) +
-  theme(axis.text.y = element_blank(),
-        axis.ticks.y = element_blank())
-ggsave("graph/MCS_test_palette.png", width = 6, height = 4)
-ggsave("graph/MCS_test_palette.pdf", width = 6, height = 4)
+  # labs(y = NULL) +
+  # theme(axis.text.y = element_blank(),
+        # axis.ticks.y = element_blank())
+# ggsave("graph/MCS_test_palette.png", MCS_test_palette, width = 6, height = 4)
+# ggsave("graph/MCS_test_palette.pdf", MCS_test_palette, width = 6, height = 4)
+
+# Get Oz event
+MHW <- ts <- ts2clm(sst_WA, climatologyPeriod = c("1982-01-01", "2011-12-31")) %>% 
+  detect_event()
+clim_cat <- MHW$clim %>% 
+  dplyr::mutate(diff = thresh - seas,
+                thresh_2x = thresh + diff,
+                thresh_3x = thresh_2x + diff,
+                thresh_4x = thresh_3x + diff) %>% 
+  dplyr::slice(10580:10690)
+
+# Create MHW for demo
+MHW_demo <- ggplot(data = clim_cat, aes(x = t, y = temp)) +
+  geom_flame(aes(y2 = thresh, fill = "Moderate")) +
+  geom_flame(aes(y2 = thresh_2x, fill = "Strong")) +
+  geom_flame(aes(y2 = thresh_3x, fill = "Severe")) +
+  geom_flame(aes(y2 = thresh_4x, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.5) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.5) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = NULL, values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = NULL, values = MHW_colours, guide = FALSE) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0),) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(0.6, 0.7, 0.7, 0.7, 0.7, 0.7)))) +
+  labs(y = "Temp. [°C]", x = NULL)
+# MHW_demo
+
+# Side by side events
+event_compare <- ggarrange(MHW_demo, MCS_test_palette, ncol = 1, nrow = 2, align = "hv", common.legend = TRUE)
+ggsave("graph/event_compare.png", event_compare, height = 4, width = 6)
+
+# Create the colour palette for plotting by itself
+colour_palette <- data.frame(category = factor(c("I Moderate", "II Strong", "III Severe", "IV Extreme"),
+                                               levels = c("I Moderate", "II Strong", "III Severe", "IV Extreme")),
+                             MHW = c(MHW_colours[1], MHW_colours[2], MHW_colours[3], MHW_colours[4]),
+                             MCS = c(MCS_palette[1], MCS_palette[2], MCS_palette[3], MCS_palette[4])) %>% 
+  pivot_longer(cols = c(MHW, MCS), names_to = "event", values_to = "colour")
+
+# Show the palettes side-by-side
+palette_compare <- ggplot(data = colour_palette, aes(x = category, y = event)) +
+  geom_tile(fill = colour_palette$colour) +
+  coord_cartesian(expand = F) +
+  labs(x = NULL, y = NULL)
+ggsave("graph/palette_compare.png", palette_compare, height = 3, width = 6)
 
 
 # Functions ---------------------------------------------------------------
@@ -177,6 +258,7 @@ MCS_event_YHZ_sub <- MCS_event_YHZ %>%
 # One pixel for time series example
 MCS_event_YHZ_one <- MCS_event_YHZ %>% 
   filter(lon == -66.875, lat == 42.875)
+
 
 # Event visuals -----------------------------------------------------------
 
