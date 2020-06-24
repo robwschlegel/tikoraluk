@@ -496,6 +496,9 @@ MHW_total_state_fig <- function(df, product, chosen_clim){
 # file_name <- MCS_lon_files[1]
 MCS_trend_calc <- function(file_name){
   
+  # Empty year sequence for joining
+  year_index <- data.frame(year = 1982:2020)
+  
   # Load chosen file
   load(file_name)
   
@@ -519,12 +522,13 @@ MCS_trend_calc <- function(file_name){
     filter(nrow(event$event) > 0) %>%
     unnest(cols = event) %>%
     ungroup() %>% 
-    left_join(MCS_cat, by = c("lon", "lat", "event_no", "duration"))
+    left_join(MCS_cat, by = c("lon", "lat", "event_no", "duration")) %>% 
+    ungroup() %>% 
+    mutate(year = year(date_peak))
   
   # Annual metric summaries
   MCS_metric <- MCS_event %>% 
-    mutate(year = year(date_peak)) %>% 
-    group_by(year) %>% 
+    group_by(lon, lat, year) %>% 
     summarise(dur_mean = mean(duration, na.rm = T),
               i_mean = mean(intensity_mean, na.rm = T),
               i_max_mean = mean(intensity_max, na.rm = T),
@@ -540,30 +544,39 @@ MCS_trend_calc <- function(file_name){
     mutate_if(is.numeric, round, 4)
   
   # Annual count of MHWs
-  MCS_event_count
+  MCS_event_count <- MCS_event %>% 
+    mutate(count = "count") %>% 
+    dplyr::select(lon, lat, year, count) %>% 
+    group_by(lon, lat, year) %>% 
+    table() %>% 
+    as.data.frame() %>% 
+    pivot_wider(values_from = Freq, names_from = count) #%>% 
+    # mutate(lon = as.numeric(as.character(lon)),
+           # lat = as.numeric(as.character(lat)))
   
   # Annual category count summaries 
   MCS_cat_count <- MCS_event %>% 
-    mutate(year = year(date_peak)) %>% 
     dplyr::select(lon, lat, year, category) %>% 
     group_by(lon, lat, year) %>% 
     table() %>% 
     as.data.frame() %>% 
-    pivot_wider(values_from = Freq, names_from = category) %>% 
-    mutate(lon = as.numeric(as.character(lon)),
-           lat = as.numeric(as.character(lat)))
+    pivot_wider(values_from = Freq, names_from = category)# %>% 
+    # mutate(lon = as.numeric(as.character(lon)),
+           # lat = as.numeric(as.character(lat)))
   
   # Annual peak of season count
   MCS_season_count <- MCS_event %>% 
-    mutate(year = year(date_peak)) %>% 
     dplyr::select(lon, lat, year, season) %>% 
     group_by(lon, lat, year) %>% 
     table() %>% 
     as.data.frame() %>% 
-    pivot_wider(values_from = Freq, names_from = season) %>% 
-    mutate(lon = as.numeric(as.character(lon)),
-           lat = as.numeric(as.character(lat)))
+    pivot_wider(values_from = Freq, names_from = season) #%>% 
+    # mutate(lon = as.numeric(as.character(lon)),
+           # lat = as.numeric(as.character(lat)))
   
+  # Join all count data.frames
+  MCS_count <- left_join(MCS_event_count, MCS_cat_count) %>% 
+    left_join(MCS_season_count)
   
 }
 
