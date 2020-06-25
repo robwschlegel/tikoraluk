@@ -640,39 +640,59 @@ MCS_trend_calc <- function(lon_step){
 # plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
-MCS_count_trend_brick <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
-
-# Extract the four different bits
-# MCS_count <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_count), .parallel = T) %>% 
-#   dplyr::select(-year) %>% 
-#   group_by(lon, lat) %>% 
-#   summarise_if(is.numeric, mean, na.rm = T) %>% 
-#   pivot_longer(`I Moderate`:total_count)
-# MCS_metric <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_metric)) %>% 
-#   dplyr::select(-year) %>% 
-#   group_by(lon, lat) %>% 
-#   summarise_if(is.numeric, mean, na.rm = T) %>% 
-#   pivot_longer()
-# MCS_count_trends <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_count_trends))
-# MCS_metric_trends <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_metric_trends))
+MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 
 # Figures of trends and annual states
 
-# fig_map <- ggplot(MCS_count, aes(x = lon, y = lat)) +
-#   # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
-#   geom_raster(aes(fill = Winter)) +
-#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-#   # scale_fill_manual("Category", values = MCS_colours) +
-#   scale_fill_viridis_c() +
-#   coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
-#                                        max(OISST_ocean_coords$lat))) +
-#   theme_void() +
-#   # guides(fill = guide_legend(override.aes = list(size = 10))) +
-#   theme(legend.position = "bottom",
-#         legend.text = element_text(size = 14),
-#         legend.title = element_text(size = 16),
-#         panel.background = element_rect(fill = "grey90"))
-# fig_map
+var_mean_trend_fig <- function(var_name){
+  
+  df <- MCS_count_trend %>% 
+    filter(name == var_name)
+  
+  df_p <- df %>% 
+    filter(p.value <= 0.05)
+  
+  mean_map <- ggplot(df, aes(x = lon, y = lat)) +
+    # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
+    geom_raster(aes(fill = value)) +
+    geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+    # scale_fill_manual("Category", values = MCS_colours) +
+    scale_fill_viridis_c() +
+    coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+                                         max(OISST_ocean_coords$lat))) +
+    theme_void() +
+    # guides(fill = guide_legend(override.aes = list(size = 10))) +
+    labs(title = var_name) +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 16),
+          panel.background = element_rect(fill = "grey90"))
+  mean_map
+  
+  trend_map <- ggplot(df, aes(x = lon, y = lat)) +
+    # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
+    geom_raster(aes(fill = slope)) +
+    geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+    # scale_fill_manual("Category", values = MCS_colours) +
+    # scale_fill_viridis_c() +
+    scale_fill_gradient2(low = "blue", high = "red") +
+    coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+                                         max(OISST_ocean_coords$lat))) +
+    theme_void() +
+    # guides(fill = guide_legend(override.aes = list(size = 10))) +
+    labs(title = paste0(var_name," trend")) +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 16),
+          panel.background = element_rect(fill = "grey90"))
+  trend_map
+  
+  full_map <- ggpubr::ggarrange(mean_map, trend_map, ncol = 1, nrow = 2)
+  ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
+  
+}
+
+
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
