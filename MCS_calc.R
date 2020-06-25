@@ -539,6 +539,7 @@ MCS_trend_calc <- function(lon_step){
   MCS_metric <- MCS_event %>% 
     group_by(lon, lat, year) %>% 
     summarise(dur_mean = mean(duration, na.rm = T),
+              dur_sum = sum(duration, na.rm = T),
               i_mean = mean(intensity_mean, na.rm = T),
               i_max_mean = mean(intensity_max, na.rm = T),
               i_max_min = min(intensity_max, na.rm = T),
@@ -637,7 +638,7 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 # registerDoParallel(cores = 50)
-# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
