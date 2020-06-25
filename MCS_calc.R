@@ -638,7 +638,7 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 # registerDoParallel(cores = 50)
-plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
