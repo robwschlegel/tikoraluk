@@ -653,46 +653,39 @@ var_mean_trend_fig <- function(var_name){
     filter(p.value <= 0.05)
   
   mean_map <- ggplot(df, aes(x = lon, y = lat)) +
-    # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
     geom_raster(aes(fill = value)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-    # scale_fill_manual("Category", values = MCS_colours) +
-    scale_fill_viridis_c() +
+    scale_fill_viridis_c("Mean\n(annual)") +
     coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
                                          max(OISST_ocean_coords$lat))) +
     theme_void() +
     # guides(fill = guide_legend(override.aes = list(size = 10))) +
     labs(title = var_name) +
-    theme(legend.position = "bottom",
-          legend.text = element_text(size = 14),
+    theme(legend.text = element_text(size = 14),
           legend.title = element_text(size = 16),
           panel.background = element_rect(fill = "grey90"))
-  mean_map
+  # mean_map
   
   trend_map <- ggplot(df, aes(x = lon, y = lat)) +
-    # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
     geom_raster(aes(fill = slope)) +
+    # geom_point(data = df_p, shape = 4, size = 0.1, alpha = 0.1) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-    # scale_fill_manual("Category", values = MCS_colours) +
-    # scale_fill_viridis_c() +
-    scale_fill_gradient2(low = "blue", high = "red") +
+    scale_fill_gradient2("Slope\n(annual)", low = "blue", high = "red") +
     coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
                                          max(OISST_ocean_coords$lat))) +
     theme_void() +
     # guides(fill = guide_legend(override.aes = list(size = 10))) +
     labs(title = paste0(var_name," trend")) +
-    theme(legend.position = "bottom",
-          legend.text = element_text(size = 14),
+    theme(legend.text = element_text(size = 14),
           legend.title = element_text(size = 16),
           panel.background = element_rect(fill = "grey90"))
-  trend_map
+  # trend_map
   
-  full_map <- ggpubr::ggarrange(mean_map, trend_map, ncol = 1, nrow = 2)
+  full_map <- ggpubr::ggarrange(mean_map, trend_map, ncol = 1, nrow = 2, align = "hv")
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
-  
 }
 
-
+plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
