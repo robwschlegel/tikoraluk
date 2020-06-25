@@ -16,6 +16,7 @@ library(tidyverse)
 library(lubridate)
 library(dtplyr)
 library(tidync)
+library(broom)
 # remotes::install_github("robwschlegel/heatwaveR")
 library(heatwaveR); packageVersion("heatwaveR")
 source("MHW_prep.R")
@@ -25,6 +26,7 @@ library(doParallel); registerDoParallel(cores = 50)
 OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
 MCS_lon_files <- dir("../data/MCS", full.names = T)
 MCS_cat_files <- dir("../data/cat_clim_MCS", full.names = T)
+MCS_count_trend_files <- dir("annual_summary_MCS", pattern = "count_trend", full.names = T)
 
 # Metadata
 load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
@@ -39,6 +41,9 @@ MCS_colours <- c(
 
 # The base map
 load("../MHWapp/metadata/map_base.Rdata")
+
+# Disable scientific notation
+options(scipen = 9999)
 
 
 # 2: Full calculations  ---------------------------------------------------
@@ -144,14 +149,14 @@ cat_clim_global_daily <- function(date_range){
 }
 
 # NB: Better not to run the entire 30+ years at once
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
 
 
 # 4: Annual summaries -----------------------------------------------------
@@ -493,14 +498,14 @@ MHW_total_state_fig <- function(df, product, chosen_clim){
 
 # 6: Trends ---------------------------------------------------------------
 
-# file_name <- MCS_lon_files[1]
-MCS_trend_calc <- function(file_name){
+MCS_trend_calc <- function(lon_step){
   
-  # Empty year sequence for joining
-  year_index <- data.frame(year = 1982:2020)
+  # Start
+  lon_step_pad <- str_pad(lon_step, 4, pad = "0")
+  print(paste0("Began run on ",lon_step," at ", Sys.time()))
   
   # Load chosen file
-  load(file_name)
+  load(MCS_lon_files[lon_step])
   
   # Unpack categories
   MCS_cat <- MCS_res %>%
@@ -511,7 +516,8 @@ MCS_trend_calc <- function(file_name){
     unnest(cols = cat) %>% 
     ungroup() %>% 
     mutate(category = factor(category, levels = c("I Moderate", "II Strong",
-                                                  "III Severe", "IV Extreme"))) %>% 
+                                                  "III Severe", "IV Extreme")),
+           season = factor(season, levels = c("Spring", "Summer", "Fall", "Winter"))) %>% 
     data.frame()
   
   # Unpack event metrics and join
@@ -525,14 +531,19 @@ MCS_trend_calc <- function(file_name){
     left_join(MCS_cat, by = c("lon", "lat", "event_no", "duration")) %>% 
     ungroup() %>% 
     mutate(year = year(date_peak))
+  rm(MCS_res); gc()
   
   # Annual metric summaries
+  suppressWarnings(
+  suppressMessages(
   MCS_metric <- MCS_event %>% 
     group_by(lon, lat, year) %>% 
     summarise(dur_mean = mean(duration, na.rm = T),
               i_mean = mean(intensity_mean, na.rm = T),
               i_max_mean = mean(intensity_max, na.rm = T),
               i_max_min = min(intensity_max, na.rm = T),
+              i_cum_mean = mean(intensity_cumulative, na.rm = T),
+              i_cum_sum = sum(intensity_cumulative, na.rm = T),
               onset_mean = mean(rate_onset, na.rm = T),
               onset_min = min(rate_onset, na.rm = T),
               decline_mean = mean(rate_decline, na.rm = T),
@@ -541,44 +552,127 @@ MCS_trend_calc <- function(file_name){
               p_strong = mean(p_strong, na.rm = T),
               p_severe = mean(p_severe, na.rm = T),
               p_extreme = mean(p_extreme, na.rm = T)) %>% 
-    mutate_if(is.numeric, round, 4)
+    filter(p_extreme >= 0) %>% 
+    mutate_if(is.numeric, round, 4) %>% 
+    pivot_longer(cols = c(-lon, -lat, -year))
+  ))
+  MCS_metric$value[is.na(MCS_metric$value)] <- NA
+  MCS_metric$value[is.infinite(as.matrix(MCS_metric$value))] <- NA
   
-  # Annual count of MHWs
-  MCS_event_count <- MCS_event %>% 
-    mutate(count = "count") %>% 
-    dplyr::select(lon, lat, year, count) %>% 
-    group_by(lon, lat, year) %>% 
-    table() %>% 
-    as.data.frame() %>% 
-    pivot_wider(values_from = Freq, names_from = count) #%>% 
-    # mutate(lon = as.numeric(as.character(lon)),
-           # lat = as.numeric(as.character(lat)))
+  # Annual metric trends
+  suppressWarnings(
+  MCS_metric_trends <- MCS_metric %>% 
+    group_by(lon, lat, name) %>% 
+    nest() %>% 
+    mutate(model = map(data, ~lm(value ~ year, data = .)),
+           model_out = map(model, ~broom::tidy(.))) %>% 
+    dplyr::select(-data, -model) %>% 
+    unnest(cols = model_out) %>% 
+    ungroup() %>% 
+    filter(term == "year") %>% 
+    dplyr::rename(slope = estimate) %>% 
+    dplyr::select(lon, lat, name, slope, p.value) %>% 
+    mutate(slope = round(slope, 4), 
+           p.value = round(p.value, 4))
+  )
+  MCS_metric_trends[is.na(MCS_metric_trends)] <- 1
   
   # Annual category count summaries 
   MCS_cat_count <- MCS_event %>% 
     dplyr::select(lon, lat, year, category) %>% 
     group_by(lon, lat, year) %>% 
     table() %>% 
-    as.data.frame() %>% 
-    pivot_wider(values_from = Freq, names_from = category)# %>% 
-    # mutate(lon = as.numeric(as.character(lon)),
-           # lat = as.numeric(as.character(lat)))
+    as.data.frame(stringsAsFactors = F) %>% 
+    pivot_wider(values_from = Freq, names_from = category)
   
   # Annual peak of season count
   MCS_season_count <- MCS_event %>% 
     dplyr::select(lon, lat, year, season) %>% 
     group_by(lon, lat, year) %>% 
     table() %>% 
-    as.data.frame() %>% 
-    pivot_wider(values_from = Freq, names_from = season) #%>% 
-    # mutate(lon = as.numeric(as.character(lon)),
-           # lat = as.numeric(as.character(lat)))
+    as.data.frame(stringsAsFactors = F) %>% 
+    pivot_wider(values_from = Freq, names_from = season)
   
   # Join all count data.frames
-  MCS_count <- left_join(MCS_event_count, MCS_cat_count) %>% 
-    left_join(MCS_season_count)
+  MCS_count <- left_join(MCS_cat_count, MCS_season_count,
+                         by = c("lon", "lat", "year")) %>%
+    mutate(total_count = Spring + Summer + Fall + Winter,
+           lon = as.numeric(lon),
+           lat = as.numeric(lat),
+           year = as.numeric(year)) %>% 
+    pivot_longer(cols = c(-lon, -lat, -year))
   
+  # Trends in count values
+  suppressWarnings(
+  MCS_count_trends <- MCS_count %>% 
+    group_by(lon, lat, name) %>% 
+    nest() %>% 
+    mutate(model = map(data, ~lm(value ~ year, data = .)),
+           model_out = map(model, ~broom::tidy(.))) %>% 
+    dplyr::select(-data, -model) %>% 
+    unnest(cols = model_out) %>% 
+    ungroup() %>% 
+    filter(term == "year") %>% 
+    dplyr::rename(slope = estimate) %>% 
+    dplyr::select(lon, lat, name, slope, p.value) %>% 
+    mutate(slope = round(slope, 4), 
+           p.value = round(p.value, 4))
+  )
+  MCS_count_trends[is.na(MCS_count_trends)] <- 1
+  
+  # Final data.frame and save
+  MCS_count_trend <- rbind(MCS_metric, MCS_count) %>% 
+    dplyr::select(-year) %>% 
+    group_by(lon, lat, name) %>%
+    summarise_if(is.numeric, mean, na.rm = T) %>% 
+    left_join(rbind(MCS_metric_trends, MCS_count_trends), by = c("lon", "lat", "name")) %>% 
+    mutate(value = round(value, 4))
+  saveRDS(MCS_count_trend, paste0("annual_summary_MCS/MCS_count_trend_",lon_step_pad,".Rds"))
 }
+
+# Run one
+# system.time(
+#   MCS_trend_calc(1172)
+# ) # 29 seconds
+
+# Run all
+# registerDoParallel(cores = 50)
+# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+
+# Load all results into one brick
+MCS_count_trend_brick <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+
+# Extract the four different bits
+# MCS_count <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_count), .parallel = T) %>% 
+#   dplyr::select(-year) %>% 
+#   group_by(lon, lat) %>% 
+#   summarise_if(is.numeric, mean, na.rm = T) %>% 
+#   pivot_longer(`I Moderate`:total_count)
+# MCS_metric <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_metric)) %>% 
+#   dplyr::select(-year) %>% 
+#   group_by(lon, lat) %>% 
+#   summarise_if(is.numeric, mean, na.rm = T) %>% 
+#   pivot_longer()
+# MCS_count_trends <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_count_trends))
+# MCS_metric_trends <- plyr::ldply(lapply(MCS_count_trend_brick, function(x) x$MCS_metric_trends))
+
+# Figures of trends and annual states
+
+# fig_map <- ggplot(MCS_count, aes(x = lon, y = lat)) +
+#   # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
+#   geom_raster(aes(fill = Winter)) +
+#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+#   # scale_fill_manual("Category", values = MCS_colours) +
+#   scale_fill_viridis_c() +
+#   coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+#                                        max(OISST_ocean_coords$lat))) +
+#   theme_void() +
+#   # guides(fill = guide_legend(override.aes = list(size = 10))) +
+#   theme(legend.position = "bottom",
+#         legend.text = element_text(size = 14),
+#         legend.title = element_text(size = 16),
+#         panel.background = element_rect(fill = "grey90"))
+# fig_map
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
