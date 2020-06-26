@@ -46,6 +46,11 @@ load("../MHWapp/metadata/map_base.Rdata")
 options(scipen = 9999)
 
 
+# TO DO
+# Also need to caluclate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
+# Fix the saturation in figures having colourbars dominated by outliers
+
+
 # 2: Full calculations  ---------------------------------------------------
 
 # Function for loading OISST data, calculating MCSs, and saving the results
