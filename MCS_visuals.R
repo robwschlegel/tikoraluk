@@ -112,7 +112,6 @@ MHW_colours <- c(
 )
 
 
-
 # Colour palette comparison figure ----------------------------------------
 
 # Find extreme MCSs

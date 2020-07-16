@@ -47,8 +47,7 @@ options(scipen = 9999)
 
 
 # TO DO
-# Also need to caluclate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
-# Fix the saturation in figures having colourbars dominated by outliers
+# Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
 
 
 # 2: Full calculations  ---------------------------------------------------
@@ -649,11 +648,11 @@ MCS_trend_calc <- function(lon_step){
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 
 # Figures of trends and annual states
-
 var_mean_trend_fig <- function(var_name){
   
   df <- MCS_count_trend %>% 
-    filter(name == var_name)
+    filter(name == var_name,
+           lat >= -70, lat <= 70)
   
   df_p <- df %>% 
     filter(p.value <= 0.05)
@@ -662,8 +661,9 @@ var_mean_trend_fig <- function(var_name){
     geom_raster(aes(fill = value)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     scale_fill_viridis_c("Mean\n(annual)") +
-    coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
-                                         max(OISST_ocean_coords$lat))) +
+    # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+    #                                      max(OISST_ocean_coords$lat))) +
+    coord_cartesian(expand = F, ylim = c(-70, 70)) +
     theme_void() +
     # guides(fill = guide_legend(override.aes = list(size = 10))) +
     labs(title = var_name) +
@@ -677,8 +677,9 @@ var_mean_trend_fig <- function(var_name){
     # geom_point(data = df_p, shape = 4, size = 0.1, alpha = 0.1) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     scale_fill_gradient2("Slope\n(annual)", low = "blue", high = "red") +
-    coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
-                                         max(OISST_ocean_coords$lat))) +
+    # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+    #                                      max(OISST_ocean_coords$lat))) +
+    coord_cartesian(expand = F, ylim = c(-70, 70)) +
     theme_void() +
     # guides(fill = guide_legend(override.aes = list(size = 10))) +
     labs(title = paste0(var_name," trend")) +
