@@ -650,14 +650,27 @@ MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 # Figures of trends and annual states
 var_mean_trend_fig <- function(var_name){
   
+  # Basic filter
   df <- MCS_count_trend %>% 
     filter(name == var_name,
            lat >= -70, lat <= 70)
   
+  # Significant results
   df_p <- df %>% 
     filter(p.value <= 0.05)
   
-  mean_map <- ggplot(df, aes(x = lon, y = lat)) +
+  # Find 10th and 90th quantiles to round off tails for plotting
+  value_q10 <- quantile(df$value, 0.1)
+  value_q90 <- quantile(df$value, 0.9)
+  slope_q10 <- quantile(df$slope, 0.1)
+  slope_q90 <- quantile(df$slope, 0.9)
+  
+  # The mean value map
+  mean_map <- df %>% 
+    mutate(value = case_when(value <= value_q10 ~ value_q10,
+                             value >= value_q90 ~ value_q90,
+                             TRUE ~ value)) %>% 
+    ggplot(aes(x = lon, y = lat)) +
     geom_raster(aes(fill = value)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     scale_fill_viridis_c("Mean\n(annual)") +
@@ -672,7 +685,12 @@ var_mean_trend_fig <- function(var_name){
           panel.background = element_rect(fill = "grey90"))
   # mean_map
   
-  trend_map <- ggplot(df, aes(x = lon, y = lat)) +
+  # The trend map
+  trend_map <- df %>% 
+    mutate(slope = case_when(slope <= slope_q10 ~ slope_q10,
+                             slope >= slope_q90 ~ slope_q90,
+                             TRUE ~ slope)) %>% 
+    ggplot(aes(x = lon, y = lat)) +
     geom_raster(aes(fill = slope)) +
     # geom_point(data = df_p, shape = 4, size = 0.1, alpha = 0.1) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
