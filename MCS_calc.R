@@ -53,7 +53,7 @@ options(scipen = 9999)
 # 2: Full calculations  ---------------------------------------------------
 
 # Function for loading OISST data, calculating MCSs, and saving the results
-# lon_row <- 613
+# lon_row <- 1203
 MCS_calc <- function(lon_row){
   
   # Begin
@@ -67,7 +67,7 @@ MCS_calc <- function(lon_row){
     dplyr::rename(t = time, temp = sst)
   
   # Make calculations
-  MCS_res <- SST %>% 
+  MCS_res <- SST %>%
     group_by(lon, lat) %>%
     nest() %>% 
     mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
@@ -83,11 +83,11 @@ MCS_calc <- function(lon_row){
 }
 
 # system.time(
-#   MCS_calc(613)
+#   MCS_calc(1204)
 # ) # 150 seconds
 
-# Ran on Monday, June 15th, 2020
-# plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
+# Ran on Thursday, July 30th, 2020
+plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # Takes just over two hours
 
 
@@ -388,7 +388,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # NB: Running this in parallel will cause a proper stack overflow
 # registerDoParallel(cores = 50)
 # plyr::l_ply(1982:2020, MCS_annual_state, force_calc = T, .parallel = F,
-            # product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
+#             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
 # 5: Total summaries ------------------------------------------------------
@@ -422,9 +422,9 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run them all
-# MHW_total_state("OISST", "1982-2011")
+# MCS_total_state("OISST", "1982-2011")
 
-MHW_total_state_fig <- function(df, product, chosen_clim){
+MCS_total_state_fig <- function(df, product, chosen_clim){
   
   # Stacked barplot of global daily count of MHWs by category
   fig_count_historic <- ggplot(df, aes(x = t, y = cat_prop_daily_mean)) +
@@ -497,7 +497,7 @@ MHW_total_state_fig <- function(df, product, chosen_clim){
 ## Run them all
 # OISST
 # MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-# MHW_total_state_fig(MCS_total, "OISST", "1982-2011")
+# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -710,7 +710,7 @@ var_mean_trend_fig <- function(var_name){
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
 }
 
-plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+# plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------

@@ -23,12 +23,12 @@ load("metadata/lon_OISST.RData")
 lon_OISST <- ifelse(lon_OISST > 180, lon_OISST-360, lon_OISST)
 
 # The base map
-map_base <- ggplot2::fortify(maps::map(fill = TRUE, plot = FALSE)) %>% 
-  dplyr::rename(lon = long)
+load("../MHWapp/metadata/map_base.Rdata")
+
+# Metadata
+load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
 
 # Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
-# Gulf Stream boundary from 'gulf_stream.R'
-# GS_bound <- c(25, 50, -85, -40)
 YHZ_bound <- c(42, 47, -75, -55)
 
 ## Potential colour palettes
@@ -109,6 +109,14 @@ MHW_colours <- c(
   "Strong" = "#ff6900",
   "Severe" = "#9e0000",
   "Extreme" = "#2d0000"
+)
+
+# The MCS colour palette
+MCS_colours <- c(
+  "I Moderate" = "#A4D4E0",
+  "II Strong" = "#5B80A6",
+  "III Severe" = "#2A3C66",
+  "IV Extreme" = "#111433"
 )
 
 
@@ -212,9 +220,13 @@ ggsave("graph/palette_compare.png", palette_compare, height = 3, width = 6)
 
 # Subset event metric files
 load_MCS_event_sub <- function(file_name, date_range,
-                         lon_range = NA, lat_range){
+                               lon_range = NA, lat_range){
   load(file_name)
-  res <- MHW_event(MCS_res) %>% 
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, event) %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    unnest(event) %>% 
     filter(date_start >= date_range[1], date_start <= date_range[2],
            # lon >= lon_range[1], lon <= lon_range[2],
            lat >= lat_range[1], lat <= lat_range[2]) #%>%
@@ -223,11 +235,32 @@ load_MCS_event_sub <- function(file_name, date_range,
   return(res)
 }
 
+# Subset category files
+load_MCS_cat_sub <- function(file_name, date_range,
+                             lon_range = NA, lat_range){
+  load(file_name)
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, cat) %>% 
+    unnest(cat) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    unnest(cat) %>% 
+    filter(peak_date >= date_range[1], peak_date <= date_range[2],
+           # lon >= lon_range[1], lon <= lon_range[2],
+           lat >= lat_range[1], lat <= lat_range[2]) #%>%
+  # select(lon, lat, t, temp)
+  rm(MCS_res)
+  return(res)
+}
+
 # Subset climatology files
 load_MCS_clim_sub <- function(file_name, date_range,
                                lon_range = NA, lat_range){
   load(file_name)
-  res <- MHW_clim(MCS_res) %>% 
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, event) %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(event) %>% 
     filter(t >= date_range[1], t <= date_range[2],
            # lon >= lon_range[1], lon <= lon_range[2],
            lat >= lat_range[1], lat <= lat_range[2]) #%>%
@@ -239,6 +272,7 @@ load_MCS_clim_sub <- function(file_name, date_range,
 
 # Event data --------------------------------------------------------------
 
+## Halifax
 # Extract event metrics
 MCS_event_YHZ <- plyr::ldply(MCS_RData[which(lon_OISST >= YHZ_bound[3] & lon_OISST <= YHZ_bound[4])], 
                              .fun = load_MCS_event_sub, .parallel = T, 
@@ -252,11 +286,11 @@ MCS_event_YHZ <- MCS_event_YHZ %>%
 
 # Subset for plotting
 MCS_event_YHZ_sub <- MCS_event_YHZ %>% 
-  filter(date_start >= "2016-12-10", date_start <= "2016-12-20")
+  filter(date_start >= "2016-12-10", date_start <= "2017-01-15")
 
 # One pixel for time series example
 MCS_event_YHZ_one <- MCS_event_YHZ %>% 
-  filter(lon == -66.875, lat == 42.875)
+  filter(lon == -64.125, lat == 46.375)
 
 
 # Event visuals -----------------------------------------------------------
@@ -279,7 +313,7 @@ event_cum <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   labs(x = "", y = "", fill = "Cum. Intensity (°C x days)") +
   scale_fill_gradient(low = "grey", high = "deepskyblue") +
   theme(legend.position = "bottom")
-# event_cum
+event_cum
 
 # Rate of onset
 event_onset <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
@@ -289,7 +323,7 @@ event_onset <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   labs(x = "", y = "", fill = "Rate onset (°C/days)") +
   scale_fill_gradient(low = "grey", high = "darkorchid") +
   theme(legend.position = "bottom")
-# event_onset
+event_onset
 
 # Duration
 event_duration <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
@@ -299,7 +333,7 @@ event_duration <- ggplot(MCS_event_YHZ_sub, aes(x = lon, y = lat)) +
   labs(x = "", y = "", fill = "Duration (days)") +
   scale_fill_gradient(low = "grey", high = "steelblue") +
   theme(legend.position = "bottom")
-# event_duration
+event_duration
 
 # Combine
 event_all <- ggpubr::ggarrange(event_max, event_cum, event_onset, event_duration)
@@ -374,3 +408,157 @@ yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
   labs(title = 'Date: {frame_time}', x = '', y = '', fill = "°C below threshold") +
   transition_time(t)
 anim_save("graph/MCS/YHZ_2016_12.gif")
+
+
+# Hobday Fig 3 ------------------------------------------------------------
+
+# Function for loading all data streams
+load_MCS_ALL <- function(bbox){
+  # Load event data
+  event_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                            .fun = load_MCS_event_sub, .parallel = T, 
+                            date_range = c("1982-01-01", "2020-12-31"),
+                            lat_range = c(bbox[1], bbox[2]))
+  
+  # Load category data
+  cat_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                          .fun = load_MCS_cat_sub, .parallel = T, 
+                          date_range = c("1982-01-01", "2020-12-31"),
+                          # date_range = date_range,
+                          lat_range = c(bbox[1], bbox[2]))
+  
+  # Load clim data
+  clim_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                           .fun = load_MCS_clim_sub, .parallel = T, 
+                           date_range = c("1982-01-01", "2020-12-31"),
+                           # date_range = date_range,
+                           lat_range = c(bbox[1], bbox[2]))
+  
+  # Combine into list and exut
+  list_data <- list(event_data = event_data,
+                    cat_data = cat_data,
+                    clim_data = clim_data)
+  gc()
+  return(list_data)
+}
+
+# One of the most widely published MCS is that which occurred off Florida in 2003
+FL_bound <- c(26, 36, -82, -72)
+
+# Load the Florida region data
+MCS_data <- load_MCS_ALL(FL_bound)
+
+# testers...
+# bbox <- FL_bound
+# date_range <- c("2003-07-01", "2003-7-31")
+# peak_date <- "2003-07-18"
+Hobday_Fig_3_MCS <- function(MCS_data, date_range){
+  
+  # Find the most intense point
+  centre_point <- MCS_data$clim_data %>% 
+    mutate(anom = temp - seas) %>% 
+    filter(t >= date_range[1],
+           t <= date_range[2]) %>% 
+    filter(anom == min(anom))
+  
+  # Find the date range of the event
+  centre_dates <- MCS_data$event_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1],
+           event_no == centre_point$event_no[1])
+  
+  # Event name
+  centre_name <- paste0(year(centre_dates$date_peak), " event")
+  
+  # Extract the top event rows
+  mcs_top <- MCS_data$clim_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1],
+           t >= centre_dates$date_start[1]-1,
+           t <= centre_dates$date_end[1]+1)
+  
+  # Map figure
+  mf <- MCS_data$clim_data %>% 
+    filter(t == centre_point$t[1]) %>% 
+    mutate(anom = temp - seas) %>% 
+    ggplot(aes(x = lon, y = lat)) +
+    geom_tile(aes(fill = anom)) +
+    geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+    geom_label(aes(x = -80, y = 35, label = centre_point$t[1])) +
+    geom_point(data = centre_point, aes(x = lon, y = lat), shape = 21, fill = "pink", size = 3) +
+    coord_quickmap(expand = F, xlim = range(clim_data$lon), ylim = range(clim_data$lat)) +
+    labs(x = NULL, y = NULL, fill = "SSTa (°C)") +
+    theme(panel.border = element_rect(colour = "black", fill = NA))
+  # mf
+  
+  # Event line figure
+  el <- MCS_data$clim_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1],
+           t >= centre_point$t-190,
+           t <= centre_point$t+190) %>% 
+    ggplot(aes(x = t)) +
+    geom_flame(aes(y = thresh, y2 = temp, fill = "all"), show.legend = T) +
+    geom_flame(data = mcs_top, aes(y = thresh, y2 = temp, fill = "top"), show.legend = T) +
+    geom_line(aes(y = temp, colour = "temp")) +
+    geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
+    geom_line(aes(y = seas, colour = "seas"), size = 1.2) +
+    scale_colour_manual(name = "Line Colour",
+                        values = c("temp" = "black", "thresh" =  "forestgreen", "seas" = "grey80")) +
+    scale_fill_manual(name = "Event Colour", values = c("all" = "steelblue3", "top" = "navy")) +
+    scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+    guides(colour = guide_legend(override.aes = list(fill = NA))) +
+    labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+    theme(panel.border = element_rect(colour = "black", fill = NA))
+  # el
+  
+  # Lolliplot figures
+  ld <- MCS_data$event_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1]) %>% 
+    ggplot(aes(x = date_peak, y = duration)) +
+    geom_lolli(colour = "steelblue3") +
+    geom_lolli(data = centre_dates, colour = "navy") +
+    labs(x = NULL, y = "Duration (days)", colour = "Events") +
+    theme(axis.text.x = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA))
+  # ld
+  lim <- MCS_data$event_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1]) %>% 
+    ggplot(aes(x = date_peak, y = intensity_max)) +
+    geom_lolli(colour = "steelblue3") +
+    geom_lolli(data = centre_dates, colour = "navy") +
+    labs(x = NULL, y = "Maximum Intensity (°C)", colour = "Events") +
+    theme(axis.text.x = element_blank(),
+          panel.border = element_rect(colour = "black", fill = NA))
+  # lim
+  lic <- MCS_data$event_data %>% 
+    filter(lon == centre_point$lon[1],
+           lat == centre_point$lat[1]) %>% 
+    ggplot(aes(x = date_peak, y = intensity_cumulative)) +
+    geom_lolli(colour = "steelblue3") +
+    geom_lolli(data = centre_dates, colour = "navy") +
+    labs(x = "Peak date", y = "Cumulative Intensity (°C)", colour = "Events") +
+    theme(panel.border = element_rect(colour = "black", fill = NA))
+  # lic
+  
+  # Combine and save
+  full_fig <- ggarrange(mf, el, ld, lim, lic, ncol = 1, nrow = 5, align = "h", heights = c(1.5, 1, 0.5, 0.5, 0.5))
+  return(full_fig)
+}
+
+# The 2003 Florida summer event
+FL_2003_summer <- Hobday_Fig_3_MCS(FL_data, c("2003-07-01", "2003-7-31"))
+ggsave("graph/MCS/FL_2003_summer.png", FL_2003_summer, height = 16, width = 6)
+
+# The 2002 winter event
+FL_2002_winter <- Hobday_Fig_3_MCS(FL_data, c("2002-09-01", "2003-01-31"))
+ggsave("graph/MCS/FL_2002_winter.png", FL_2002_winter, height = 16, width = 6)
+
+# The biggest event
+FL_max <- Hobday_Fig_3_MCS(FL_data, c("1982-01-01", "2020-12-31"))
+ggsave("graph/MCS/FL_max.png", FL_max, height = 16, width = 6)
+
+# Combine all three
+
