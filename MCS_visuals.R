@@ -35,30 +35,10 @@ YHZ_bound <- c(42, 47, -75, -55)
 # w3schools.com/colors/colors_groups.asp
 # sciviscolor.org/home/environmental-palettes/
 
-#474E73
-
-#1cb5e0, #000046
-
-#0575e6, #021b79 
-
-#B0E0E6, #6495ED, #0000CD, #191970
-
-#1fa2ff #12d8fa #a6ffcb 
-
-#1a2980 #26d0ce 
-
-#5433ff #20bdff #a5fecb 
-
-## RcolorBrewer palettes
-# Blues
-# PuBu
-# RdBu
-
 # Consider ROYGBIV
 # Because MHWs use ROY it could be good to use GBIV for MCSs
-# Maybe don't worry about perceptual symetry
+# Maybe don't worry about perceptual symmetry
 # Just pick the best colours from a colour wheel
-
 
 # Load an XML file containing weird rgb vlaues and convert to hex
 rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
@@ -88,11 +68,11 @@ MCS_palette <- c(BlueWater$hex[10], BlueWater$hex[7], BlueWater$hex[4], BlueWate
 # Set line colours
 lineCol <- c(
   "Temperature" = "black",
-  "Climatology" = "black",
-  "Threshold" = "black",
-  "2x Threshold" = "black",
-  "3x Threshold" = "black",
-  "4x Threshold" = "black"
+  "Climatology" = "grey20",
+  "Threshold" = "darkorchid",
+  "2x Threshold" = "darkorchid",
+  "3x Threshold" = "darkorchid",
+  "4x Threshold" = "darkorchid"
 )
 
 # Set category fill colours
@@ -118,6 +98,90 @@ MCS_colours <- c(
   "III Severe" = "#2A3C66",
   "IV Extreme" = "#111433"
 )
+
+
+# Functions ---------------------------------------------------------------
+
+# Subset event metric files
+load_MCS_event_sub <- function(file_name, date_range,
+                               lon_range = NA, lat_range){
+  load(file_name)
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, event) %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    unnest(event) %>% 
+    filter(date_start >= date_range[1], date_start <= date_range[2],
+           # lon >= lon_range[1], lon <= lon_range[2],
+           lat >= lat_range[1], lat <= lat_range[2]) #%>%
+  # select(lon, lat, t, temp)
+  rm(MCS_res)
+  return(res)
+}
+
+# Subset category files
+load_MCS_cat_sub <- function(file_name, date_range,
+                             lon_range = NA, lat_range){
+  load(file_name)
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, cat) %>% 
+    unnest(cat) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    unnest(cat) %>% 
+    filter(peak_date >= date_range[1], peak_date <= date_range[2],
+           # lon >= lon_range[1], lon <= lon_range[2],
+           lat >= lat_range[1], lat <= lat_range[2]) #%>%
+  # select(lon, lat, t, temp)
+  rm(MCS_res)
+  return(res)
+}
+
+# Subset climatology files
+load_MCS_clim_sub <- function(file_name, date_range,
+                              lon_range = NA, lat_range){
+  load(file_name)
+  res <- MCS_res %>% 
+    dplyr::select(lon, lat, event) %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(event) %>% 
+    filter(t >= date_range[1], t <= date_range[2],
+           # lon >= lon_range[1], lon <= lon_range[2],
+           lat >= lat_range[1], lat <= lat_range[2]) #%>%
+  # select(lon, lat, t, temp)
+  rm(MCS_res)
+  return(res)
+}
+
+# Function for loading all data streams
+load_MCS_ALL <- function(bbox){
+  # Load event data
+  event_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                            .fun = load_MCS_event_sub, .parallel = T, 
+                            date_range = c("1982-01-01", "2020-12-31"),
+                            lat_range = c(bbox[1], bbox[2]))
+  
+  # Load category data
+  cat_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                          .fun = load_MCS_cat_sub, .parallel = T, 
+                          date_range = c("1982-01-01", "2020-12-31"),
+                          # date_range = date_range,
+                          lat_range = c(bbox[1], bbox[2]))
+  
+  # Load clim data
+  clim_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+                           .fun = load_MCS_clim_sub, .parallel = T, 
+                           date_range = c("1982-01-01", "2020-12-31"),
+                           # date_range = date_range,
+                           lat_range = c(bbox[1], bbox[2]))
+  
+  # Combine into list and exut
+  list_data <- list(event_data = event_data,
+                    cat_data = cat_data,
+                    clim_data = clim_data)
+  gc()
+  return(list_data)
+}
 
 
 # Colour palette comparison figure ----------------------------------------
@@ -214,60 +278,6 @@ palette_compare <- ggplot(data = colour_palette, aes(x = category, y = event)) +
   coord_cartesian(expand = F) +
   labs(x = NULL, y = NULL)
 ggsave("graph/palette_compare.png", palette_compare, height = 3, width = 6)
-
-
-# Functions ---------------------------------------------------------------
-
-# Subset event metric files
-load_MCS_event_sub <- function(file_name, date_range,
-                               lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
-    dplyr::select(lon, lat, event) %>% 
-    unnest(event) %>% 
-    filter(row_number() %% 2 == 0) %>% 
-    unnest(event) %>% 
-    filter(date_start >= date_range[1], date_start <= date_range[2],
-           # lon >= lon_range[1], lon <= lon_range[2],
-           lat >= lat_range[1], lat <= lat_range[2]) #%>%
-    # select(lon, lat, t, temp)
-  rm(MCS_res)
-  return(res)
-}
-
-# Subset category files
-load_MCS_cat_sub <- function(file_name, date_range,
-                             lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
-    dplyr::select(lon, lat, cat) %>% 
-    unnest(cat) %>% 
-    filter(row_number() %% 2 == 0) %>% 
-    unnest(cat) %>% 
-    filter(peak_date >= date_range[1], peak_date <= date_range[2],
-           # lon >= lon_range[1], lon <= lon_range[2],
-           lat >= lat_range[1], lat <= lat_range[2]) #%>%
-  # select(lon, lat, t, temp)
-  rm(MCS_res)
-  return(res)
-}
-
-# Subset climatology files
-load_MCS_clim_sub <- function(file_name, date_range,
-                               lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
-    dplyr::select(lon, lat, event) %>% 
-    unnest(event) %>% 
-    filter(row_number() %% 2 == 1) %>% 
-    unnest(event) %>% 
-    filter(t >= date_range[1], t <= date_range[2],
-           # lon >= lon_range[1], lon <= lon_range[2],
-           lat >= lat_range[1], lat <= lat_range[2]) #%>%
-  # select(lon, lat, t, temp)
-  rm(MCS_res)
-  return(res)
-}
 
 
 # Event data --------------------------------------------------------------
@@ -412,46 +422,14 @@ anim_save("graph/MCS/YHZ_2016_12.gif")
 
 # Hobday Fig 3 ------------------------------------------------------------
 
-# Function for loading all data streams
-load_MCS_ALL <- function(bbox){
-  # Load event data
-  event_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
-                            .fun = load_MCS_event_sub, .parallel = T, 
-                            date_range = c("1982-01-01", "2020-12-31"),
-                            lat_range = c(bbox[1], bbox[2]))
-  
-  # Load category data
-  cat_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
-                          .fun = load_MCS_cat_sub, .parallel = T, 
-                          date_range = c("1982-01-01", "2020-12-31"),
-                          # date_range = date_range,
-                          lat_range = c(bbox[1], bbox[2]))
-  
-  # Load clim data
-  clim_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
-                           .fun = load_MCS_clim_sub, .parallel = T, 
-                           date_range = c("1982-01-01", "2020-12-31"),
-                           # date_range = date_range,
-                           lat_range = c(bbox[1], bbox[2]))
-  
-  # Combine into list and exut
-  list_data <- list(event_data = event_data,
-                    cat_data = cat_data,
-                    clim_data = clim_data)
-  gc()
-  return(list_data)
-}
-
 # One of the most widely published MCS is that which occurred off Florida in 2003
 FL_bound <- c(26, 36, -82, -72)
 
 # Load the Florida region data
-MCS_data <- load_MCS_ALL(FL_bound)
+FL_data <- load_MCS_ALL(FL_bound)
 
 # testers...
-# bbox <- FL_bound
 # date_range <- c("2003-07-01", "2003-7-31")
-# peak_date <- "2003-07-18"
 Hobday_Fig_3_MCS <- function(MCS_data, date_range){
   
   # Find the most intense point
@@ -468,7 +446,7 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
            event_no == centre_point$event_no[1])
   
   # Event name
-  centre_name <- paste0(year(centre_dates$date_peak), " event")
+  centre_name <- paste0(lubridate::year(centre_dates$date_peak), " event")
   
   # Extract the top event rows
   mcs_top <- MCS_data$clim_data %>% 
@@ -486,7 +464,7 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     geom_label(aes(x = -80, y = 35, label = centre_point$t[1])) +
     geom_point(data = centre_point, aes(x = lon, y = lat), shape = 21, fill = "pink", size = 3) +
-    coord_quickmap(expand = F, xlim = range(clim_data$lon), ylim = range(clim_data$lat)) +
+    coord_quickmap(expand = F, xlim = range(MCS_data$clim_data$lon), ylim = range(MCS_data$clim_data$lat)) +
     labs(x = NULL, y = NULL, fill = "SSTa (°C)") +
     theme(panel.border = element_rect(colour = "black", fill = NA))
   # mf
@@ -497,17 +475,29 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
            lat == centre_point$lat[1],
            t >= centre_point$t-190,
            t <= centre_point$t+190) %>% 
+    mutate(diff = thresh - seas,
+           thresh_2x = thresh + diff,
+           thresh_3x = thresh_2x + diff,
+           thresh_4x = thresh_3x + diff) %>% 
     ggplot(aes(x = t)) +
-    geom_flame(aes(y = thresh, y2 = temp, fill = "all"), show.legend = T) +
-    geom_flame(data = mcs_top, aes(y = thresh, y2 = temp, fill = "top"), show.legend = T) +
-    geom_line(aes(y = temp, colour = "temp")) +
-    geom_line(aes(y = thresh, colour = "thresh"), size = 1.0) +
-    geom_line(aes(y = seas, colour = "seas"), size = 1.2) +
-    scale_colour_manual(name = "Line Colour",
-                        values = c("temp" = "black", "thresh" =  "forestgreen", "seas" = "grey80")) +
-    scale_fill_manual(name = "Event Colour", values = c("all" = "steelblue3", "top" = "navy")) +
+    geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2, show.legend = F) +
+    geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong"), show.legend = F) +
+    geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe"), show.legend = F) +
+    geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme"), show.legend = F) +
+    geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+    geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+    geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+    geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+    geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+    geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+    scale_colour_manual(name = NULL, values = lineCol,
+                        breaks = c("Temperature", "Climatology", "Threshold",
+                                   "2x Threshold", "3x Threshold", "4x Threshold")) +
+    scale_fill_manual(name = "Event colour", values = fillCol) +
     scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-    guides(colour = guide_legend(override.aes = list(fill = NA))) +
+    guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
+                                                                  "dashed", "dotdash", "dotted"),
+                                                     size = c(1, 1, 1, 1, 1, 1)))) +
     labs(y = expression(paste("Temperature (°C)")), x = NULL) +
     theme(panel.border = element_rect(colour = "black", fill = NA))
   # el
@@ -544,7 +534,8 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
   # lic
   
   # Combine and save
-  full_fig <- ggarrange(mf, el, ld, lim, lic, ncol = 1, nrow = 5, align = "h", heights = c(1.5, 1, 0.5, 0.5, 0.5))
+  full_fig <- ggarrange(mf, el, ld, lim, lic, ncol = 1, nrow = 5, align = "h", 
+                        heights = c(1.5, 1, 0.5, 0.5, 0.5))
   return(full_fig)
 }
 
@@ -561,4 +552,5 @@ FL_max <- Hobday_Fig_3_MCS(FL_data, c("1982-01-01", "2020-12-31"))
 ggsave("graph/MCS/FL_max.png", FL_max, height = 16, width = 6)
 
 # Combine all three
-
+FL_trio <- ggarrange(FL_2003_summer, FL_2002_winter, FL_max, ncol = 3, nrow = 1)
+ggsave("graph/MCS/FL_trio.png", FL_trio, height = 16, width = 18)
