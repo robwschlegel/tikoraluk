@@ -535,22 +535,22 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
   
   # Combine and save
   full_fig <- ggarrange(mf, el, ld, lim, lic, ncol = 1, nrow = 5, align = "h", 
-                        heights = c(1.5, 1, 0.5, 0.5, 0.5))
+                        heights = c(1.2, 0.7, 0.5, 0.5, 0.5))
   return(full_fig)
 }
 
 # The 2003 Florida summer event
 FL_2003_summer <- Hobday_Fig_3_MCS(FL_data, c("2003-07-01", "2003-7-31"))
-ggsave("graph/MCS/FL_2003_summer.png", FL_2003_summer, height = 16, width = 6)
+ggsave("graph/MCS/FL_2003_summer.png", FL_2003_summer, height = 14, width = 5)
 
 # The 2002 winter event
 FL_2002_winter <- Hobday_Fig_3_MCS(FL_data, c("2002-09-01", "2003-01-31"))
-ggsave("graph/MCS/FL_2002_winter.png", FL_2002_winter, height = 16, width = 6)
+ggsave("graph/MCS/FL_2002_winter.png", FL_2002_winter, height = 14, width = 5)
 
 # The biggest event
 FL_max <- Hobday_Fig_3_MCS(FL_data, c("1982-01-01", "2020-12-31"))
-ggsave("graph/MCS/FL_max.png", FL_max, height = 16, width = 6)
+ggsave("graph/MCS/FL_max.png", FL_max, height = 14, width = 5)
 
 # Combine all three
 FL_trio <- ggarrange(FL_2003_summer, FL_2002_winter, FL_max, ncol = 3, nrow = 1)
-ggsave("graph/MCS/FL_trio.png", FL_trio, height = 16, width = 18)
+ggsave("graph/MCS/FL_trio.png", FL_trio, height = 14, width = 15)
