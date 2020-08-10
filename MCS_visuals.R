@@ -428,6 +428,14 @@ FL_bound <- c(26, 36, -82, -72)
 # Load the Florida region data
 FL_data <- load_MCS_ALL(FL_bound)
 
+# Notes from Monday 2020-08-10 meeting
+# Map anomalies should be blue to red
+  # But use different shades of blue etc. so they don't look like the MCS colours
+  # Consider white or yellow
+# Add labels in top left corners
+
+# Create a schematic for figure 1
+
 # testers...
 # date_range <- c("2003-07-01", "2003-7-31")
 Hobday_Fig_3_MCS <- function(MCS_data, date_range){
