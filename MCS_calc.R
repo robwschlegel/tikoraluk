@@ -7,6 +7,8 @@
 # 5: Total summaries 
 # 6: Trends 
 # 7: MHWs minus MCSs
+# 8: SSTa skewness and kurtosis
+
 
 # 1: Setup ----------------------------------------------------------------
 
@@ -17,10 +19,12 @@ library(lubridate)
 library(dtplyr)
 library(tidync)
 library(broom)
+library(e1071)
+library(ggridges)
 # remotes::install_github("robwschlegel/heatwaveR")
 library(heatwaveR); packageVersion("heatwaveR")
-source("MHW_prep.R")
 library(doParallel); registerDoParallel(cores = 50)
+source("MCS_prep.R")
 
 # File locations
 OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
@@ -44,6 +48,9 @@ load("../MHWapp/metadata/map_base.Rdata")
 
 # Disable scientific notation
 options(scipen = 9999)
+
+# The MCS results
+MCS_RData <- c(file = dir(path = "../data/MCS", pattern = "MCS.calc.*.RData", full.names = T))
 
 
 # TO DO
@@ -716,4 +723,35 @@ var_mean_trend_fig <- function(var_name){
 # 7: MHWs minus MCSs ------------------------------------------------------
 
 
+# 8: SSTa skewness and kurtosis -------------------------------------------
 
+# testers...
+# file_name_MCS <- MCS_RData[1]
+load_SSTa <- function(lon_step, lon_range){
+  
+  df <- sst_seas_thresh_merge()
+  
+  load(file_name_MCS)
+  SSTa <- MCS_res %>% 
+    dplyr::select(-cat) %>% 
+    MHW_clim() %>% 
+    ungroup() %>% 
+    dplyr::select(lon, lat, t, temp, seas, thresh) %>% 
+    mutate(lon_ceiling = ceiling(lon),
+           anom = round(temp - seas, 3))
+    SSTa_sub <- SSTa %>% 
+      filter(lon_ceiling >= lon_range[1],
+             lon_ceiling <= lon_range[2])
+  rm(MCS_res, SSTa); gc()
+  return(SSTa_sub)
+}
+
+# Load the global SSTa
+registerDoParallel(cores = 50)
+system.time(SSTa_top <- plyr::ldply(MCS_RData, load_SSTa, .parallel = T, .paropts = c(.inorder = F), lon_range = c(80, 90))) # 634 seconds
+system.time(SSTa_bottom <- plyr::ldply(MCS_RData, load_SSTa, .parallel = T, .paropts = c(.inorder = F), lon_range = c(-90, -1)))
+
+kurtosis()
+skewness()
+
+# Show a ridegplot with the fill for kurtosis and the colour for skewness
