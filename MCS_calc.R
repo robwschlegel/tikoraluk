@@ -31,6 +31,7 @@ OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
 MCS_lon_files <- dir("../data/MCS", full.names = T)
 MCS_cat_files <- dir("../data/cat_clim_MCS", full.names = T)
 MCS_count_trend_files <- dir("annual_summary_MCS", pattern = "count_trend", full.names = T)
+seas_thresh_files <- dir("../data/thresh", pattern = "MHW.seas.thresh.", full.names = T)
 
 # Metadata
 load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
@@ -51,7 +52,6 @@ options(scipen = 9999)
 
 # The MCS results
 MCS_RData <- c(file = dir(path = "../data/MCS", pattern = "MCS.calc.*.RData", full.names = T))
-
 
 # TO DO
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
@@ -727,31 +727,51 @@ var_mean_trend_fig <- function(var_name){
 
 # testers...
 # file_name_MCS <- MCS_RData[1]
-load_SSTa <- function(lon_step, lon_range){
+# lon_step <- lon_OISST[1]
+skew_kurt_calc <- function(lon_step){
+  # Load the data
+  df <- sst_seas_thresh_merge(lon_step, date_range = as.Date("1982-01-01"))
   
-  df <- sst_seas_thresh_merge()
+  # Add a season category
+  df_season <- df %>% 
+    mutate(month = month(t, label = T)) %>% 
+    mutate(season = case_when(month %in% c("Jan", "Feb", "Mar") & lat > 0 ~ "Winter",
+                              month %in% c("Apr", "May", "Jun") & lat > 0 ~ "Spring",
+                              month %in% c("Jul", "Aug", "Sep") & lat > 0 ~ "Summer",
+                              month %in% c("Oct", "Nov", "Dec") & lat > 0 ~ "Autumn",
+                              month %in% c("Jan", "Feb", "Mar") & lat < 0 ~ "Summer",
+                              month %in% c("Apr", "May", "Jun") & lat < 0 ~ "Autumn",
+                              month %in% c("Jul", "Aug", "Sep") & lat < 0 ~ "Winter",
+                              month %in% c("Oct", "Nov", "Dec") & lat < 0 ~ "Spring")) %>% 
+    dplyr::select(-month)
   
-  load(file_name_MCS)
-  SSTa <- MCS_res %>% 
-    dplyr::select(-cat) %>% 
-    MHW_clim() %>% 
-    ungroup() %>% 
-    dplyr::select(lon, lat, t, temp, seas, thresh) %>% 
-    mutate(lon_ceiling = ceiling(lon),
-           anom = round(temp - seas, 3))
-    SSTa_sub <- SSTa %>% 
-      filter(lon_ceiling >= lon_range[1],
-             lon_ceiling <= lon_range[2])
-  rm(MCS_res, SSTa); gc()
-  return(SSTa_sub)
+  # Combine data frames and calculate skewness and kurtosis
+  skew_kurt <- df %>%
+    mutate(season = "Total") %>% 
+    rbind(., df_season) %>% 
+    mutate(season = factor(season, levels = c("Total", "Spring", "Summer", "Autumn", "Winter"))) %>% 
+    group_by(lon, lat, season) %>% 
+    summarise(anom_skew = round(skewness(anom), 2),
+              anom_kurt = round(kurtosis(anom), 2),
+              anom_min = min(anom),
+              anom_mean = round(mean(anom), 2),
+              anom_max = max(anom), .groups = "drop")
+  return(skew_kurt)
 }
 
 # Load the global SSTa
 registerDoParallel(cores = 50)
-system.time(SSTa_top <- plyr::ldply(MCS_RData, load_SSTa, .parallel = T, .paropts = c(.inorder = F), lon_range = c(80, 90))) # 634 seconds
-system.time(SSTa_bottom <- plyr::ldply(MCS_RData, load_SSTa, .parallel = T, .paropts = c(.inorder = F), lon_range = c(-90, -1)))
-
-kurtosis()
-skewness()
+system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 947 seconds
+saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
+SSTa_ridge <- SSTa_stats %>% 
+  mutate(lat_10 = factor(plyr::round_any(lat, 10))) %>% 
+  dplyr::select(-lon, -lat) %>% 
+  mutate(season = factor(season, levels = c("Spring", "Summer", "Autumn", "Winter", "Total"))) %>% 
+  ggplot(aes(x = anom_skew, y = lat_10)) +
+  geom_density_ridges(aes(fill = season), alpha = 0.5, size = 0.1) +
+  # scale_x_continuous(limits = c(-2, 10), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(-2, 5), expand = c(0, 0)) +
+  theme_ridges()
+ggsave("graph/kurt_skew_lon.png", SSTa_ridge, width = 12)
