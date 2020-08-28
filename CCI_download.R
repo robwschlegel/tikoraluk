@@ -104,6 +104,7 @@ plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .paral
 #   coord_cartesian(expand = F) +
 #   theme_void()
 
+
 # Load data ---------------------------------------------------------------
 
 # Files
@@ -136,5 +137,4 @@ load_CCI_region <- function(file_name, lon_min, lon_max, lat_min, lat_max){
 #   borders(colour = "black") +
 #   coord_quickmap(xlim = c(-65.5843, -64.8205),
 #                  ylim = c(43.3256, 43.8499), expand = F)
-
 
