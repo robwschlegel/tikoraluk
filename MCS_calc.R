@@ -26,33 +26,6 @@ library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 source("MCS_prep.R")
 
-# File locations
-OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
-MCS_lon_files <- dir("../data/MCS", full.names = T)
-MCS_cat_files <- dir("../data/cat_clim_MCS", full.names = T)
-MCS_count_trend_files <- dir("annual_summary_MCS", pattern = "count_trend", full.names = T)
-seas_thresh_files <- dir("../data/thresh", pattern = "MHW.seas.thresh.", full.names = T)
-
-# Metadata
-load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
-
-# The MCS colour palette
-MCS_colours <- c(
-  "I Moderate" = "#A4D4E0",
-  "II Strong" = "#5B80A6",
-  "III Severe" = "#2A3C66",
-  "IV Extreme" = "#111433"
-)
-
-# The base map
-load("../MHWapp/metadata/map_base.Rdata")
-
-# Disable scientific notation
-options(scipen = 9999)
-
-# The MCS results
-MCS_RData <- c(file = dir(path = "../data/MCS", pattern = "MCS.calc.*.RData", full.names = T))
-
 # TO DO
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
 
@@ -83,18 +56,17 @@ MCS_calc <- function(lon_row){
     select(-data, -clim)
   
   # Finish
-  # save(MCS_res, file = paste0("../data/MCS/MCS.calc", lon_row_pad,".RData"))
   saveRDS(MCS_res, paste0("../data/MCS/MCS.calc.", lon_row_pad,".Rds"))
   rm(SST, MCS_res); gc()
   print(paste("Completed run",lon_row_pad,"at",Sys.time()))
 }
 
 # system.time(
-#   MCS_calc(1204)
+  # MCS_calc(612)
 # ) # 150 seconds
 
-# Ran on Thursday, July 30th, 2020
-plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
+# Ran on Friday, August 28th, 2020
+# plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # Takes just over two hours
 
 
@@ -102,13 +74,10 @@ plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 
 # Function for loading a cat_lon slice and extracting a single day of values
 # testers...
-# cat_lon_file <- MCS_lon_files[613]
+# cat_lon_file <- MCS_lon_files[1]
 # date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
 load_sub_cat_clim <- function(cat_lon_file, date_range){
-  # cat_clim <- readRDS(cat_lon_file)
-  load(cat_lon_file)
-  # cat_clim_sub <- cat_clim %>%
-  cat_clim_sub <- MCS_res %>%
+  cat_clim_sub <- readRDS(cat_lon_file) %>%
     dplyr::select(-event) %>% 
     unnest(cols = cat) %>% 
     filter(row_number() %% 2 == 1) %>% 
@@ -116,14 +85,12 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
     unnest(cols = cat) %>% 
     ungroup() %>% 
     filter(t >= date_range[1], t <= date_range[2])
-  # rm(cat_clim); gc()
-  rm(MCS_res); gc()
   return(cat_clim_sub)
 }
 
 # Function for saving daily global cat files
-# df <- cat_clim_daily
-# date_choice <- as.Date("1982-01-01")
+# df <- cat_clim_sub
+# date_choice <- as.Date("2020-01-01")
 save_sub_cat_clim <- function(date_choice, df){
   
   # Establish flie name and save location
@@ -160,14 +127,14 @@ cat_clim_global_daily <- function(date_range){
 }
 
 # NB: Better not to run the entire 30+ years at once
-# registerDoParallel(cores = 50)
-# cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
-# registerDoParallel(cores = 50)
-# cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
-# registerDoParallel(cores = 50)
-# cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
-# registerDoParallel(cores = 50)
-# cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
+registerDoParallel(cores = 50)
+cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
+registerDoParallel(cores = 50)
+cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
+registerDoParallel(cores = 50)
+cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
+registerDoParallel(cores = 50)
+cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
 
 
 # 4: Annual summaries -----------------------------------------------------
@@ -393,9 +360,9 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
-# registerDoParallel(cores = 50)
-# plyr::l_ply(1982:2020, MCS_annual_state, force_calc = T, .parallel = F,
-#             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
+registerDoParallel(cores = 50)
+plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
+            product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
 # 5: Total summaries ------------------------------------------------------
@@ -405,18 +372,19 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # chosen_clim <- "1982-2011"
 MCS_total_state <- function(product, chosen_clim){
   
+  MCS_cat_daily_files <- dir("annual_summary_MCS", pattern = "MCS_cat_daily", full.names = T)
+  MCS_cat_daily_files <- MCS_cat_daily_files[!grepl("total", MCS_cat_daily_files)]
+  
   # Create mean values of daily count
-  cat_daily_mean <- map_dfr(dir("annual_summary_MCS", pattern = paste0("MCS_cat_daily"),
-                                full.names = T), readRDS) %>%
+  cat_daily_mean <- map_dfr(MCS_cat_daily_files, readRDS) %>%
     mutate(t = lubridate::year(t)) %>%
     group_by(t, category) %>%
     summarise(cat_n = mean(cat_n, na.rm = T)) %>%
     ungroup() %>%
     mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4))
   
-  # Extract only values from Decemer 31st
-  cat_daily <- map_dfr(dir("annual_summary_MCS", pattern = paste0("MCS_cat_daily_"),
-                           full.names = T), readRDS) %>%
+  # Extract only values from December 31st
+  cat_daily <- map_dfr(MCS_cat_daily_files, readRDS) %>%
     # cat_daily <- map_dfr(dir("data/annual_summary/v2.0", pattern = "cat_daily",
     # full.names = T), readRDS) %>% # The old v2.0 OISST data
     filter(lubridate::month(t) == 12, lubridate::day(t) == 31) %>%
@@ -429,8 +397,9 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run them all
-# MCS_total_state("OISST", "1982-2011")
+MCS_total_state("OISST", "1982-2011")
 
+## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
   
   # Stacked barplot of global daily count of MHWs by category
@@ -503,8 +472,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 
 ## Run them all
 # OISST
-# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -516,7 +485,7 @@ MCS_trend_calc <- function(lon_step){
   print(paste0("Began run on ",lon_step," at ", Sys.time()))
   
   # Load chosen file
-  load(MCS_lon_files[lon_step])
+  MCS_res <- readRDS(MCS_lon_files[lon_step])
   
   # Unpack categories
   MCS_cat <- MCS_res %>%
@@ -644,12 +613,12 @@ MCS_trend_calc <- function(lon_step){
 
 # Run one
 # system.time(
-#   MCS_trend_calc(1172)
+#   MCS_trend_calc(1)
 # ) # 29 seconds
 
 # Run all
-# registerDoParallel(cores = 50)
-# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+registerDoParallel(cores = 50)
+plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
@@ -717,27 +686,43 @@ var_mean_trend_fig <- function(var_name){
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
 }
 
-# plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
 
 # Function that loads one MHW and one MCS lon slice and subtracts them
-MHW_v_MCS <- function(lon_step){
+# testers...
+# lon_row <- 1
+MHW_v_MCS_func <- function(lon_row){
+  lon_row_pad <- str_pad(lon_row, width = 4, pad = "0", side = "left")
   
+  # Load and prep MHW data
+  MHW_mean <- readRDS(paste0("../data/event/MHW.event.",lon_row_pad,".Rda")) %>% 
+    dplyr::select(lon, lat, duration, intensity_mean:intensity_cumulative) %>% 
+    group_by(lon, lat) %>% 
+    summarise_all("mean", .groups = "drop")
+  
+  # Load and prep MCS data
+  MCS_mean <- load_MCS_event_sub(MCS_lon_files[lon_row], lat_range = c(-90, 90),
+                                 date_range = c("1982-01-01", "2020-12-31")) %>% 
+    dplyr::select(lon, lat, duration, intensity_mean, intensity_max, intensity_cumulative) %>% 
+    group_by(lon, lat) %>% 
+    summarise_all("mean", .groups = "drop")
+  
+  # Subtract MCS from MHW
+  MHW_v_MCS <- left_join(MHW_mean, MCS_mean, by = c("lon", "lat")) %>% 
+    mutate(dur = round(duration.x - duration.y, 2),
+           i_mean = round(intensity_mean.x - abs(intensity_mean.y), 2),
+           i_max = round(intensity_max.x - abs(intensity_max.y), 2),
+           i_cum = round(intensity_cumulative.x - abs(intensity_cumulative.y), 2)) %>% 
+    dplyr::select(lon, lat, dur:i_cum)
+  return(MHW_v_MCS)
 }
 
-
-OISST_21 <- readRDS("../data/OISST_lon/OISST_MHW_1982-2011_01.Rds")
-OISST_20 <- readRDS("../data/cat_lon/MHW.cat.0001.Rda")
-OISST_21_sub <- OISST_21[[300]]$cat %>% 
-  mutate(intensity = round(intensity, 2))
-OISST_20_sub <- OISST_20 %>% 
-  filter(lon == 0.125, lat == 3.375)
-OISST_20_21 <- full_join(OISST_20_sub, OISST_21_sub, by = "t") %>% 
-  mutate(intensity_comp <- intensity.x - intensity.y)
-
-OISST_21[300]
+registerDoParallel(cores = 50)
+system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
+saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
 
 
 # 8: SSTa skewness and kurtosis -------------------------------------------
@@ -778,7 +763,7 @@ skew_kurt_calc <- function(lon_step){
 
 # Load the global SSTa
 registerDoParallel(cores = 50)
-system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 947 seconds
+system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
 saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness

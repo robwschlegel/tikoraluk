@@ -7,20 +7,46 @@
 source("MHW_prep.R")
 
 # OISST coords
-lon_OISST <- c(seq(0.125, 179.875, by = 0.25), seq(-179.875, -0.125, by = 0.25))
+# The lon coords for the OISST data
+load("metadata/lon_OISST.RData")
+lon_OISST <- ifelse(lon_OISST > 180, lon_OISST-360, lon_OISST)
 lat_OISST <- seq(-89.875, 89.875, by = 0.25)
 lon_lat_OISST <- base::expand.grid(lon_OISST, lat_OISST) %>% 
   dplyr::rename(lon = Var1, lat = Var2) %>% 
   arrange(lon, lat) %>% 
   data.frame()
 
+# File locations
+OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
+MCS_lon_files <- dir("../data/MCS", full.names = T)
+MCS_cat_files <- dir("../data/cat_clim_MCS", full.names = T)
+MCS_count_trend_files <- dir("annual_summary_MCS", pattern = "count_trend", full.names = T)
+seas_thresh_files <- dir("../data/thresh", pattern = "MHW.seas.thresh.", full.names = T)
+
+# Metadata
+load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
+
+# The MCS colour palette
+MCS_colours <- c(
+  "I Moderate" = "#A4D4E0",
+  "II Strong" = "#5B80A6",
+  "III Severe" = "#2A3C66",
+  "IV Extreme" = "#111433"
+)
+
+# The base map
+load("../MHWapp/metadata/map_base.Rdata")
+
+# Disable scientific notation
+options(scipen = 9999)
+
+
 # Functions ---------------------------------------------------------------
 
 # Subset event metric files
 load_MCS_event_sub <- function(file_name, date_range,
                                lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
+  res <- readRDS(file_name) %>% 
     dplyr::select(lon, lat, event) %>% 
     unnest(event) %>% 
     filter(row_number() %% 2 == 0) %>% 
@@ -29,15 +55,13 @@ load_MCS_event_sub <- function(file_name, date_range,
            # lon >= lon_range[1], lon <= lon_range[2],
            lat >= lat_range[1], lat <= lat_range[2]) #%>%
   # select(lon, lat, t, temp)
-  rm(MCS_res)
   return(res)
 }
 
 # Subset category files
 load_MCS_cat_sub <- function(file_name, date_range,
                              lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
+  res <- readRDS(file_name) %>% 
     dplyr::select(lon, lat, cat) %>% 
     unnest(cat) %>% 
     filter(row_number() %% 2 == 0) %>% 
@@ -46,15 +70,13 @@ load_MCS_cat_sub <- function(file_name, date_range,
            # lon >= lon_range[1], lon <= lon_range[2],
            lat >= lat_range[1], lat <= lat_range[2]) #%>%
   # select(lon, lat, t, temp)
-  rm(MCS_res)
   return(res)
 }
 
 # Subset climatology files
 load_MCS_clim_sub <- function(file_name, date_range,
                               lon_range = NA, lat_range){
-  load(file_name)
-  res <- MCS_res %>% 
+  res <- readRDS(file_name) %>% 
     dplyr::select(lon, lat, event) %>% 
     unnest(event) %>% 
     filter(row_number() %% 2 == 1) %>% 
@@ -63,27 +85,26 @@ load_MCS_clim_sub <- function(file_name, date_range,
            # lon >= lon_range[1], lon <= lon_range[2],
            lat >= lat_range[1], lat <= lat_range[2]) #%>%
   # select(lon, lat, t, temp)
-  rm(MCS_res)
   return(res)
 }
 
 # Function for loading all data streams
 load_MCS_ALL <- function(bbox){
   # Load event data
-  event_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+  event_data <- plyr::ldply(MCS_lon_files[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
                             .fun = load_MCS_event_sub, .parallel = T, 
                             date_range = c("1982-01-01", "2020-12-31"),
                             lat_range = c(bbox[1], bbox[2]))
   
   # Load category data
-  cat_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+  cat_data <- plyr::ldply(MCS_lon_files[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
                           .fun = load_MCS_cat_sub, .parallel = T, 
                           date_range = c("1982-01-01", "2020-12-31"),
                           # date_range = date_range,
                           lat_range = c(bbox[1], bbox[2]))
   
   # Load clim data
-  clim_data <- plyr::ldply(MCS_RData[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
+  clim_data <- plyr::ldply(MCS_lon_files[which(lon_OISST >= bbox[3] & lon_OISST <= bbox[4])], 
                            .fun = load_MCS_clim_sub, .parallel = T, 
                            date_range = c("1982-01-01", "2020-12-31"),
                            # date_range = date_range,
@@ -130,3 +151,4 @@ sst_seas_thresh_merge <- function(lon_step, date_range){
     mutate(anom = round(temp - seas, 2))
   return(sst_seas_thresh)
 }
+

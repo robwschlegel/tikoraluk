@@ -10,24 +10,12 @@ library(heatwaveR)
 library(gganimate)
 library(ggpubr)
 library(XML)
+library(ggridges)
 library(doParallel); registerDoParallel(cores = 50)
 source("MCS_prep.R")
 
 
 # Meta-data ---------------------------------------------------------------
-
-# The MCS results
-MCS_RData <- c(file = dir(path = "../data/MCS", pattern = "MCS.calc.*.RData", full.names = T))
-
-# The lon coords for the OISST data
-load("metadata/lon_OISST.RData")
-lon_OISST <- ifelse(lon_OISST > 180, lon_OISST-360, lon_OISST)
-
-# The base map
-load("../MHWapp/metadata/map_base.Rdata")
-
-# Metadata
-load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
 
 # Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
 YHZ_bound <- c(42, 47, -75, -55)
@@ -196,6 +184,30 @@ palette_compare <- ggplot(data = colour_palette, aes(x = category, y = event)) +
   labs(x = NULL, y = NULL)
 ggsave("graph/palette_compare.png", palette_compare, height = 3, width = 6)
 
+MCS_test_palette <- ggplot(data = sst_MCS, aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2, show.legend = F) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong"), show.legend = F) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe"), show.legend = F) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme"), show.legend = F) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = NULL, values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Event colour", values = fillCol) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
+               limits = c(as.Date("1993-10-02"), as.Date("1994-03-30"))) +
+  # scale_y_continuous(limits = c(18, 32), expand = c(0, 0),
+  # breaks = seq(20, 30, by = 5)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = "Temp. [°C]", x = NULL)
+
 
 # Event data --------------------------------------------------------------
 
@@ -337,7 +349,37 @@ yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
 anim_save("graph/MCS/YHZ_2016_12.gif")
 
 
-# Hobday Fig 3 ------------------------------------------------------------
+
+
+# Figure 1 ----------------------------------------------------------------
+
+fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
+               limits = c(as.Date("1993-10-02"), as.Date("1994-03-30"))) +
+  scale_y_continuous(limits = c(8, 22), expand = c(0, 0), breaks = seq(10, 20, by = 5)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
+                                                                "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = "Temp. [°C]", x = NULL)
+# fig_1
+ggsave("graph/MCS/fig_1.png", fig_1, width = 6)
+
+
+# Figure 2 ----------------------------------------------------------------
 
 # One of the most widely published MCS is that which occurred off Florida in 2003
 FL_bound <- c(26, 36, -82, -72)
@@ -387,9 +429,10 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
     ggplot(aes(x = lon, y = lat)) +
     geom_tile(aes(fill = anom)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-    geom_label(aes(x = -80, y = 35, label = centre_point$t[1])) +
+    geom_label(aes(x = -80, y = 35, label = centre_point$t[1]), size = 6) +
     geom_point(data = centre_point, aes(x = lon, y = lat), shape = 21, fill = "pink", size = 3) +
     coord_quickmap(expand = F, xlim = range(MCS_data$clim_data$lon), ylim = range(MCS_data$clim_data$lat)) +
+    scale_fill_gradient2(low = "blue", high = "red") +
     labs(x = NULL, y = NULL, fill = "SSTa (°C)") +
     theme(panel.border = element_rect(colour = "black", fill = NA))
   # mf
@@ -405,20 +448,20 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
            thresh_3x = thresh_2x + diff,
            thresh_4x = thresh_3x + diff) %>% 
     ggplot(aes(x = t)) +
-    geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2, show.legend = F) +
-    geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong"), show.legend = F) +
-    geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe"), show.legend = F) +
-    geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme"), show.legend = F) +
+    geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+    geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
+    geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
+    geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
     geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
     geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
     geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
     geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
     geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
     geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
-    scale_colour_manual(name = NULL, values = lineCol,
+    scale_colour_manual(name = "Line colours", values = lineCol,
                         breaks = c("Temperature", "Climatology", "Threshold",
                                    "2x Threshold", "3x Threshold", "4x Threshold")) +
-    scale_fill_manual(name = "Event colour", values = fillCol) +
+    scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
     scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
     guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                   "dashed", "dotdash", "dotted"),
@@ -479,3 +522,53 @@ ggsave("graph/MCS/FL_max.png", FL_max, height = 14, width = 5)
 # Combine all three
 FL_trio <- ggarrange(FL_2003_summer, FL_2002_winter, FL_max, ncol = 3, nrow = 1)
 ggsave("graph/MCS/FL_trio.png", FL_trio, height = 14, width = 15)
+ggsave("graph/MCS/fig_2.png", FL_trio, height = 14, width = 15)
+
+
+# Figure 3 ----------------------------------------------------------------
+
+MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
+
+fig_3_func <- function(tile_val){
+  ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
+    geom_tile(aes_string(fill = tile_val)) +
+    geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+    coord_quickmap(expand = F) +
+    scale_fill_gradient2(low = "blue", high = "red") +
+    labs(x = NULL, y = NULL, fill = tile_val) +
+    theme_void() +
+    theme(panel.border = element_rect(colour = "black", fill = NA))
+}
+
+fig_3a <- fig_3_func("dur")
+fig_3b <- fig_3_func("i_mean")
+fig_3c <- fig_3_func("i_max")
+fig_3d <- fig_3_func("i_cum")
+
+fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2)
+ggsave("graph/MCS/fig_3.png", fig_3, height = 8, width = 16)
+
+
+# Figure 4 ----------------------------------------------------------------
+
+SSTa_stats <- readRDS("data/SSTa_stats.Rds") %>% 
+  dplyr::select(lon:anom_kurt) %>% 
+  pivot_longer(c(anom_kurt, anom_skew)) %>% 
+  mutate(name = case_when(name == "anom_kurt" ~ "kurtosis",
+                          name == "anom_skew" ~ "skewness"))
+
+
+# Show a ridegplot with the fill for kurtosis and the colour for skewness
+fig_4 <- SSTa_stats %>% 
+  mutate(lat_10 = factor(plyr::round_any(lat, 10))) %>% 
+  dplyr::select(-lon, -lat) %>% 
+  mutate(season = factor(season, levels = c("Spring", "Summer", "Autumn", "Winter", "Total"))) %>% 
+  ggplot(aes(x = value, y = lat_10)) +
+  geom_density_ridges(aes(fill = season), alpha = 0.5, size = 0.1) +
+  # scale_x_continuous(limits = c(-2, 10), expand = c(0, 0)) +
+  scale_x_continuous(limits = c(-2, 6), expand = c(0, 0)) +
+  labs(x = NULL, y = "Latitude" ) +
+  facet_wrap(~name) +
+  theme_ridges()
+ggsave("graph/MCS/fig_4.png", fig_4, width = 12)
+
