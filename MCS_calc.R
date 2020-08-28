@@ -722,6 +722,23 @@ var_mean_trend_fig <- function(var_name){
 
 # 7: MHWs minus MCSs ------------------------------------------------------
 
+# Function that loads one MHW and one MCS lon slice and subtracts them
+MHW_v_MCS <- function(lon_step){
+  
+}
+
+
+OISST_21 <- readRDS("../data/OISST_lon/OISST_MHW_1982-2011_01.Rds")
+OISST_20 <- readRDS("../data/cat_lon/MHW.cat.0001.Rda")
+OISST_21_sub <- OISST_21[[300]]$cat %>% 
+  mutate(intensity = round(intensity, 2))
+OISST_20_sub <- OISST_20 %>% 
+  filter(lon == 0.125, lat == 3.375)
+OISST_20_21 <- full_join(OISST_20_sub, OISST_21_sub, by = "t") %>% 
+  mutate(intensity_comp <- intensity.x - intensity.y)
+
+OISST_21[300]
+
 
 # 8: SSTa skewness and kurtosis -------------------------------------------
 
