@@ -14,7 +14,7 @@
 
 # Libraries
 .libPaths(c("~/R-packages", .libPaths()))
-library(tidyverse)
+source("MCS_prep.R")
 library(lubridate)
 library(dtplyr)
 library(tidync)
@@ -24,7 +24,6 @@ library(ggridges)
 # remotes::install_github("robwschlegel/heatwaveR")
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
-source("MCS_prep.R")
 
 # TO DO
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps

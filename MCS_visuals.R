@@ -5,88 +5,12 @@
 # Libraries ---------------------------------------------------------------
 
 .libPaths(c("~/R-packages", .libPaths()))
-library(tidyverse)
-library(heatwaveR)
+source("MCS_prep.R")
 library(gganimate)
 library(ggpubr)
-library(XML)
 library(ggridges)
+library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
-source("MCS_prep.R")
-
-
-# Meta-data ---------------------------------------------------------------
-
-# Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
-YHZ_bound <- c(42, 47, -75, -55)
-
-## Potential colour palettes
-# w3schools.com/colors/colors_groups.asp
-# sciviscolor.org/home/environmental-palettes/
-
-# Consider ROYGBIV
-# Because MHWs use ROY it could be good to use GBIV for MCSs
-# Maybe don't worry about perceptual symmetry
-# Just pick the best colours from a colour wheel
-
-# Load an XML file containing weird rgb vlaues and convert to hex
-rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
-
-# BlueSpectrum colour palette from sciviscolor.org/home/environmental-palettes/
-BlueSpectrum <- t(data.frame(xmlToList(xmlParse("metadata/BlueSpectrum.xml"))$ColorMap[1:27], stringsAsFactors = F)) %>% 
-  data.frame(., stringsAsFactors = F) %>% 
-  remove_rownames(.) %>% 
-  select(r, g, b) %>% 
-  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
-         hex = rgb2hex(r, g, b))
-write_csv(BlueSpectrum, "metadata/BlueSpecturm.csv")
-
-# BlueWater colour palette from sciviscolor.org/home/environmental-palettes/
-BlueWater <- t(data.frame(xmlToList(xmlParse("metadata/BlueWater.xml"))$ColorMap[1:12], stringsAsFactors = F)) %>% 
-  data.frame(., stringsAsFactors = F) %>% 
-  remove_rownames(.) %>% 
-  select(r, g, b) %>% 
-  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
-         hex = rgb2hex(r, g, b))
-write_csv(BlueWater, "metadata/BlueWater.csv")
-
-# This is negotiable...
-# MCS_palette <- c(BlueSpectrum$hex[6], BlueSpectrum$hex[13], BlueSpectrum$hex[20], BlueSpectrum$hex[27])
-MCS_palette <- c(BlueWater$hex[10], BlueWater$hex[7], BlueWater$hex[4], BlueWater$hex[2])
-
-# Set line colours
-lineCol <- c(
-  "Temperature" = "black",
-  "Climatology" = "grey20",
-  "Threshold" = "darkorchid",
-  "2x Threshold" = "darkorchid",
-  "3x Threshold" = "darkorchid",
-  "4x Threshold" = "darkorchid"
-)
-
-# Set category fill colours
-fillCol <- c(
-  "Moderate" = MCS_palette[1],
-  "Strong" = MCS_palette[2],
-  "Severe" = MCS_palette[3],
-  "Extreme" = MCS_palette[4]
-)
-
-# The MHW colour palette
-MHW_colours <- c(
-  "Moderate" = "#ffc866",
-  "Strong" = "#ff6900",
-  "Severe" = "#9e0000",
-  "Extreme" = "#2d0000"
-)
-
-# The MCS colour palette
-MCS_colours <- c(
-  "I Moderate" = "#A4D4E0",
-  "II Strong" = "#5B80A6",
-  "III Severe" = "#2A3C66",
-  "IV Extreme" = "#111433"
-)
 
 
 # Colour palette comparison figure ----------------------------------------
@@ -353,6 +277,13 @@ anim_save("graph/MCS/YHZ_2016_12.gif")
 
 # Figure 1 ----------------------------------------------------------------
 
+# Find a pixel that naturally experienced a Cat 4 event
+AC_bound <- c(-35, 4-5, 20, 35)
+AC_data <- load_MCS_ALL(AC_bound)
+
+AC_data_event <- AC_data$event_data
+
+# Schematic of a MCS
 fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
@@ -364,6 +295,37 @@ fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
   geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
   geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
   geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  # Duration label
+  # geom_segment(colour = "springgreen",
+  #              aes(x = as.Date("2010-12-23"), xend = as.Date("2010-12-23"),
+  #                  y = 23.08, yend = 22.5)) +
+  # geom_segment(colour = "springgreen",
+  #              aes(x = as.Date("2011-04-08"), xend = as.Date("2011-04-08"),
+  #                  y = 24.7, yend = 22.5)) +
+  # geom_segment(colour = "springgreen",
+  #              aes(x = as.Date("2010-12-23"), xend = as.Date("2011-04-08"),
+  #                  y = 22.5, yend = 22.5)) +
+  # geom_label(aes(label = "Duration = 105 days", x = as.Date("2011-02-15"), y = 22.5),
+  #            colour = "springgreen", label.size = 3) +
+  # geom_label(aes(label = "Duration = 105 days", x = as.Date("2011-02-15"), y = 22.5),
+  #            colour = "black", label.size = 0) +
+  # # Max intensity label
+  # geom_segment(colour = "forestgreen",
+  #              aes(x = as.Date("2011-01-15"), xend = as.Date("2011-02-28"),
+  #                  y = 29.74, yend = 29.74)) +
+  # geom_segment(colour = "forestgreen",
+  #              aes(x = as.Date("2011-02-28"), xend = as.Date("2011-02-28"),
+  #                  y = 23.1602, yend = 29.74)) +
+  # geom_label(aes(label = "Max. Intensity = 6.58°C", x = as.Date("2011-02-01"), y = 29.4),
+  #            colour = "forestgreen", label.size = 3) +
+  # geom_label(aes(label = "Max. Intensity = 6.58°C", x = as.Date("2011-02-01"), y = 29.4),
+  #            colour = "black", label.size = 0) +
+  # # Cumulative intensity label
+  # geom_label(aes(label = "Cum. Intensity = 293.21°CxDays", x = as.Date("2011-02-28"), y = 26),
+  #            colour = "salmon", label.size = 3) +
+  # geom_label(aes(label = "Cum. Intensity = 293.21°CxDays", x = as.Date("2011-02-28"), y = 26),
+  #            colour = "black", label.size = 0) +
+  # Other aesthetics
   scale_colour_manual(name = "Line colours", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
@@ -375,7 +337,7 @@ fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
                                                                 "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = "Temp. [°C]", x = NULL)
-# fig_1
+fig_1
 ggsave("graph/MCS/fig_1.png", fig_1, width = 6)
 
 
@@ -383,9 +345,15 @@ ggsave("graph/MCS/fig_1.png", fig_1, width = 6)
 
 # One of the most widely published MCS is that which occurred off Florida in 2003
 FL_bound <- c(26, 36, -82, -72)
-
-# Load the Florida region data
 FL_data <- load_MCS_ALL(FL_bound)
+
+# Atlantic Ocean cold blob 2014 - 2016 under Greenland
+AO_bound <- c()
+AO_data <- load_MCS_ALL()
+
+# Bearing sea 2002
+BS_bound <- c()
+BS_data <- load_MCS_ALL(BS_bound)
 
 # Notes from Monday 2020-08-10 meeting
 # Map anomalies should be blue to red
@@ -571,4 +539,13 @@ fig_4 <- SSTa_stats %>%
   facet_wrap(~name) +
   theme_ridges()
 ggsave("graph/MCS/fig_4.png", fig_4, width = 12)
+
+
+# Figure 5 ----------------------------------------------------------------
+
+# Figures showing what the temperature threshold must be per pixel to reach the four categories
+
+# Could also create a figure that shows the skewness or kurtosis map of values per pixel
+
+# This then could be spatially correlated with the difference between maximum intensities of MHW- MCS
 

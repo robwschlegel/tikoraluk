@@ -4,7 +4,80 @@
 
 # Setup -------------------------------------------------------------------
 
+.libPaths(c("~/R-packages", .libPaths()))
 source("MHW_prep.R")
+library(XML)
+
+
+# Meta-data ---------------------------------------------------------------
+
+## Potential colour palettes
+# w3schools.com/colors/colors_groups.asp
+# sciviscolor.org/home/environmental-palettes/
+
+# Consider ROYGBIV
+# Because MHWs use ROY it could be good to use GBIV for MCSs
+# Maybe don't worry about perceptual symmetry
+# Just pick the best colours from a colour wheel
+
+# Load an XML file containing weird rgb vlaues and convert to hex
+rgb2hex <- function(r,g,b) rgb(r, g, b, maxColorValue = 255)
+
+# BlueSpectrum colour palette from sciviscolor.org/home/environmental-palettes/
+BlueSpectrum <- t(data.frame(xmlToList(xmlParse("metadata/BlueSpectrum.xml"))$ColorMap[1:27], stringsAsFactors = F)) %>% 
+  data.frame(., stringsAsFactors = F) %>% 
+  remove_rownames(.) %>% 
+  select(r, g, b) %>% 
+  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
+         hex = rgb2hex(r, g, b))
+write_csv(BlueSpectrum, "metadata/BlueSpecturm.csv")
+
+# BlueWater colour palette from sciviscolor.org/home/environmental-palettes/
+BlueWater <- t(data.frame(xmlToList(xmlParse("metadata/BlueWater.xml"))$ColorMap[1:12], stringsAsFactors = F)) %>% 
+  data.frame(., stringsAsFactors = F) %>% 
+  remove_rownames(.) %>% 
+  select(r, g, b) %>% 
+  mutate(r = round(as.numeric(r)*255), g = round(as.numeric(g)*255), b = round(as.numeric(b)*255),
+         hex = rgb2hex(r, g, b))
+# write_csv(BlueWater, "metadata/BlueWater.csv")
+
+# This is negotiable...
+# MCS_palette <- c(BlueSpectrum$hex[6], BlueSpectrum$hex[13], BlueSpectrum$hex[20], BlueSpectrum$hex[27])
+MCS_palette <- c(BlueWater$hex[10], BlueWater$hex[7], BlueWater$hex[4], BlueWater$hex[2])
+
+# Set line colours
+lineCol <- c(
+  "Temperature" = "black",
+  "Climatology" = "grey20",
+  "Threshold" = "darkorchid",
+  "2x Threshold" = "darkorchid",
+  "3x Threshold" = "darkorchid",
+  "4x Threshold" = "darkorchid"
+)
+
+# Set category fill colours
+fillCol <- c(
+  "Moderate" = MCS_palette[1],
+  "Strong" = MCS_palette[2],
+  "Severe" = MCS_palette[3],
+  "Extreme" = MCS_palette[4]
+)
+
+# The MHW colour palette
+MHW_colours <- c(
+  "Moderate" = "#ffc866",
+  "Strong" = "#ff6900",
+  "Severe" = "#9e0000",
+  "Extreme" = "#2d0000"
+)
+
+# The MCS colour palette
+MCS_colours <- c(
+  "I Moderate" = "#A4D4E0",
+  "II Strong" = "#5B80A6",
+  "III Severe" = "#2A3C66",
+  "IV Extreme" = "#111433"
+)
 
 # OISST coords
 # The lon coords for the OISST data
@@ -25,14 +98,6 @@ seas_thresh_files <- dir("../data/thresh", pattern = "MHW.seas.thresh.", full.na
 
 # Metadata
 load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
-
-# The MCS colour palette
-MCS_colours <- c(
-  "I Moderate" = "#A4D4E0",
-  "II Strong" = "#5B80A6",
-  "III Severe" = "#2A3C66",
-  "IV Extreme" = "#111433"
-)
 
 # The base map
 load("../MHWapp/metadata/map_base.Rdata")
@@ -110,7 +175,7 @@ load_MCS_ALL <- function(bbox){
                            # date_range = date_range,
                            lat_range = c(bbox[1], bbox[2]))
   
-  # Combine into list and exut
+  # Combine into list and exit
   list_data <- list(event_data = event_data,
                     cat_data = cat_data,
                     clim_data = clim_data)
