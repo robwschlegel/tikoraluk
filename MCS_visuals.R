@@ -699,9 +699,6 @@ value_q90 <- quantile(df$value, 0.9)
 slope_q10 <- quantile(df$slope, 0.1)
 slope_q90 <- quantile(df$slope, 0.9)
 
-# Correlate with MHW-MCS stats
-
-
 # Map of skewness per pixel
 map_skew <- SSTa_stats %>% 
   filter(name == "skewness", season == "Total") %>% 
@@ -718,35 +715,122 @@ map_skew <- SSTa_stats %>%
 map_skew
 
 # Map of kurtosis per pixel
-
-
-# Map of correlations with skewness and MHW metrics
-
-ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
-  geom_tile(aes_string(fill = tile_val)) +
+map_kurt <- SSTa_stats %>% 
+  filter(name == "kurtosis", season == "Total") %>% 
+  mutate(value = case_when(value <= kurt_quants$q10 ~ kurt_quants$q10,
+                           value >= kurt_quants$q90 ~ kurt_quants$q90,
+                           TRUE ~ value)) %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_raster(aes(fill = value)) +
   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  coord_quickmap(expand = F) +
-  scale_fill_gradient2(low = "blue", high = "red") +
-  labs(x = NULL, y = NULL, fill = tile_val) +
+  scale_fill_gradient2("Kurtosis", low = "blue", high = "red") +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = "black", fill = NA))
+map_kurt
+
+# Correlate with MHW-MCS stats
+SSTa_max_int <- SSTa_stats %>% 
+  filter(season == "Total") %>% 
+  pivot_wider(names_from = "name", values_from = "value") %>% 
+  left_join(MHW_v_MCS) %>% 
+  na.omit() %>% 
+  summarise(cor_i_max = cor(skewness, i_max))
+
+# Line plot of correlation between skewness and i_max
+plot_skew <- SSTa_stats %>% 
+  filter(season == "Total") %>% 
+  pivot_wider(names_from = "name", values_from = "value") %>% 
+  left_join(MHW_v_MCS) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = skewness, y = i_max)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+plot_skew
+
+# Line plot of correlation between kurtosis and i_max
+plot_kurt <- SSTa_stats %>% 
+  filter(season == "Total") %>% 
+  pivot_wider(names_from = "name", values_from = "value") %>% 
+  left_join(MHW_v_MCS) %>% 
+  na.omit() %>% 
+  ggplot(aes(x = kurtosis, y = i_max)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+plot_kurt
+
+
+fig_6 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
+
+
+# Figure 7 ----------------------------------------------------------------
+# Figures showing what the temperature threshold must be per pixel to reach the four categories
+
+# Function for loading and extracting the lowest MCS threshold per pixel
+# lon_step <- 1
+MCS_thresh_func <- function(lon_step){
+  MCS_df <- readRDS(MCS_lon_files[lon_step])
+  MCS_thresh <- MCS_df %>% 
+    dplyr::select(-cat) %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(event) %>% 
+    mutate(diff = thresh - seas,
+           thresh_2x = thresh + diff,
+           thresh_3x = thresh_2x + diff,
+           thresh_4x = thresh_3x + diff) %>% 
+    group_by(lon, lat) %>% 
+    summarise(thresh_4x = min(thresh_4x, na.rm = T), .groups = "drop")
+  rm(MCS_df); gc() 
+  return(MCS_thresh)
+}
+
+# Load all of the max Cat 4 thresholds
+# doParallel::registerDoParallel(cores = 20)
+# MCS_thresh <- plyr::ldply(1:1440, MCS_thresh_func, .parallel = T, .paropts = c(.inorder = FALSE))
+# saveRDS(MCS_thresh, "data/MCS_thresh.Rds")
+MCS_thresh <- readRDS("data/MCS_thresh.Rds")
+
+# Do the same for MHWs
+MHW_thresh_func <- function(lon_step){
+  MHW_thresh <- tidync::tidync(dir("../data/thresh/", full.names = T)[lon_step]) %>% 
+    tidync::hyper_tibble() %>% 
+    mutate(diff = thresh - seas,
+           thresh_2x = thresh + diff,
+           thresh_3x = thresh_2x + diff,
+           thresh_4x = thresh_3x + diff) %>% 
+    group_by(lon, lat) %>% 
+    summarise(thresh_4x = max(thresh_4x, na.rm = T), .groups = "drop")
+}
+
+# Load all of the max Cat 4 thresholds
+doParallel::registerDoParallel(cores = 50)
+MHW_thresh <- plyr::ldply(1:1440, MHW_thresh_func, .parallel = T, .paropts = c(.inorder = FALSE))
+
+# Map of the Cat 4 thresholds for the MCSs
+map_MCS_thresh <- MCS_thresh %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_raster(aes(fill = thresh_4x)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  geom_contour(aes(z = thresh_4x), colour = "black", breaks = c(-1.8, 35)) +
+  scale_fill_gradient2("IV threshold", low = "blue", high = "red") +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
   theme_void() +
   theme(panel.border = element_rect(colour = "black", fill = NA))
 
-# Show a ridegplot with the fill for kurtosis and the colour for skewness
-fig_4 <- SSTa_stats %>% 
-  mutate(lat_10 = factor(plyr::round_any(lat, 10))) %>% 
-  dplyr::select(-lon, -lat) %>% 
-  mutate(season = factor(season, levels = c("Spring", "Summer", "Autumn", "Winter", "Total"))) %>% 
-  ggplot(aes(x = value, y = lat_10)) +
-  geom_density_ridges(aes(fill = season), alpha = 0.5, size = 0.1) +
-  # scale_x_continuous(limits = c(-2, 10), expand = c(0, 0)) +
-  scale_x_continuous(limits = c(-2, 6), expand = c(0, 0)) +
-  labs(x = NULL, y = "Latitude" ) +
-  facet_wrap(~name) +
-  theme_ridges()
-ggsave("graph/MCS/fig_4.png", fig_4, width = 12)
+# Map of the Cat 4 thresholds for the MCSs
+map_MHW_thresh <- MHW_thresh %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_raster(aes(fill = thresh_4x)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  geom_contour(aes(z = thresh_4x), colour = "black", breaks = c(-1.8, 35)) +
+  scale_fill_gradient2("IV threshold", low = "blue", high = "red") +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = "black", fill = NA))
 
-
-# Figure 5 ----------------------------------------------------------------
-
-# Figures showing what the temperature threshold must be per pixel to reach the four categories
+# Combine maps
+fig_7 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
+ggsave("graph/MCS/fig_7.png", fig_7, height = 4, width = 16)
 
