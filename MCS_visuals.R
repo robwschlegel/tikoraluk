@@ -685,11 +685,37 @@ SSTa_stats <- readRDS("data/SSTa_stats.Rds") %>%
   mutate(name = case_when(name == "anom_kurt" ~ "kurtosis",
                           name == "anom_skew" ~ "skewness"))
 
+# Find upper skewness and kurtosis quantiles
+skew_quants <- SSTa_stats %>% 
+  filter(name == "skewness", season == "Total") %>% 
+  summarise(q10 = quantile(value, 0.1),
+            q90 = quantile(value, 0.9))
+kurt_quants <- SSTa_stats %>% 
+  filter(name == "kurtosis", season == "Total") %>% 
+  summarise(q10 = quantile(value, 0.1),
+            q90 = quantile(value, 0.9))
+
+value_q90 <- quantile(df$value, 0.9)
+slope_q10 <- quantile(df$slope, 0.1)
+slope_q90 <- quantile(df$slope, 0.9)
+
 # Correlate with MHW-MCS stats
 
 
 # Map of skewness per pixel
-
+map_skew <- SSTa_stats %>% 
+  filter(name == "skewness", season == "Total") %>% 
+  mutate(value = case_when(value <= skew_quants$q10 ~ skew_quants$q10,
+                           value >= skew_quants$q90 ~ skew_quants$q90,
+                           TRUE ~ value)) %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_raster(aes(fill = value)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  scale_fill_gradient2("Skewness", low = "blue", high = "red") +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = "black", fill = NA))
+map_skew
 
 # Map of kurtosis per pixel
 
