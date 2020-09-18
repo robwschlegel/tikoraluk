@@ -211,6 +211,9 @@ ggplot(MCS_event_YHZ_one, aes(x = date_start, y = intensity_max)) +
 
 # Clim data ---------------------------------------------------------------
 
+# Currently interested in the 2016 winter MCS that happened just outside of the Bay of Fundy
+YHZ_bound <- c(42, 47, -75, -55)
+
 # Extract event metrics
 MCS_clim_YHZ <- plyr::ldply(MCS_RData[which(lon_OISST >= YHZ_bound[3] & lon_OISST <= YHZ_bound[4])], 
                             .fun = load_MCS_clim_sub, .parallel = T, 
@@ -271,8 +274,6 @@ yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
   labs(title = 'Date: {frame_time}', x = '', y = '', fill = "°C below threshold") +
   transition_time(t)
 anim_save("graph/MCS/YHZ_2016_12.gif")
-
-
 
 
 # Figure 1 ----------------------------------------------------------------
@@ -556,45 +557,153 @@ CC_coast <- Hobday_Fig_3_MCS(CC_data, c("2003-01-01", "2003-12-31"), intensity_c
 ggsave("graph/MCS/CC_coast.png", CC_coast, height = 14, width = 5)
 
 # Combine the three notorious MCS multi-panel figures
-fig_2 <- ggarrange(CC_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1)
+fig_2 <- ggarrange(CC_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
 ggsave("graph/MCS/fig_2.png", fig_2, height = 14, width = 15)
 
 
 # Figure 3 ----------------------------------------------------------------
+# Maps of the mean metrics
+
+# Load all results into one brick
+MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+unique(MCS_count_trend$name)
+
+# Figures of trends and annual states
+fig_3_func <- function(var_name, mean_plot = T){
+  
+  # Basic filter
+  df <- MCS_count_trend %>% 
+    filter(name == var_name,
+           lat >= -70, lat <= 70)
+  
+  # Significant results
+  df_p <- df %>% 
+    filter(p.value <= 0.05)
+  
+  # Find 10th and 90th quantiles to round off tails for plotting
+  value_q10 <- quantile(df$value, 0.1)
+  value_q90 <- quantile(df$value, 0.9)
+  slope_q10 <- quantile(df$slope, 0.1)
+  slope_q90 <- quantile(df$slope, 0.9)
+  
+  if(var_name == "total_count"){
+    viridis_choice <- "A"
+  } else if(var_name == "dur_mean"){
+    viridis_choice <- "B"
+  } else{
+    viridis_choice <- "D"
+  }
+  
+  if(mean_plot){
+    # The mean value map
+    map_res <- df %>% 
+      mutate(value = case_when(value <= value_q10 ~ value_q10,
+                               value >= value_q90 ~ value_q90,
+                               TRUE ~ value)) %>% 
+      ggplot(aes(x = lon, y = lat)) +
+      geom_raster(aes(fill = value)) +
+      geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+      scale_fill_viridis_c(paste0(var_name,"\n(annual)"), option = viridis_choice) +
+      coord_quickmap(expand = F, ylim = c(-70, 70)) +
+      theme_void() +
+      theme(panel.border = element_rect(colour = "black", fill = NA))
+    # mean_map 
+  } else{
+    # The trend map
+    map_res <- df %>% 
+      mutate(slope = case_when(slope <= slope_q10 ~ slope_q10,
+                               slope >= slope_q90 ~ slope_q90,
+                               TRUE ~ slope)) %>% 
+      ggplot(aes(x = lon, y = lat)) +
+      geom_raster(aes(fill = slope)) +
+      geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+      scale_fill_gradient2(paste0(var_name,"\n(annual)"), low = "blue", high = "red") +
+      coord_quickmap(expand = F, ylim = c(-70, 70)) +
+      theme_void() +
+      theme(panel.border = element_rect(colour = "black", fill = NA))
+    # trend_map 
+  }
+  map_res
+}
+
+fig_3a <- fig_3_func("total_count")
+fig_3b <- fig_3_func("dur_mean")
+fig_3c <- fig_3_func("i_max_mean")
+fig_3d <- fig_3_func("i_cum_mean")
+
+fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2, 
+                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_3.png", fig_3, height = 7, width = 16)
+
+
+# Figure 4 ----------------------------------------------------------------
+# Maps of the trends in the metrics
+
+fig_4a <- fig_3_func("total_count", mean_plot = F)
+fig_4b <- fig_3_func("dur_mean", mean_plot = F)
+fig_4c <- fig_3_func("i_max_mean", mean_plot = F)
+fig_4d <- fig_3_func("i_cum_mean", mean_plot = F)
+
+fig_4 <- ggpubr::ggarrange(fig_4a, fig_4b, fig_4c, fig_4d, ncol = 2, nrow = 2, 
+                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_4.png", fig_4, height = 7, width = 16)
+
+
+# Figure 5 ----------------------------------------------------------------
 
 MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
 
-fig_3_func <- function(tile_val){
+fig_5_func <- function(tile_val){
   ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
     geom_tile(aes_string(fill = tile_val)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-    coord_quickmap(expand = F) +
+    coord_quickmap(expand = F, ylim = c(-70, 70)) +
     scale_fill_gradient2(low = "blue", high = "red") +
     labs(x = NULL, y = NULL, fill = tile_val) +
     theme_void() +
     theme(panel.border = element_rect(colour = "black", fill = NA))
 }
 
-fig_3a <- fig_3_func("dur")
-fig_3b <- fig_3_func("i_mean")
-fig_3c <- fig_3_func("i_max")
-fig_3d <- fig_3_func("i_cum")
+fig_5a <- fig_5_func("count")
+fig_5b <- fig_5_func("dur")
+fig_5c <- fig_5_func("i_max")
+fig_5d <- fig_5_func("i_cum")
 
-fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
-ggsave("graph/MCS/fig_3.png", fig_3, height = 8, width = 16)
+fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_5.png", fig_5, height = 8, width = 16)
 
 
-# Figure 4 ----------------------------------------------------------------
+# Figure 6 ----------------------------------------------------------------
 
-# Could also create a figure that shows the skewness or kurtosis map of values per pixel
+# A figure that shows the skewness or kurtosis map of values per pixel
+# This then could be spatially correlated with the difference between maximum intensities of MHW-MCS
 
-# This then could be spatially correlated with the difference between maximum intensities of MHW- MCS
-
+# Prep SSTa stats
 SSTa_stats <- readRDS("data/SSTa_stats.Rds") %>% 
   dplyr::select(lon:anom_kurt) %>% 
   pivot_longer(c(anom_kurt, anom_skew)) %>% 
   mutate(name = case_when(name == "anom_kurt" ~ "kurtosis",
                           name == "anom_skew" ~ "skewness"))
+
+# Correlate with MHW-MCS stats
+
+
+# Map of skewness per pixel
+
+
+# Map of kurtosis per pixel
+
+
+# Map of correlations with skewness and MHW metrics
+
+ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
+  geom_tile(aes_string(fill = tile_val)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  coord_quickmap(expand = F) +
+  scale_fill_gradient2(low = "blue", high = "red") +
+  labs(x = NULL, y = NULL, fill = tile_val) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = "black", fill = NA))
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
 fig_4 <- SSTa_stats %>% 
