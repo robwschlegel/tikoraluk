@@ -48,7 +48,7 @@ MCS_palette <- c(BlueWater$hex[10], BlueWater$hex[7], BlueWater$hex[4], BlueWate
 # Set line colours
 lineCol <- c(
   "Temperature" = "black",
-  "Climatology" = "grey20",
+  "Climatology" = "grey40",
   "Threshold" = "darkorchid",
   "2x Threshold" = "darkorchid",
   "3x Threshold" = "darkorchid",

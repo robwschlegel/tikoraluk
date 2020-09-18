@@ -281,10 +281,22 @@ anim_save("graph/MCS/YHZ_2016_12.gif")
 AC_bound <- c(-35, 4-5, 20, 35)
 AC_data <- load_MCS_ALL(AC_bound)
 
-AC_data_event <- AC_data$event_data
+# Manually look through the events to find a good Cat 4
+AC_data_cat <- AC_data$cat_data
+
+# A 2018 event at 29.625 -31.625 looks like a good candidate
+AC_data_event_sub <- AC_data$event_data %>% 
+  filter(lon == 29.625, lat == -31.625)
+AC_data_clim_sub <- AC_data$clim_data %>% 
+  filter(lon == 29.625, lat == -31.625,
+         t >= "2017-08-01", t <= "2018-07-31") %>% 
+  mutate(diff = thresh - seas,
+         thresh_2x = thresh + diff,
+         thresh_3x = thresh_2x + diff,
+         thresh_4x = thresh_3x + diff)
 
 # Schematic of a MCS
-fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
+fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
@@ -295,50 +307,70 @@ fig_1 <- ggplot(data = sst_MCS, aes(x = t)) +
   geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
   geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
   geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  # Cumulative intensity label
+  geom_curve(colour = "steelblue1",
+             aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-10"),
+                 y = 24.7, yend = 19.39), curvature = -0.4) +
+  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-28"), y = 22.0),
+             colour = "steelblue1", label.size = 3) +
+  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-28"), y = 22.0),
+             colour = "black", label.size = 0) +
+  # Max intensity label
+  geom_segment(colour = "midnightblue",
+               aes(x = as.Date("2018-02-10"), xend = as.Date("2018-02-10"),
+                   y = 25.6323, yend = 19.0)) +
+  geom_label(aes(label = "Max. Intensity = -6.24°C", x = as.Date("2018-02-10"), y = 19.0),
+             colour = "midnightblue", label.size = 3) +
+  geom_label(aes(label = "Max. Intensity = -6.24°C", x = as.Date("2018-02-10"), y = 19.0),
+             colour = "black", label.size = 0) +
   # Duration label
-  # geom_segment(colour = "springgreen",
-  #              aes(x = as.Date("2010-12-23"), xend = as.Date("2010-12-23"),
-  #                  y = 23.08, yend = 22.5)) +
-  # geom_segment(colour = "springgreen",
-  #              aes(x = as.Date("2011-04-08"), xend = as.Date("2011-04-08"),
-  #                  y = 24.7, yend = 22.5)) +
-  # geom_segment(colour = "springgreen",
-  #              aes(x = as.Date("2010-12-23"), xend = as.Date("2011-04-08"),
-  #                  y = 22.5, yend = 22.5)) +
-  # geom_label(aes(label = "Duration = 105 days", x = as.Date("2011-02-15"), y = 22.5),
-  #            colour = "springgreen", label.size = 3) +
-  # geom_label(aes(label = "Duration = 105 days", x = as.Date("2011-02-15"), y = 22.5),
-  #            colour = "black", label.size = 0) +
-  # # Max intensity label
-  # geom_segment(colour = "forestgreen",
-  #              aes(x = as.Date("2011-01-15"), xend = as.Date("2011-02-28"),
-  #                  y = 29.74, yend = 29.74)) +
-  # geom_segment(colour = "forestgreen",
-  #              aes(x = as.Date("2011-02-28"), xend = as.Date("2011-02-28"),
-  #                  y = 23.1602, yend = 29.74)) +
-  # geom_label(aes(label = "Max. Intensity = 6.58°C", x = as.Date("2011-02-01"), y = 29.4),
-  #            colour = "forestgreen", label.size = 3) +
-  # geom_label(aes(label = "Max. Intensity = 6.58°C", x = as.Date("2011-02-01"), y = 29.4),
-  #            colour = "black", label.size = 0) +
-  # # Cumulative intensity label
-  # geom_label(aes(label = "Cum. Intensity = 293.21°CxDays", x = as.Date("2011-02-28"), y = 26),
-  #            colour = "salmon", label.size = 3) +
-  # geom_label(aes(label = "Cum. Intensity = 293.21°CxDays", x = as.Date("2011-02-28"), y = 26),
-  #            colour = "black", label.size = 0) +
+  geom_segment(colour = "slateblue1",
+               aes(x = as.Date("2018-01-28"), xend = as.Date("2018-01-28"),
+                   y = 24.1, yend = 26.0)) +
+  geom_segment(colour = "slateblue1",
+               aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-23"),
+                   y = 24.7, yend = 26.0)) +
+  geom_segment(colour = "slateblue1",
+               aes(x = as.Date("2018-01-28"), xend = as.Date("2018-02-23"),
+                   y = 26.0, yend = 26.0)) +
+  geom_label(aes(label = "Duration = 25 days", x = as.Date("2018-02-10"), y = 26.0),
+             colour = "slateblue1", label.size = 3) +
+  geom_label(aes(label = "Duration = 25 days", x = as.Date("2018-02-10"), y = 26.0),
+             colour = "black", label.size = 0) +
+  # I Moderate
+  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-26"), y = 23.5),
+                 colour = MCS_palette[1], label.size = 3) +
+  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-26"), y = 23.5),
+             colour = "black", label.size = 0) +
+  # II Strong
+  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-01"), y = 22.5),
+             colour = MCS_palette[2], label.size = 3) +
+  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-01"), y = 22.5),
+             colour = "black", label.size = 0) +
+  # III Severe
+  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-02"), y = 21.5),
+             colour = MCS_palette[3], label.size = 3) +
+  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-02"), y = 21.5),
+             colour = "black", label.size = 0) +
+  # IV Extreme
+  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-01"), y = 20.5),
+             colour = MCS_palette[4], label.size = 3) +
+  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-01"), y = 20.5),
+             colour = "black", label.size = 0) +
   # Other aesthetics
   scale_colour_manual(name = "Line colours", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("1993-10-02"), as.Date("1994-03-30"))) +
-  scale_y_continuous(limits = c(8, 22), expand = c(0, 0), breaks = seq(10, 20, by = 5)) +
+               limits = c(as.Date("2017-12-15"), as.Date("2018-03-30"))) +
+  scale_y_continuous(limits = c(16, 28), expand = c(0, 0), breaks = seq(18, 26, by = 2)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                 "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
-  labs(y = "Temp. [°C]", x = NULL)
-fig_1
-ggsave("graph/MCS/fig_1.png", fig_1, width = 6)
+  labs(y = "Temperature (°C)", x = NULL)
+# fig_1
+ggsave("graph/MCS/fig_1.png", fig_1, width = 12, height = 6)
 
 
 # Figure 2 ----------------------------------------------------------------
