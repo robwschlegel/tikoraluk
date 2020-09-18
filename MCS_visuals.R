@@ -289,7 +289,7 @@ AC_data_event_sub <- AC_data$event_data %>%
   filter(lon == 29.625, lat == -31.625)
 AC_data_clim_sub <- AC_data$clim_data %>% 
   filter(lon == 29.625, lat == -31.625,
-         t >= "2017-08-01", t <= "2018-07-31") %>% 
+         t >= "2017-12-01", t <= "2018-04-30") %>% 
   mutate(diff = thresh - seas,
          thresh_2x = thresh + diff,
          thresh_3x = thresh_2x + diff,
@@ -311,9 +311,9 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   geom_curve(colour = "steelblue1",
              aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-10"),
                  y = 24.7, yend = 19.39), curvature = -0.4) +
-  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-28"), y = 22.0),
+  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-26"), y = 22.0),
              colour = "steelblue1", label.size = 3) +
-  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-28"), y = 22.0),
+  geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-26"), y = 22.0),
              colour = "black", label.size = 0) +
   # Max intensity label
   geom_segment(colour = "midnightblue",
@@ -326,7 +326,7 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   # Duration label
   geom_segment(colour = "slateblue1",
                aes(x = as.Date("2018-01-28"), xend = as.Date("2018-01-28"),
-                   y = 24.1, yend = 26.0)) +
+                   y = 24.1698, yend = 26.0)) +
   geom_segment(colour = "slateblue1",
                aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-23"),
                    y = 24.7, yend = 26.0)) +
@@ -338,37 +338,39 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   geom_label(aes(label = "Duration = 25 days", x = as.Date("2018-02-10"), y = 26.0),
              colour = "black", label.size = 0) +
   # I Moderate
-  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-26"), y = 23.5),
+  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
                  colour = MCS_palette[1], label.size = 3) +
-  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-26"), y = 23.5),
+  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
              colour = "black", label.size = 0) +
   # II Strong
-  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-01"), y = 22.5),
+  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
              colour = MCS_palette[2], label.size = 3) +
-  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-01"), y = 22.5),
+  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
              colour = "black", label.size = 0) +
   # III Severe
-  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-02"), y = 21.5),
+  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
              colour = MCS_palette[3], label.size = 3) +
-  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-02"), y = 21.5),
+  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
              colour = "black", label.size = 0) +
   # IV Extreme
-  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-01"), y = 20.5),
+  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
              colour = MCS_palette[4], label.size = 3) +
-  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-01"), y = 20.5),
+  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
              colour = "black", label.size = 0) +
   # Other aesthetics
   scale_colour_manual(name = "Line colours", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
-  scale_x_date(date_labels = "%b %Y", expand = c(0, 0),
-               limits = c(as.Date("2017-12-15"), as.Date("2018-03-30"))) +
-  scale_y_continuous(limits = c(16, 28), expand = c(0, 0), breaks = seq(18, 26, by = 2)) +
+  scale_x_date(expand = c(0, 0), date_labels = "%b %Y", 
+               breaks = c(as.Date("2018-02-01"), as.Date("2018-03-01")),
+               limits = c(as.Date("2018-01-10"), as.Date("2018-03-15"))) +
+  scale_y_continuous(limits = c(18, 28), expand = c(0, 0), breaks = seq(20, 26, by = 2)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
                                                                 "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
-  labs(y = "Temperature (°C)", x = NULL)
+  labs(y = "Temperature (°C)", x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA))
 # fig_1
 ggsave("graph/MCS/fig_1.png", fig_1, width = 12, height = 6)
 
@@ -380,12 +382,20 @@ FL_bound <- c(26, 36, -82, -72)
 FL_data <- load_MCS_ALL(FL_bound)
 
 # Atlantic Ocean cold blob 2014 - 2016 under Greenland
-AO_bound <- c()
-AO_data <- load_MCS_ALL()
+AO_bound <- c(43, 65, -50, -7)
+AO_data <- load_MCS_ALL(AO_bound)
 
-# Bearing sea 2002
-BS_bound <- c()
-BS_data <- load_MCS_ALL(BS_bound)
+# Australia southern reef
+OZ_bound <- c(-26, -22, 150, 155)
+OZ_data <- load_MCS_ALL(OZ_bound)
+
+# Mediterranean
+MD_bound <- c(0, 27, 31, 45)
+MD_data <- load_MCS_ALL(MD_bound)
+
+# California current
+CC_bound <- c(38, 48, -132, -124)
+CC_data <- load_MCS_ALL(CC_bound)
 
 # Notes from Monday 2020-08-10 meeting
 # Map anomalies should be blue to red
@@ -396,15 +406,25 @@ BS_data <- load_MCS_ALL(BS_bound)
 # Create a schematic for figure 1
 
 # testers...
-# date_range <- c("2003-07-01", "2003-7-31")
-Hobday_Fig_3_MCS <- function(MCS_data, date_range){
+# date_range <- c("2014-01-01", "2016-12-31")
+# intensity_choice <- "cumulative"
+Hobday_Fig_3_MCS <- function(MCS_data, date_range, intensity_choice = "max", line_legend = "none"){
   
   # Find the most intense point
-  centre_point <- MCS_data$clim_data %>% 
-    mutate(anom = temp - seas) %>% 
-    filter(t >= date_range[1],
-           t <= date_range[2]) %>% 
-    filter(anom == min(anom))
+  if(intensity_choice == "max"){
+    centre_point <- MCS_data$clim_data %>% 
+      mutate(anom = temp - seas) %>% 
+      filter(t >= date_range[1],
+             t <= date_range[2]) %>% 
+      filter(anom == min(anom))
+    # centre_date <- centre_point$t
+  } else if(intensity_choice == "cumulative"){
+    centre_point <- MCS_data$event_data %>% 
+      filter(date_start >= date_range[1],
+             date_end <= date_range[2]) %>% 
+      filter(intensity_cumulative == min(intensity_cumulative))
+    # centre_date <- centre_point$date_peak
+  }
   
   # Find the date range of the event
   centre_dates <- MCS_data$event_data %>% 
@@ -424,13 +444,13 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
   
   # Map figure
   mf <- MCS_data$clim_data %>% 
-    filter(t == centre_point$t[1]) %>% 
+    filter(t == centre_dates$date_peak) %>% 
     mutate(anom = temp - seas) %>% 
     ggplot(aes(x = lon, y = lat)) +
     geom_tile(aes(fill = anom)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-    geom_label(aes(x = -80, y = 35, label = centre_point$t[1]), size = 6) +
-    geom_point(data = centre_point, aes(x = lon, y = lat), shape = 21, fill = "pink", size = 3) +
+    geom_label(aes(x = min(lon), y = max(lat), label = centre_dates$date_peak), hjust = 0, vjust = 1, size = 6) +
+    geom_point(data = centre_point, aes(x = lon, y = lat), shape = 21, fill = "yellow", size = 3) +
     coord_quickmap(expand = F, xlim = range(MCS_data$clim_data$lon), ylim = range(MCS_data$clim_data$lat)) +
     scale_fill_gradient2(low = "blue", high = "red") +
     labs(x = NULL, y = NULL, fill = "SSTa (°C)") +
@@ -441,8 +461,8 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
   el <- MCS_data$clim_data %>% 
     filter(lon == centre_point$lon[1],
            lat == centre_point$lat[1],
-           t >= centre_point$t-190,
-           t <= centre_point$t+190) %>% 
+           t >= centre_dates$date_start-30,
+           t <= centre_dates$date_end+30) %>% 
     mutate(diff = thresh - seas,
            thresh_2x = thresh + diff,
            thresh_3x = thresh_2x + diff,
@@ -463,11 +483,11 @@ Hobday_Fig_3_MCS <- function(MCS_data, date_range){
                                    "2x Threshold", "3x Threshold", "4x Threshold")) +
     scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
     scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-    guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid",
-                                                                  "dashed", "dotdash", "dotted"),
+    guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
                                                      size = c(1, 1, 1, 1, 1, 1)))) +
     labs(y = expression(paste("Temperature (°C)")), x = NULL) +
-    theme(panel.border = element_rect(colour = "black", fill = NA))
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          legend.position = line_legend)
   # el
   
   # Lolliplot figures
@@ -522,7 +542,22 @@ ggsave("graph/MCS/FL_max.png", FL_max, height = 14, width = 5)
 # Combine all three
 FL_trio <- ggarrange(FL_2003_summer, FL_2002_winter, FL_max, ncol = 3, nrow = 1)
 ggsave("graph/MCS/FL_trio.png", FL_trio, height = 14, width = 15)
-ggsave("graph/MCS/fig_2.png", FL_trio, height = 14, width = 15)
+
+# Atlantic Ocean cold blob of 2014 - 2016
+AO_blob <- Hobday_Fig_3_MCS(AO_data, c("2014-01-01", "2016-12-31"), intensity_choice = "cumulative", line_legend = "right")
+ggsave("graph/MCS/AO_blob.png", AO_blob, height = 14, width = 5)
+
+# Australia event
+OZ_reef <- Hobday_Fig_3_MCS(OZ_data, c("2003-01-01", "2003-12-31"), intensity_choice = "cumulative")
+ggsave("graph/MCS/OZ_reef.png", OZ_reef, height = 14, width = 5)
+
+# California current
+CC_coast <- Hobday_Fig_3_MCS(CC_data, c("2003-01-01", "2003-12-31"), intensity_choice = "max")
+ggsave("graph/MCS/CC_coast.png", CC_coast, height = 14, width = 5)
+
+# Combine the three notorious MCS multi-panel figures
+fig_2 <- ggarrange(CC_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1)
+ggsave("graph/MCS/fig_2.png", fig_2, height = 14, width = 15)
 
 
 # Figure 3 ----------------------------------------------------------------
@@ -545,18 +580,21 @@ fig_3b <- fig_3_func("i_mean")
 fig_3c <- fig_3_func("i_max")
 fig_3d <- fig_3_func("i_cum")
 
-fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2)
+fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_3.png", fig_3, height = 8, width = 16)
 
 
 # Figure 4 ----------------------------------------------------------------
+
+# Could also create a figure that shows the skewness or kurtosis map of values per pixel
+
+# This then could be spatially correlated with the difference between maximum intensities of MHW- MCS
 
 SSTa_stats <- readRDS("data/SSTa_stats.Rds") %>% 
   dplyr::select(lon:anom_kurt) %>% 
   pivot_longer(c(anom_kurt, anom_skew)) %>% 
   mutate(name = case_when(name == "anom_kurt" ~ "kurtosis",
                           name == "anom_skew" ~ "skewness"))
-
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
 fig_4 <- SSTa_stats %>% 
@@ -576,8 +614,4 @@ ggsave("graph/MCS/fig_4.png", fig_4, width = 12)
 # Figure 5 ----------------------------------------------------------------
 
 # Figures showing what the temperature threshold must be per pixel to reach the four categories
-
-# Could also create a figure that shows the skewness or kurtosis map of values per pixel
-
-# This then could be spatially correlated with the difference between maximum intensities of MHW- MCS
 
