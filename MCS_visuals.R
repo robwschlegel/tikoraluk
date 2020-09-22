@@ -277,7 +277,16 @@ yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
 anim_save("graph/MCS/YHZ_2016_12.gif")
 
 
+
+
 # Figure 1 ----------------------------------------------------------------
+
+# Figure showing where in the world noteworthy MCSs from the literature occurred
+
+# Load icons for map
+
+
+# Figure 2 ----------------------------------------------------------------
 
 # Find a pixel that naturally experienced a Cat 4 event
 AC_bound <- c(-35, 4-5, 20, 35)
@@ -302,7 +311,7 @@ AC_data_clim_sub_sub <- AC_data_clim_sub %>%
   filter(event_no > 0)
 
 # Schematic of a MCS
-fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
+fig_2 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   geom_ribbon_pattern(data = AC_data_clim_sub_sub, aes(ymin = seas, ymax = temp), 
                       pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
@@ -379,12 +388,12 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = "Temperature (°C)", x = NULL) +
   theme(panel.border = element_rect(colour = "black", fill = NA))
-# fig_1
-ggsave("graph/MCS/fig_1.png", fig_1, width = 12, height = 6)
-ggsave("graph/MCS/fig_1.pdf", fig_1, width = 12, height = 6)
+# fig_2
+ggsave("graph/MCS/fig_2.png", fig_2, width = 12, height = 6)
+ggsave("graph/MCS/fig_2.pdf", fig_2, width = 12, height = 6)
 
 
-# Figure 2 ----------------------------------------------------------------
+# Figure 3 ----------------------------------------------------------------
 
 # One of the most widely published MCS is that which occurred off Florida in 2003
 FL_bound <- c(26, 36, -84, -72)
@@ -567,12 +576,12 @@ TS_coast <- Hobday_Fig_3_MCS(TS_data, c("2007-01-01", "2008-12-31"), intensity_c
 ggsave("graph/MCS/TS_coast.png", TS_coast, height = 14, width = 5)
 
 # Combine the three notorious MCS multi-panel figures
-fig_2 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
-ggsave("graph/MCS/fig_2.png", fig_2, height = 14, width = 15)
-ggsave("graph/MCS/fig_2.pdf", fig_2, height = 14, width = 15)
+fig_3 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
+ggsave("graph/MCS/fig_3.png", fig_3, height = 14, width = 15)
+ggsave("graph/MCS/fig_3.pdf", fig_3, height = 14, width = 15)
 
 
-# Figure 3 ----------------------------------------------------------------
+# Figure 4 ----------------------------------------------------------------
 # Maps of the mean metrics
 
 # Load all results into one brick
@@ -580,7 +589,7 @@ MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 unique(MCS_count_trend$name)
 
 # Figures of trends and annual states
-fig_3_func <- function(var_name, mean_plot = T){
+fig_4_func <- function(var_name, mean_plot = T){
   
   # Basic filter
   df <- MCS_count_trend %>% 
@@ -637,24 +646,10 @@ fig_3_func <- function(var_name, mean_plot = T){
   map_res
 }
 
-fig_3a <- fig_3_func("total_count")
-fig_3b <- fig_3_func("dur_mean")
-fig_3c <- fig_3_func("i_max_mean")
-fig_3d <- fig_3_func("i_cum_mean")
-
-fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2, 
-                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
-ggsave("graph/MCS/fig_3.png", fig_3, height = 7, width = 16)
-ggsave("graph/MCS/fig_3.pdf", fig_3, height = 7, width = 16)
-
-
-# Figure 4 ----------------------------------------------------------------
-# Maps of the trends in the metrics
-
-fig_4a <- fig_3_func("total_count", mean_plot = F)
-fig_4b <- fig_3_func("dur_mean", mean_plot = F)
-fig_4c <- fig_3_func("i_max_mean", mean_plot = F)
-fig_4d <- fig_3_func("i_cum_mean", mean_plot = F)
+fig_4a <- fig_4_func("total_count")
+fig_4b <- fig_4_func("dur_mean")
+fig_4c <- fig_4_func("i_max_mean")
+fig_4d <- fig_4_func("i_cum_mean")
 
 fig_4 <- ggpubr::ggarrange(fig_4a, fig_4b, fig_4c, fig_4d, ncol = 2, nrow = 2, 
                            align = "hv", labels = c("a)", "b)", "c)", "d)"))
@@ -663,10 +658,24 @@ ggsave("graph/MCS/fig_4.pdf", fig_4, height = 7, width = 16)
 
 
 # Figure 5 ----------------------------------------------------------------
+# Maps of the trends in the metrics
+
+fig_5a <- fig_4_func("total_count", mean_plot = F)
+fig_5b <- fig_4_func("dur_mean", mean_plot = F)
+fig_5c <- fig_4_func("i_max_mean", mean_plot = F)
+fig_5d <- fig_4_func("i_cum_mean", mean_plot = F)
+
+fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, 
+                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_5.png", fig_5, height = 7, width = 16)
+ggsave("graph/MCS/fig_5.pdf", fig_5, height = 7, width = 16)
+
+
+# Figure 6 ----------------------------------------------------------------
 
 MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
 
-fig_5_func <- function(tile_val){
+fig_6_func <- function(tile_val){
   ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
     geom_tile(aes_string(fill = tile_val)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
@@ -677,17 +686,17 @@ fig_5_func <- function(tile_val){
     theme(panel.border = element_rect(colour = "black", fill = NA))
 }
 
-fig_5a <- fig_5_func("count")
-fig_5b <- fig_5_func("dur")
-fig_5c <- fig_5_func("i_max")
-fig_5d <- fig_5_func("i_cum")
+fig_6a <- fig_6_func("count")
+fig_6b <- fig_6_func("dur")
+fig_6c <- fig_6_func("i_max")
+fig_6d <- fig_6_func("i_cum")
 
-fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
-ggsave("graph/MCS/fig_5.png", fig_5, height = 8, width = 16)
-# ggsave("graph/MCS/fig_5.pdf", fig_5, height = 8, width = 16) # Too large as a vector file
+fig_6 <- ggpubr::ggarrange(fig_6a, fig_6b, fig_6c, fig_6d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
+# ggsave("graph/MCS/fig_6.pdf", fig_5, height = 8, width = 16) # Too large as a vector file
 
 
-# Figure 6 ----------------------------------------------------------------
+# Figure 7 ----------------------------------------------------------------
 
 # A figure that shows the skewness or kurtosis map of values per pixel
 # This then could be spatially correlated with the difference between maximum intensities of MHW-MCS
@@ -771,13 +780,13 @@ plot_kurt <- SSTa_stats %>%
   scale_colour_gradient2(low = "purple", high = "green")
 plot_kurt
 
-
-fig_6 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
-ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
+# Save
+fig_7 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+ggsave("graph/MCS/fig_7.png", fig_7, height = 8, width = 16)
 # ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16) # Too large as a vector file
 
 
-# Figure 7 ----------------------------------------------------------------
+# Figure 8 ----------------------------------------------------------------
 # Figures showing what the temperature threshold must be per pixel to reach the four categories
 
 # Function for loading and extracting the lowest MCS threshold per pixel
@@ -844,12 +853,12 @@ map_MHW_thresh <- MHW_thresh %>%
   theme(panel.border = element_rect(colour = "black", fill = NA))
 
 # Combine maps
-fig_7 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
-ggsave("graph/MCS/fig_7.png", fig_7, height = 4, width = 16)
-ggsave("graph/MCS/fig_7.pdf", fig_7, height = 4, width = 16)
+fig_8 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
+ggsave("graph/MCS/fig_8.png", fig_8, height = 4, width = 16)
+ggsave("graph/MCS/fig_8.pdf", fig_8, height = 4, width = 16)
 
 
-# Figure 8 ----------------------------------------------------------------
+# Figure 9 ----------------------------------------------------------------
 
 # The difference between the standard category definition and one corrected for -1.8C
 
@@ -876,7 +885,7 @@ BI_data_sub <- BI_data %>%
   filter(event_no == 69)
 
 # The top panel: original categories
-fig8a <- BI_data  %>% 
+fig_9a <- BI_data  %>% 
   ggplot(aes(x = t)) +
   geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
                       pattern = 'stripe', fill = NA, colour  = 'black') +
@@ -901,10 +910,10 @@ fig8a <- BI_data  %>%
   labs(y = expression(paste("Temperature (°C)")), x = NULL) +
   theme(panel.border = element_rect(colour = "black", fill = NA),
         legend.position = "right")
-# fig8a
+# fig_9a
 
 # Bottom panel: the categories corrected for -1.8C
-fig8b <- BI_data  %>% 
+fig_9b <- BI_data  %>% 
   ggplot(aes(x = t)) +
   geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
                       pattern = 'stripe', fill = NA, colour  = 'black') +
@@ -929,10 +938,10 @@ fig8b <- BI_data  %>%
   labs(y = expression(paste("Temperature (°C)")), x = NULL) +
   theme(panel.border = element_rect(colour = "black", fill = NA),
         legend.position = "right")
-# fig8b
+# fig_9b
 
 # Combine and save
-fig_8 <- ggpubr::ggarrange(fig8a, fig8b, ncol = 2, nrow = 1, labels = c("a)", "b)"), legend = "bottom", common.legend = T)
-ggsave("graph/MCS/fig_8.png", fig_8, height = 4, width = 10)
-ggsave("graph/MCS/fig_8.pdf", fig_8, height = 4, width = 10)
+fig_9 <- ggpubr::ggarrange(fig_9a, fig_9b, ncol = 2, nrow = 1, labels = c("a)", "b)"), legend = "bottom", common.legend = T)
+ggsave("graph/MCS/fig_9.png", fig_9, height = 4, width = 10)
+ggsave("graph/MCS/fig_9.pdf", fig_9, height = 4, width = 10)
 
