@@ -11,7 +11,7 @@ library(ggpubr)
 library(ggridges)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
-
+#
 
 # Colour palette comparison figure ----------------------------------------
 
@@ -379,7 +379,7 @@ ggsave("graph/MCS/fig_1.png", fig_1, width = 12, height = 6)
 # Figure 2 ----------------------------------------------------------------
 
 # One of the most widely published MCS is that which occurred off Florida in 2003
-FL_bound <- c(26, 36, -82, -72)
+FL_bound <- c(26, 36, -84, -72)
 FL_data <- load_MCS_ALL(FL_bound)
 
 # Atlantic Ocean cold blob 2014 - 2016 under Greenland
@@ -398,13 +398,11 @@ MD_data <- load_MCS_ALL(MD_bound)
 CC_bound <- c(38, 48, -132, -124)
 CC_data <- load_MCS_ALL(CC_bound)
 
-# Notes from Monday 2020-08-10 meeting
-# Map anomalies should be blue to red
-  # But use different shades of blue etc. so they don't look like the MCS colours
-  # Consider white or yellow
-# Add labels in top left corners
+# Taiwan Strait
+TS_bound <- c(22, 26, 116, 122)
+TS_data <- load_MCS_ALL(TS_bound)
 
-# Create a schematic for figure 1
+# TO DO: Consider searching for the day that has the hgighest total max intensity pixels
 
 # testers...
 # date_range <- c("2014-01-01", "2016-12-31")
@@ -556,8 +554,12 @@ ggsave("graph/MCS/OZ_reef.png", OZ_reef, height = 14, width = 5)
 CC_coast <- Hobday_Fig_3_MCS(CC_data, c("2003-01-01", "2003-12-31"), intensity_choice = "max")
 ggsave("graph/MCS/CC_coast.png", CC_coast, height = 14, width = 5)
 
+# Taiwan Strait
+TS_coast <- Hobday_Fig_3_MCS(TS_data, c("2007-01-01", "2008-12-31"), intensity_choice = "max")
+ggsave("graph/MCS/TS_coast.png", TS_coast, height = 14, width = 5)
+
 # Combine the three notorious MCS multi-panel figures
-fig_2 <- ggarrange(CC_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
+fig_2 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
 ggsave("graph/MCS/fig_2.png", fig_2, height = 14, width = 15)
 
 
@@ -695,10 +697,6 @@ kurt_quants <- SSTa_stats %>%
   summarise(q10 = quantile(value, 0.1),
             q90 = quantile(value, 0.9))
 
-value_q90 <- quantile(df$value, 0.9)
-slope_q10 <- quantile(df$slope, 0.1)
-slope_q90 <- quantile(df$slope, 0.9)
-
 # Map of skewness per pixel
 map_skew <- SSTa_stats %>% 
   filter(name == "skewness", season == "Total") %>% 
@@ -730,7 +728,7 @@ map_kurt <- SSTa_stats %>%
 map_kurt
 
 # Correlate with MHW-MCS stats
-SSTa_max_int <- SSTa_stats %>% 
+SSTa_stats %>% 
   filter(season == "Total") %>% 
   pivot_wider(names_from = "name", values_from = "value") %>% 
   left_join(MHW_v_MCS) %>% 
@@ -744,8 +742,9 @@ plot_skew <- SSTa_stats %>%
   left_join(MHW_v_MCS) %>% 
   na.omit() %>% 
   ggplot(aes(x = skewness, y = i_max)) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  geom_point(aes(colour = lat), alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  scale_colour_gradient2(low = "purple", high = "green")
 plot_skew
 
 # Line plot of correlation between kurtosis and i_max
@@ -755,8 +754,9 @@ plot_kurt <- SSTa_stats %>%
   left_join(MHW_v_MCS) %>% 
   na.omit() %>% 
   ggplot(aes(x = kurtosis, y = i_max)) +
-  geom_point() +
-  geom_smooth(method = "lm")
+  geom_point(aes(colour = lat), alpha = 0.1) +
+  geom_smooth(method = "lm") +
+  scale_colour_gradient2(low = "purple", high = "green")
 plot_kurt
 
 
@@ -833,4 +833,55 @@ map_MHW_thresh <- MHW_thresh %>%
 # Combine maps
 fig_7 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
 ggsave("graph/MCS/fig_7.png", fig_7, height = 4, width = 16)
+
+
+# Figure 8 ----------------------------------------------------------------
+
+# The difference between the standard category definition and one corrected for -1.8C
+
+# Extract the barrier island time series from the Florida data
+BI_coords <- FL_data$clim_data %>% 
+  mutate(anom = temp - seas) %>% 
+  filter(anom == min(anom))
+BI_data <- FL_data$clim_data %>% 
+  filter(lon == BI_coords$lon,
+         lat == BI_coords$lat,
+         t >= BI_coords$t-100,
+         t <= BI_coords$t+100)
+
+# The top panel: original categories
+fig8a <- BI_data %>% 
+  mutate(diff = thresh - seas,
+         thresh_2x = thresh + diff,
+         thresh_3x = thresh_2x + diff,
+         thresh_4x = thresh_3x + diff) %>% 
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+# fig8a
+
+# Bottom panel: the categories corrected for -1.8C
+fig8b <- BI_data %>% 
+  mutate(diff = thresh - seas,
+         thresh_2x = thresh + diff,
+         thresh_3x = thresh_2x + diff,
+         thresh_4x = thresh_3x + diff)
 
