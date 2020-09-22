@@ -297,8 +297,14 @@ AC_data_clim_sub <- AC_data$clim_data %>%
          thresh_3x = thresh_2x + diff,
          thresh_4x = thresh_3x + diff)
 
+# Further subset for correct hatch filling
+AC_data_clim_sub_sub <- AC_data_clim_sub %>% 
+  filter(event_no > 0)
+
 # Schematic of a MCS
 fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
+  geom_ribbon_pattern(data = AC_data_clim_sub_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
@@ -311,8 +317,8 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
   # Cumulative intensity label
   geom_curve(colour = "steelblue1",
-             aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-10"),
-                 y = 24.7, yend = 19.39), curvature = -0.4) +
+             aes(x = as.Date("2018-02-22"), xend = as.Date("2018-02-10"),
+                 y = 25.8013, yend = 19.39), curvature = -0.4) +
   geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-26"), y = 22.0),
              colour = "steelblue1", label.size = 3) +
   geom_label(aes(label = "Cum. Intensity = -70.04°CxDays", x = as.Date("2018-02-26"), y = 22.0),
@@ -327,13 +333,13 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
              colour = "black", label.size = 0) +
   # Duration label
   geom_segment(colour = "slateblue1",
-               aes(x = as.Date("2018-01-28"), xend = as.Date("2018-01-28"),
-                   y = 24.1698, yend = 26.0)) +
+               aes(x = as.Date("2018-01-29"), xend = as.Date("2018-01-29"),
+                   y = 24.1951, yend = 26.0)) +
   geom_segment(colour = "slateblue1",
-               aes(x = as.Date("2018-02-23"), xend = as.Date("2018-02-23"),
-                   y = 24.7, yend = 26.0)) +
+               aes(x = as.Date("2018-02-22"), xend = as.Date("2018-02-22"),
+                   y = 24.6653, yend = 26.0)) +
   geom_segment(colour = "slateblue1",
-               aes(x = as.Date("2018-01-28"), xend = as.Date("2018-02-23"),
+               aes(x = as.Date("2018-01-29"), xend = as.Date("2018-02-22"),
                    y = 26.0, yend = 26.0)) +
   geom_label(aes(label = "Duration = 25 days", x = as.Date("2018-02-10"), y = 26.0),
              colour = "slateblue1", label.size = 3) +
@@ -678,7 +684,7 @@ fig_5d <- fig_5_func("i_cum")
 
 fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_5.png", fig_5, height = 8, width = 16)
-ggsave("graph/MCS/fig_5.pdf", fig_5, height = 8, width = 16)
+# ggsave("graph/MCS/fig_5.pdf", fig_5, height = 8, width = 16) # Too large as a vector file
 
 
 # Figure 6 ----------------------------------------------------------------
@@ -768,7 +774,7 @@ plot_kurt
 
 fig_6 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
-ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16)
+# ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16) # Too large as a vector file
 
 
 # Figure 7 ----------------------------------------------------------------
@@ -864,11 +870,16 @@ BI_data <- FL_data$clim_data %>%
          thresh_2x_new = thresh + diff_new,
          thresh_3x_new = thresh_2x_new + diff_new,
          thresh_4x_new = thresh_3x_new + diff_new) 
-  
+
+# Further subset for correct hatching
+BI_data_sub <- BI_data %>% 
+  filter(event_no == 69)
 
 # The top panel: original categories
 fig8a <- BI_data  %>% 
   ggplot(aes(x = t)) +
+  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
@@ -895,6 +906,8 @@ fig8a <- BI_data  %>%
 # Bottom panel: the categories corrected for -1.8C
 fig8b <- BI_data  %>% 
   ggplot(aes(x = t)) +
+  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
