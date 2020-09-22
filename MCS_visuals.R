@@ -9,6 +9,7 @@ source("MCS_prep.R")
 library(gganimate)
 library(ggpubr)
 library(ggridges)
+library(ggpattern)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 #
@@ -374,6 +375,7 @@ fig_1 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
   theme(panel.border = element_rect(colour = "black", fill = NA))
 # fig_1
 ggsave("graph/MCS/fig_1.png", fig_1, width = 12, height = 6)
+ggsave("graph/MCS/fig_1.pdf", fig_1, width = 12, height = 6)
 
 
 # Figure 2 ----------------------------------------------------------------
@@ -561,6 +563,7 @@ ggsave("graph/MCS/TS_coast.png", TS_coast, height = 14, width = 5)
 # Combine the three notorious MCS multi-panel figures
 fig_2 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
 ggsave("graph/MCS/fig_2.png", fig_2, height = 14, width = 15)
+ggsave("graph/MCS/fig_2.pdf", fig_2, height = 14, width = 15)
 
 
 # Figure 3 ----------------------------------------------------------------
@@ -636,6 +639,7 @@ fig_3d <- fig_3_func("i_cum_mean")
 fig_3 <- ggpubr::ggarrange(fig_3a, fig_3b, fig_3c, fig_3d, ncol = 2, nrow = 2, 
                            align = "hv", labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_3.png", fig_3, height = 7, width = 16)
+ggsave("graph/MCS/fig_3.pdf", fig_3, height = 7, width = 16)
 
 
 # Figure 4 ----------------------------------------------------------------
@@ -649,6 +653,7 @@ fig_4d <- fig_3_func("i_cum_mean", mean_plot = F)
 fig_4 <- ggpubr::ggarrange(fig_4a, fig_4b, fig_4c, fig_4d, ncol = 2, nrow = 2, 
                            align = "hv", labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_4.png", fig_4, height = 7, width = 16)
+ggsave("graph/MCS/fig_4.pdf", fig_4, height = 7, width = 16)
 
 
 # Figure 5 ----------------------------------------------------------------
@@ -673,6 +678,7 @@ fig_5d <- fig_5_func("i_cum")
 
 fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_5.png", fig_5, height = 8, width = 16)
+ggsave("graph/MCS/fig_5.pdf", fig_5, height = 8, width = 16)
 
 
 # Figure 6 ----------------------------------------------------------------
@@ -762,6 +768,7 @@ plot_kurt
 
 fig_6 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
+ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16)
 
 
 # Figure 7 ----------------------------------------------------------------
@@ -833,6 +840,7 @@ map_MHW_thresh <- MHW_thresh %>%
 # Combine maps
 fig_7 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
 ggsave("graph/MCS/fig_7.png", fig_7, height = 4, width = 16)
+ggsave("graph/MCS/fig_7.pdf", fig_7, height = 4, width = 16)
 
 
 # Figure 8 ----------------------------------------------------------------
@@ -847,14 +855,19 @@ BI_data <- FL_data$clim_data %>%
   filter(lon == BI_coords$lon,
          lat == BI_coords$lat,
          t >= BI_coords$t-100,
-         t <= BI_coords$t+100)
-
-# The top panel: original categories
-fig8a <- BI_data %>% 
+         t <= BI_coords$t+100) %>% 
   mutate(diff = thresh - seas,
          thresh_2x = thresh + diff,
          thresh_3x = thresh_2x + diff,
          thresh_4x = thresh_3x + diff) %>% 
+  mutate(diff_new = case_when(thresh_4x <= -1.8 ~ -(thresh+1.8)/3, TRUE ~ diff),
+         thresh_2x_new = thresh + diff_new,
+         thresh_3x_new = thresh_2x_new + diff_new,
+         thresh_4x_new = thresh_3x_new + diff_new) 
+  
+
+# The top panel: original categories
+fig8a <- BI_data  %>% 
   ggplot(aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
@@ -871,6 +884,7 @@ fig8a <- BI_data %>%
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-10, 30), expand = c(0, 0)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = expression(paste("Temperature (°C)")), x = NULL) +
@@ -879,9 +893,33 @@ fig8a <- BI_data %>%
 # fig8a
 
 # Bottom panel: the categories corrected for -1.8C
-fig8b <- BI_data %>% 
-  mutate(diff = thresh - seas,
-         thresh_2x = thresh + diff,
-         thresh_3x = thresh_2x + diff,
-         thresh_4x = thresh_3x + diff)
+fig8b <- BI_data  %>% 
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-10, 30), expand = c(0, 0)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+# fig8b
+
+# Combine and save
+fig_8 <- ggpubr::ggarrange(fig8a, fig8b, ncol = 2, nrow = 1, labels = c("a)", "b)"), legend = "bottom", common.legend = T)
+ggsave("graph/MCS/fig_8.png", fig_8, height = 4, width = 10)
+ggsave("graph/MCS/fig_8.pdf", fig_8, height = 4, width = 10)
 
