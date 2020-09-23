@@ -277,8 +277,6 @@ yhz_base + geom_raster(data = MCS_clim_YHZ_sub, aes(fill = intensity)) +
 anim_save("graph/MCS/YHZ_2016_12.gif")
 
 
-
-
 # Figure 1 ----------------------------------------------------------------
 
 # Figure showing where in the world noteworthy MCSs from the literature occurred
@@ -312,12 +310,12 @@ AC_data_clim_sub_sub <- AC_data_clim_sub %>%
 
 # Schematic of a MCS
 fig_2 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
-  geom_ribbon_pattern(data = AC_data_clim_sub_sub, aes(ymin = seas, ymax = temp), 
-                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
   geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_ribbon_pattern(data = AC_data_clim_sub_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
   geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
   geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
@@ -875,7 +873,7 @@ BI_data <- FL_data$clim_data %>%
          thresh_2x = thresh + diff,
          thresh_3x = thresh_2x + diff,
          thresh_4x = thresh_3x + diff) %>% 
-  mutate(diff_new = case_when(thresh_4x <= -1.8 ~ -(thresh+1.8)/3, TRUE ~ diff),
+  mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
          thresh_2x_new = thresh + diff_new,
          thresh_3x_new = thresh_2x_new + diff_new,
          thresh_4x_new = thresh_3x_new + diff_new) 
@@ -887,12 +885,12 @@ BI_data_sub <- BI_data %>%
 # The top panel: original categories
 fig_9a <- BI_data  %>% 
   ggplot(aes(x = t)) +
-  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
-                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
   geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
   geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
   geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
@@ -915,12 +913,12 @@ fig_9a <- BI_data  %>%
 # Bottom panel: the categories corrected for -1.8C
 fig_9b <- BI_data  %>% 
   ggplot(aes(x = t)) +
-  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
-                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
   geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
   geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
   geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
   geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
   geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
   geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
