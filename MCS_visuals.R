@@ -10,6 +10,8 @@ library(gganimate)
 library(ggpubr)
 library(ggridges)
 library(ggpattern)
+library(glow)
+library(viridisLite)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 #
@@ -754,12 +756,28 @@ SSTa_stats %>%
   na.omit() %>% 
   summarise(cor_i_max = cor(skewness, i_max))
 
-# Line plot of correlation between skewness and i_max
-plot_skew <- SSTa_stats %>% 
+# Prep data for plotting
+SSTa_prep <- SSTa_stats %>% 
   filter(season == "Total") %>% 
   pivot_wider(names_from = "name", values_from = "value") %>% 
   left_join(MHW_v_MCS) %>% 
-  na.omit() %>% 
+  na.omit() 
+
+# Prep glow data for better plotting
+gm <- GlowMapper$new(xdim = 2000, ydim = 2000, blend_mode = "screen", nthreads = 50)
+gm$map(x = SSTa_prep$skewness, y = SSTa_prep$i_max, intensity = 1, radius = .1)
+pd <- gm$output_dataframe(saturation = 1)
+
+# GLow plot
+ggplot() + 
+  geom_raster(data = pd, aes(x = pd$x, y = pd$y, fill = pd$value), show.legend = F) +
+  scale_fill_gradientn(colors = additive_alpha(magma(12))) +
+  coord_fixed(gm$aspect(), xlim = gm$xlim(), ylim = gm$ylim()) + 
+  labs(x = "carat", y = "price") + 
+  theme_night(bgcolor = magma(1))
+
+# Line plot of correlation between skewness and i_max
+plot_skew <- SSTa_prep %>%
   ggplot(aes(x = skewness, y = i_max)) +
   geom_point(aes(colour = lat), alpha = 0.1) +
   geom_smooth(method = "lm") +
@@ -767,11 +785,7 @@ plot_skew <- SSTa_stats %>%
 plot_skew
 
 # Line plot of correlation between kurtosis and i_max
-plot_kurt <- SSTa_stats %>% 
-  filter(season == "Total") %>% 
-  pivot_wider(names_from = "name", values_from = "value") %>% 
-  left_join(MHW_v_MCS) %>% 
-  na.omit() %>% 
+plot_kurt <- SSTa_prep%>% 
   ggplot(aes(x = kurtosis, y = i_max)) +
   geom_point(aes(colour = lat), alpha = 0.1) +
   geom_smooth(method = "lm") +
