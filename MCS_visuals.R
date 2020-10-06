@@ -588,6 +588,10 @@ ggsave("graph/MCS/fig_3.pdf", fig_3, height = 14, width = 15)
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 unique(MCS_count_trend$name)
 
+# Only the significant values
+MCS_sig <- MCS_count_trend %>% 
+  filter(p.value <= 0.05)
+
 # Figures of trends and annual states
 fig_4_func <- function(var_name, mean_plot = T){
   
@@ -609,7 +613,7 @@ fig_4_func <- function(var_name, mean_plot = T){
   if(var_name == "total_count"){
     viridis_choice <- "A"
   } else if(var_name == "dur_mean"){
-    viridis_choice <- "B"
+    viridis_choice <- "C"
   } else{
     viridis_choice <- "D"
   }
@@ -626,7 +630,8 @@ fig_4_func <- function(var_name, mean_plot = T){
       scale_fill_viridis_c(paste0(var_name,"\n(annual)"), option = viridis_choice) +
       coord_quickmap(expand = F, ylim = c(-70, 70)) +
       theme_void() +
-      theme(panel.border = element_rect(colour = "black", fill = NA))
+      theme(panel.border = element_rect(colour = "black", fill = NA),
+            legend.position = "top")
     # mean_map 
   } else{
     # The trend map
@@ -636,11 +641,17 @@ fig_4_func <- function(var_name, mean_plot = T){
                                TRUE ~ slope)) %>% 
       ggplot(aes(x = lon, y = lat)) +
       geom_raster(aes(fill = slope)) +
+      # geom_point(data = MCS_sig, size = 0.0001) +
+      # geom_polygon_pattern(data = MCS_sig, pattern = 'crosshatch', fill = NA, colour  = 'black') +
       geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
       scale_fill_gradient2(paste0(var_name,"\n(annual)"), low = "blue", high = "red") +
       coord_quickmap(expand = F, ylim = c(-70, 70)) +
-      theme_void() +
-      theme(panel.border = element_rect(colour = "black", fill = NA))
+      theme_bw() +
+      theme(panel.border = element_rect(colour = "black", fill = NA),
+            legend.position = "top", 
+            axis.title = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks = element_blank())
     # trend_map 
   }
   map_res
@@ -673,17 +684,43 @@ ggsave("graph/MCS/fig_5.pdf", fig_5, height = 7, width = 16)
 
 # Figure 6 ----------------------------------------------------------------
 
+# Load the MCS vs. MHW results
 MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
 
-fig_6_func <- function(tile_val){
-  ggplot(data = MHW_v_MCS, aes(x = lon, y = lat)) +
-    geom_tile(aes_string(fill = tile_val)) +
+# Melt long for easier plotting
+MHW_v_MCS_long <- MHW_v_MCS %>% 
+  pivot_longer(cols = count:i_cum, names_to = "name", values_to = "value") %>% 
+  na.omit()
+
+# Figure for plotting the panels
+fig_6_func <- function(var_name){
+  
+  # Basic filter
+  df <- MHW_v_MCS_long %>% 
+    filter(name == var_name,
+           lat >= -70, lat <= 70)
+  
+  # Find 10th and 90th quantiles to round off tails for plotting
+  value_q10 <- quantile(df$value, 0.1)
+  value_q90 <- quantile(df$value, 0.9)
+  
+  # Figure
+  df %>% 
+    mutate(value = case_when(value <= value_q10 ~ value_q10,
+                             value >= value_q90 ~ value_q90,
+                             TRUE ~ value)) %>% 
+    ggplot(aes(x = lon, y = lat)) +
+    geom_tile(aes(fill = value)) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     coord_quickmap(expand = F, ylim = c(-70, 70)) +
     scale_fill_gradient2(low = "blue", high = "red") +
-    labs(x = NULL, y = NULL, fill = tile_val) +
-    theme_void() +
-    theme(panel.border = element_rect(colour = "black", fill = NA))
+    labs(x = NULL, y = NULL, fill = var_name) +
+    theme_bw() +
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          legend.position = "top", 
+          axis.title = element_blank(),
+          axis.text = element_blank(),
+          axis.ticks = element_blank())
 }
 
 fig_6a <- fig_6_func("count")
@@ -693,7 +730,7 @@ fig_6d <- fig_6_func("i_cum")
 
 fig_6 <- ggpubr::ggarrange(fig_6a, fig_6b, fig_6c, fig_6d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
 ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
-# ggsave("graph/MCS/fig_6.pdf", fig_5, height = 8, width = 16) # Too large as a vector file
+# ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16) # Too large as a vector file
 
 
 # Figure 7 ----------------------------------------------------------------
