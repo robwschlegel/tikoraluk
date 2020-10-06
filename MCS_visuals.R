@@ -896,6 +896,24 @@ BI_data <- FL_data$clim_data %>%
 BI_data_sub <- BI_data %>% 
   filter(event_no == 69)
 
+# Extract an Antarctic data point as a counter argument for changing the category system
+hole_SST <- tidync(OISST_files[which(lon_OISST == -37.875)]) %>% 
+  hyper_tibble() %>% 
+  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+  dplyr::rename(t = time, temp = sst) %>% 
+  filter(lat == -75.875)
+
+# Calculate clims etc.
+hole_clim <- ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10) %>% 
+  mutate(diff = thresh - seas,
+         thresh_2x = thresh + diff,
+         thresh_3x = thresh_2x + diff,
+         thresh_4x = thresh_3x + diff) %>% 
+  mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
+         thresh_2x_new = thresh + diff_new,
+         thresh_3x_new = thresh_2x_new + diff_new,
+         thresh_4x_new = thresh_3x_new + diff_new) 
+
 # The top panel: original categories
 fig_9a <- BI_data  %>% 
   ggplot(aes(x = t)) +
@@ -952,8 +970,64 @@ fig_9b <- BI_data  %>%
         legend.position = "right")
 # fig_9b
 
+# The top panel: original categories
+fig_9c <- hole_clim  %>% 
+  filter(t >= "2010-07-01", t <= "2011-06-30") %>%
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-2.8, -1.4), expand = c(0, 0)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+# fig_9c
+
+# Bottom panel: the categories corrected for -1.8C
+fig_9d <- hole_clim  %>% 
+  filter(t >= "2010-07-01", t <= "2011-06-30") %>%
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-2.8, -1.4), expand = c(0, 0)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+# fig_9d
+
 # Combine and save
-fig_9 <- ggpubr::ggarrange(fig_9a, fig_9b, ncol = 2, nrow = 1, labels = c("a)", "b)"), legend = "bottom", common.legend = T)
-ggsave("graph/MCS/fig_9.png", fig_9, height = 4, width = 10)
-ggsave("graph/MCS/fig_9.pdf", fig_9, height = 4, width = 10)
+fig_9 <- ggpubr::ggarrange(fig_9a, fig_9b, fig_9c, fig_9d,
+                           ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"), 
+                           legend = "bottom", common.legend = T)
+ggsave("graph/MCS/fig_9.png", fig_9, height = 8, width = 10)
+ggsave("graph/MCS/fig_9.pdf", fig_9, height = 8, width = 10)
 

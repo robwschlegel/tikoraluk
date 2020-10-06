@@ -779,3 +779,40 @@ SSTa_ridge <- SSTa_stats %>%
   scale_x_continuous(limits = c(-2, 5), expand = c(0, 0)) +
   theme_ridges()
 ggsave("graph/kurt_skew_lon.png", SSTa_ridge, width = 12)
+
+
+# 9: Check on MCS hole in Antarctica --------------------------------------
+# There is a hole in the MCS results in the Southern Ocean where no MCS are reported
+# After going through the brief analysis below it appears that the issue is that 
+# the 10th percentile is -1.8C because this patch is almost always frozen throughout
+# the entire satellite record
+# On second pass it appears that the detect_event() function is changing the threshold
+# after it was already calculated...
+
+# Load comparison data to find the hole easily vi NA results
+MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
+
+# Extract example coords: lon = -37.875, lat = -75.875
+hole_SST <- tidync(OISST_files[which(lon_OISST == -37.875)]) %>% 
+  hyper_tibble() %>% 
+  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+  dplyr::rename(t = time, temp = sst) %>% 
+  filter(lat == -75.875)
+
+# Calculate clims separately
+hole_clim_MCS <- ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
+
+# Plot. Change pctile argument above to see effect here. E.g. pctile = 50 will give the seasonal signal
+hole_clim_MCS %>% 
+  dplyr::select(doy, thresh) %>% 
+  distinct() %>% 
+  ggplot(aes(x = doy, y = thresh)) +
+  geom_line()
+
+# Calculate MHW and MCS
+hole_MHW <- detect_event(ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31")))
+hole_MCS <- detect_event(hole_clim_MCS, coldSpells = T)
+
+# Look at results
+hole_MCS_clim <- hole_MCS$climatology
+
