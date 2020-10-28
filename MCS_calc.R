@@ -68,6 +68,12 @@ MCS_calc <- function(lon_row){
 # plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # Takes just over two hours
 
+# Load data and calculate new categories based on the bottom limit of -1.8C
+mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
+       thresh_2x_new = thresh + diff_new,
+       thresh_3x_new = thresh_2x_new + diff_new,
+       thresh_4x_new = thresh_3x_new + diff_new) 
+
 
 # 3: Daily categories -----------------------------------------------------
 
@@ -92,7 +98,7 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
 # date_choice <- as.Date("2020-01-01")
 save_sub_cat_clim <- function(date_choice, df){
   
-  # Establish flie name and save location
+  # Establish file name and save location
   cat_clim_year <- lubridate::year(date_choice)
   cat_clim_dir <- paste0("../data/cat_clim_MCS/",cat_clim_year)
   dir.create(as.character(cat_clim_dir), showWarnings = F)
