@@ -32,7 +32,7 @@ library(doParallel); registerDoParallel(cores = 50)
 # 2: Full calculations  ---------------------------------------------------
 
 # Function for loading OISST data, calculating MCSs, and saving the results
-# lon_row <- 1203
+# lon_row <- 1
 MCS_calc <- function(lon_row){
   
   # Begin
@@ -51,7 +51,8 @@ MCS_calc <- function(lon_row){
     nest() %>% 
     mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
            event = purrr::map(clim, detect_event, coldSpells = T), 
-           cat = purrr::map(event, category, climatology = T, season = "peak")) %>%
+           cat = purrr::map(event, category, climatology = T, season = "peak"),
+           cat_correct = purrr::map(event, category, climatology = T, season = "peak", MCScorrect = T)) %>%
     select(-data, -clim)
   
   # Finish
@@ -61,18 +62,12 @@ MCS_calc <- function(lon_row){
 }
 
 # system.time(
-  # MCS_calc(612)
+#   MCS_calc(1)
 # ) # 150 seconds
 
-# Ran on Friday, August 28th, 2020
-# plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
+# Ran on Saturday, October 31st, 2020
+plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # Takes just over two hours
-
-# Load data and calculate new categories based on the bottom limit of -1.8C
-mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
-       thresh_2x_new = thresh + diff_new,
-       thresh_3x_new = thresh_2x_new + diff_new,
-       thresh_4x_new = thresh_3x_new + diff_new) 
 
 
 # 3: Daily categories -----------------------------------------------------
@@ -132,14 +127,14 @@ cat_clim_global_daily <- function(date_range){
 }
 
 # NB: Better not to run the entire 30+ years at once
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
-registerDoParallel(cores = 50)
-cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("2001-01-01"), as.Date("2010-12-31")))
+# registerDoParallel(cores = 50)
+# cat_clim_global_daily(date_range = c(as.Date("2011-01-01"), as.Date("2020-12-31")))
 
 
 # 4: Annual summaries -----------------------------------------------------
@@ -366,8 +361,8 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
 registerDoParallel(cores = 50)
-plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
-            product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
+# plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
+#             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
 # 5: Total summaries ------------------------------------------------------
@@ -402,7 +397,7 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run them all
-MCS_total_state("OISST", "1982-2011")
+# MCS_total_state("OISST", "1982-2011")
 
 ## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
@@ -477,8 +472,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 
 ## Run them all
 # OISST
-MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -623,10 +618,10 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 registerDoParallel(cores = 50)
-plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
-MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+# MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 
 # Figures of trends and annual states
 var_mean_trend_fig <- function(var_name){
@@ -691,7 +686,7 @@ var_mean_trend_fig <- function(var_name){
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
 }
 
-plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+# plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
@@ -729,8 +724,8 @@ MHW_v_MCS_func <- function(lon_row){
 }
 
 registerDoParallel(cores = 50)
-system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
-saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
+# system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
+# saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
 
 
 # 8: SSTa skewness and kurtosis -------------------------------------------
@@ -771,23 +766,24 @@ skew_kurt_calc <- function(lon_step){
 
 # Load the global SSTa
 registerDoParallel(cores = 50)
-system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
-saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
+# system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
+# saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
-SSTa_ridge <- SSTa_stats %>% 
-  mutate(lat_10 = factor(plyr::round_any(lat, 10))) %>% 
-  dplyr::select(-lon, -lat) %>% 
-  mutate(season = factor(season, levels = c("Spring", "Summer", "Autumn", "Winter", "Total"))) %>% 
-  ggplot(aes(x = anom_skew, y = lat_10)) +
-  geom_density_ridges(aes(fill = season), alpha = 0.5, size = 0.1) +
-  # scale_x_continuous(limits = c(-2, 10), expand = c(0, 0)) +
-  scale_x_continuous(limits = c(-2, 5), expand = c(0, 0)) +
-  theme_ridges()
-ggsave("graph/kurt_skew_lon.png", SSTa_ridge, width = 12)
+# SSTa_ridge <- SSTa_stats %>% 
+#   mutate(lat_10 = factor(plyr::round_any(lat, 10))) %>% 
+#   dplyr::select(-lon, -lat) %>% 
+#   mutate(season = factor(season, levels = c("Spring", "Summer", "Autumn", "Winter", "Total"))) %>% 
+#   ggplot(aes(x = anom_skew, y = lat_10)) +
+#   geom_density_ridges(aes(fill = season), alpha = 0.5, size = 0.1) +
+#   # scale_x_continuous(limits = c(-2, 10), expand = c(0, 0)) +
+#   scale_x_continuous(limits = c(-2, 5), expand = c(0, 0)) +
+#   theme_ridges()
+# ggsave("graph/kurt_skew_lon.png", SSTa_ridge, width = 12)
 
 
 # 9: Check on MCS hole in Antarctica --------------------------------------
+
 # There is a hole in the MCS results in the Southern Ocean where no MCS are reported
 # After going through the brief analysis below it appears that the issue is that 
 # the 10th percentile is -1.8C because this patch is almost always frozen throughout
