@@ -1,9 +1,9 @@
 # reviews/JMS_2020.R
-# This script tests the MHW caluclations made in a paper that was
-# sumitted to the Journal of Marine Science.
+# This script tests the MHW calculations made in a paper that was
+# submitted to the Journal of Marine Science.
 # They provide shockingly little w.r.t. a methods section,
 # which may be enough to reject the paper there.
-# But I also suspect that the MHW caluclations have been done incorrectly,
+# But I also suspect that the MHW calculations have been done incorrectly,
 # so I need to check for myself first.
 
 
@@ -153,3 +153,4 @@ ggplot(MHW_year_mean, aes(x = year, y = value)) +
   geom_line() +
   # geom_hline(aes(yintercept = mean(value))) +
   facet_wrap(~name, scales = "free_y")
+
