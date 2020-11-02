@@ -354,26 +354,26 @@ fig_2 <- ggplot(data = AC_data_clim_sub, aes(x = t)) +
              colour = "slateblue1", label.size = 3) +
   geom_label(aes(label = "Duration = 25 days", x = as.Date("2018-02-10"), y = 26.0),
              colour = "black", label.size = 0) +
-  # I Moderate
-  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
-                 colour = MCS_palette[1], label.size = 3) +
-  geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
-             colour = "black", label.size = 0) +
-  # II Strong
-  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
-             colour = MCS_palette[2], label.size = 3) +
-  geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
-             colour = "black", label.size = 0) +
-  # III Severe
-  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
-             colour = MCS_palette[3], label.size = 3) +
-  geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
-             colour = "black", label.size = 0) +
-  # IV Extreme
-  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
-             colour = MCS_palette[4], label.size = 3) +
-  geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
-             colour = "black", label.size = 0) +
+  # # I Moderate
+  # geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
+  #                colour = MCS_palette[1], label.size = 3) +
+  # geom_label(aes(label = "I Moderate = 44%", x = as.Date("2018-01-28"), y = 23.5),
+  #            colour = "black", label.size = 0) +
+  # # II Strong
+  # geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
+  #            colour = MCS_palette[2], label.size = 3) +
+  # geom_label(aes(label = "II Strong = 20%", x = as.Date("2018-02-03"), y = 22.5),
+  #            colour = "black", label.size = 0) +
+  # # III Severe
+  # geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
+  #            colour = MCS_palette[3], label.size = 3) +
+  # geom_label(aes(label = "III Severe = 8%", x = as.Date("2018-02-04"), y = 21.5),
+  #            colour = "black", label.size = 0) +
+  # # IV Extreme
+  # geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
+  #            colour = MCS_palette[4], label.size = 3) +
+  # geom_label(aes(label = "IV Extreme = 20%", x = as.Date("2018-02-04"), y = 20.5),
+  #            colour = "black", label.size = 0) +
   # Other aesthetics
   scale_colour_manual(name = "Line colours", values = lineCol,
                       breaks = c("Temperature", "Climatology", "Threshold",
