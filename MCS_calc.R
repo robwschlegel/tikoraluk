@@ -47,6 +47,7 @@ MCS_calc <- function(lon_row){
   
   # Make calculations
   MCS_res <- SST %>%
+    filter(lat == -63.375, lon == 0.125) %>% 
     group_by(lon, lat) %>%
     nest() %>% 
     mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
@@ -66,7 +67,7 @@ MCS_calc <- function(lon_row){
 # ) # 150 seconds
 
 # Ran on Saturday, October 31st, 2020
-plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
+# plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # Takes just over two hours
 
 
@@ -76,15 +77,28 @@ plyr::l_ply(1:1440, .fun = MCS_calc, .parallel = T)
 # testers...
 # cat_lon_file <- MCS_lon_files[1]
 # date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
+# date_range <- c(as.Date("1982-01-01"), as.Date("1982-01-04"))
 load_sub_cat_clim <- function(cat_lon_file, date_range){
-  cat_clim_sub <- readRDS(cat_lon_file) %>%
-    dplyr::select(-event) %>% 
+  cat_sub <- readRDS(cat_lon_file) %>%
+    dplyr::select(-event, -cat_correct) %>% 
     unnest(cols = cat) %>% 
     filter(row_number() %% 2 == 1) %>% 
-    filter(nrow(cat$climatology) > 0) %>% 
+    filter(nrow(cat$climatology) > 0) %>%
     unnest(cols = cat) %>% 
     ungroup() %>% 
     filter(t >= date_range[1], t <= date_range[2])
+  cat_correct_sub <- readRDS(cat_lon_file) %>%
+    dplyr::select(-event, -cat) %>% 
+    unnest(cols = cat_correct) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    filter(nrow(cat_correct$climatology) > 0) %>%
+    unnest(cols = cat_correct) %>% 
+    ungroup() %>% 
+    filter(t >= date_range[1], t <= date_range[2])
+  cat_clim_sub <- left_join(cat_sub, cat_correct_sub, 
+                            by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
+    dplyr::rename(category = category.x, category_correct = category.y)
+  rm(cat_sub, cat_correct_sub); gc()
   return(cat_clim_sub)
 }
 
@@ -111,18 +125,19 @@ save_sub_cat_clim <- function(date_choice, df){
 # date_range <- c(as.Date("1982-01-01"), as.Date("1982-01-31"))
 cat_clim_global_daily <- function(date_range){
   cat_clim_daily <- plyr::ldply(MCS_lon_files, load_sub_cat_clim,
-                                .parallel = T, date_range = date_range) %>% 
-    ungroup() %>% 
-    na.omit() %>% 
-    mutate(category = factor(category, levels = c("I Moderate", "II Strong",
+                                .parallel = T, date_range = date_range) %>%
+    mutate(intensity = round(intensity, 2),
+           category = factor(category, levels = c("I Moderate", "II Strong",
                                                   "III Severe", "IV Extreme")),
-           intensity = round(intensity, 2)) %>% 
+           category_correct = factor(category_correct, levels = c("I Moderate", "II Strong",
+                                                                  "III Severe", "IV Extreme"))) %>%
     data.frame()
   
   # NB: Running this on too many cores may cause RAM issues
   registerDoParallel(cores = 10)
   plyr::l_ply(seq(min(cat_clim_daily$t), max(cat_clim_daily$t), by = "day"), 
-              save_sub_cat_clim, .parallel = T, df = cat_clim_daily)
+              save_sub_cat_clim, .parallel = T,
+              df = cat_clim_daily)
   rm(cat_clim_daily); gc()
 }
 
@@ -190,8 +205,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     
     MCS_intensity <- MCS_cat %>% 
       group_by(lon, lat) %>% 
-      summarise(intensity_sum = sum(intensity)) %>% 
-      ungroup()
+      summarise(intensity_sum = sum(intensity), .groups = "drop")
     
     # system.time(
     MCS_cat_pixel <- MCS_cat %>% 
@@ -207,14 +221,17 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     # system.time(
     MCS_cat_count <- lazy_dt(MCS_cat) %>% 
       group_by(lon, lat, event_no) %>% 
-      summarise(max_cat = max(as.integer(category))) %>% 
+      summarise(max_cat = max(as.integer(category)),
+                max_cat_correct = max(as.integer(category_correct))) %>% 
       data.frame() %>% 
       dplyr::select(-event_no) %>% 
-      mutate(max_cat = factor(max_cat, levels = c(1:4),  labels = levels(MCS_cat$category))) %>% 
-      group_by(lon, lat) %>% 
+      mutate(max_cat = factor(max_cat, levels = c(1:4),  labels = levels(MCS_cat$category)),
+             max_cat_correct = factor(max_cat_correct, levels = c(1:4),  labels = levels(MCS_cat$category))) %>% 
+      pivot_longer(cols = max_cat:max_cat_correct) %>% 
+      group_by(lon, lat, name) %>% 
       table() %>% 
       as.data.frame() %>% 
-      pivot_wider(values_from = Freq, names_from = max_cat) %>% 
+      pivot_wider(values_from = Freq, names_from = name) %>% 
       mutate(lon = as.numeric(as.character(lon)),
              lat = as.numeric(as.character(lat)))
     # ) # 16 seconds
@@ -233,43 +250,45 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     
     # system.time(
     MCS_cat_single <- MCS_cat_pixel %>%
-      group_by(t) %>%
+      dplyr::select(lon, lat, t, category, category_correct) %>% 
+      pivot_longer(cols = category:category_correct, values_to = "category") %>% 
+      group_by(t, name) %>%
       count(category) %>%
       dplyr::rename(first_n = n) %>% 
-      ungroup() %>% 
-      right_join(full_grid, by = c("t", "category")) %>% 
+      # ungroup() %>% 
+      right_join(full_grid, by = c("t", "category")) %>%
       mutate(first_n = ifelse(is.na(first_n), 0, first_n)) %>% 
       arrange(t) %>% 
-      group_by(category) %>%
+      group_by(name, category) %>%
       mutate(first_n_cum = cumsum(first_n)) %>% 
-      ungroup() %>% 
-      group_by(category) %>% 
       ungroup()
     # ) # 1 second
     
     # system.time(
     MCS_cat_daily <- MCS_cat %>% 
-      group_by(t) %>% 
+      pivot_longer(cols = category:category_correct, values_to = "category") %>% 
+      group_by(t, name) %>%
       count(category) %>% 
       ungroup() %>% 
       right_join(full_grid, by = c("t", "category")) %>% 
       dplyr::rename(cat_n = n) %>% 
       mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
-      group_by(category) %>% 
+      group_by(name, category) %>% 
       mutate(cat_n_cum = cumsum(cat_n),
              cat_n_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
       ungroup() %>% 
-      right_join(MCS_cat_single, by = c("t", "category"))
+      right_join(MCS_cat_single, by = c("t", "name", "category"))
     # ) # 1 second
     saveRDS(MCS_cat_daily, file = paste0("annual_summary_MCS/MCS_cat_daily_",chosen_year,".Rds"))
   }
   
   # Add prop columns for more accurate plotting
-  MCS_cat_daily <- MCS_cat_daily %>% 
+  MCS_cat_daily <- MCS_cat_daily %>%
+    filter(name == "category") %>% # Change this line to rather select the corrected categories
     mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
            cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
   
-  # Extract small data.frame for easier labelling
+  # Extract small data.frame for easier labeling
   MCS_cat_daily_labels <- MCS_cat_daily %>% 
     group_by(category) %>% 
     filter(t == max(t)) %>% 
@@ -361,8 +380,8 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
 registerDoParallel(cores = 50)
-# plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
-#             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
+plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
+            product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
 # 5: Total summaries ------------------------------------------------------
@@ -376,11 +395,10 @@ MCS_total_state <- function(product, chosen_clim){
   MCS_cat_daily_files <- MCS_cat_daily_files[!grepl("total", MCS_cat_daily_files)]
   
   # Create mean values of daily count
-  cat_daily_mean <- map_dfr(MCS_cat_daily_files, readRDS) %>%
+  cat_daily_mean <- map_dfr(MCS_cat_daily_files[1:4], readRDS) %>%
     mutate(t = lubridate::year(t)) %>%
-    group_by(t, category) %>%
-    summarise(cat_n = mean(cat_n, na.rm = T)) %>%
-    ungroup() %>%
+    group_by(t, name, category) %>%
+    summarise(cat_n = mean(cat_n, na.rm = T), .groups = "drop") %>%
     mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4))
   
   # Extract only values from December 31st
@@ -390,11 +408,13 @@ MCS_total_state <- function(product, chosen_clim){
     filter(lubridate::month(t) == 12, lubridate::day(t) == 31) %>%
     mutate(t = lubridate::year(t),
            first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
-    left_join(cat_daily_mean, by = c("t", "category"))
+    left_join(cat_daily_mean, by = c("t", "name", "category"))
   
   # Save and exit
   saveRDS(cat_daily, paste0("annual_summary_MCS/MCS_cat_daily_total.Rds"))
 }
+
+#### RWS: Pick up from here ####
 
 ## Run them all
 # MCS_total_state("OISST", "1982-2011")
@@ -782,7 +802,10 @@ registerDoParallel(cores = 50)
 # ggsave("graph/kurt_skew_lon.png", SSTa_ridge, width = 12)
 
 
-# 9: Check on MCS hole in Antarctica --------------------------------------
+# 9: Comparison of corrected category bottom limit ------------------------
+
+
+# 10: Check on MCS hole in Antarctica -------------------------------------
 
 # There is a hole in the MCS results in the Southern Ocean where no MCS are reported
 # After going through the brief analysis below it appears that the issue is that 
