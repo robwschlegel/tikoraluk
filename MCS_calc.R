@@ -29,18 +29,18 @@ library(doParallel); registerDoParallel(cores = 50)
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
 
 # Check on one pixel
-SST <- tidync(OISST_files[which(lon_OISST == -178.625)]) %>%
-  hyper_filter(lat = lat == -10.875) %>% 
-  hyper_tibble() %>% 
-  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
-  dplyr::rename(t = time, temp = sst)
-SST_clim <- ts2clm(SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
-SST_event <- detect_event(SST_clim, coldSpells = T)
-SST_event_event <- SST_event$event
-SST_event_clim <- SST_event$climatology
-SST_cat <- category(SST_event, climatology = T, season = "peak")
-SST_cat_event <- SST_cat$event
-SST_cat_clim <- SST_cat$climatology
+# SST <- tidync(OISST_files[which(lon_OISST == -178.625)]) %>%
+#   hyper_filter(lat = lat == -10.875) %>% 
+#   hyper_tibble() %>% 
+#   mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+#   dplyr::rename(t = time, temp = sst)
+# SST_clim <- ts2clm(SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
+# SST_event <- detect_event(SST_clim, coldSpells = T)
+# SST_event_event <- SST_event$event
+# SST_event_clim <- SST_event$climatology
+# SST_cat <- category(SST_event, climatology = T, season = "peak")
+# SST_cat_event <- SST_cat$event
+# SST_cat_clim <- SST_cat$climatology
 # write_csv(SST, "test_SST.csv")
 
 
@@ -173,7 +173,7 @@ cat_clim_global_daily <- function(date_range){
 max_event_date <- function(df){
   df %>% 
     group_by(lat) %>% 
-    filter(as.integer(category) == max(as.integer(category))) %>% 
+    filter(as.integer(category_correct) == max(as.integer(category_correct))) %>% 
     filter(t == min(t)) %>% 
     ungroup()
 }
@@ -225,8 +225,8 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     # system.time(
     MCS_cat_pixel <- MCS_cat %>% 
       dplyr::select(-event_no) %>% 
-      plyr::ddply(., c("lon"), max_event_date, 
-                  .parallel = T, .paropts = c(.inorder = FALSE)) %>% 
+      na.omit() %>% 
+      plyr::ddply(., c("lon"), max_event_date, .parallel = T) %>% 
       unique() %>%
       left_join(MCS_intensity, by = c("lon", "lat"))
     # ) # 14 seconds
@@ -261,14 +261,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     # Complete dates by categories data.frame
     full_grid <- expand_grid(t = seq(as.Date(paste0(chosen_year,"-01-01")), max(MCS_cat$t), by = "day"), 
                              category = as.factor(levels(MCS_cat$category)),
-                             name = c("category", "category_correct"))# %>% 
-      # mutate(category = factor(category, levels = levels(MCS_cat$category))) %>% 
-      # mutate(category_correct = paste0("category_correct_",category)) %>% 
-      # mutate(category = paste0("category_",category))
-    
-    # tester... 
-    # test <- MCS_cat_pixel %>% 
-    #   filter(lat == -10.875, lon == -178.625)
+                             name = c("category", "category_correct"))
     
     # system.time(
     MCS_cat_single <- MCS_cat_pixel %>%
@@ -292,7 +285,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
       group_by(t, name) %>%
       count(category) %>% 
       ungroup() %>% 
-      right_join(full_grid, by = c("t", "category")) %>% 
+      right_join(full_grid, by = c("t", "category", "name")) %>% 
       dplyr::rename(cat_n = n) %>% 
       mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
       group_by(name, category) %>% 
@@ -306,7 +299,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
   
   # Add prop columns for more accurate plotting
   MCS_cat_daily <- MCS_cat_daily %>%
-    filter(name == "category") %>% # Change this line to rather select the corrected categories
+    filter(name == "category_correct") %>% # Change this line to rather select the corrected categories
     mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
            cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
   
@@ -321,7 +314,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
   # Global map of MHW occurrence
   fig_map <- ggplot(MCS_cat_pixel, aes(x = lon, y = lat)) +
     # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
-    geom_tile(aes(fill = category), colour = NA) +
+    geom_tile(aes(fill = category_correct), colour = NA) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     scale_fill_manual("Category", values = MCS_colours) +
     coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
@@ -439,8 +432,8 @@ MCS_total_state <- function(product, chosen_clim){
   saveRDS(cat_daily, paste0("annual_summary_MCS/MCS_cat_daily_total.Rds"))
 }
 
-## Run them all
-# MCS_total_state("OISST", "1982-2011")
+## Run it
+MCS_total_state("OISST", "1982-2011")
 
 ## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
@@ -513,10 +506,10 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   # ggsave(fig_ALL_full, filename = paste0("figures/",product,"_cat_historic_",chosen_clim,".eps"), height = 4.25, width = 12)
 }
 
-## Run them all
+## Run it
 # OISST
-# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -661,10 +654,10 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 registerDoParallel(cores = 50)
-# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
-# MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
 
 # Figures of trends and annual states
 var_mean_trend_fig <- function(var_name){
@@ -729,7 +722,8 @@ var_mean_trend_fig <- function(var_name){
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
 }
 
-# plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+# Run them all
+plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
@@ -767,8 +761,8 @@ MHW_v_MCS_func <- function(lon_row){
 }
 
 registerDoParallel(cores = 50)
-# system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
-# saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
+system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
+saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
 
 
 # 8: SSTa skewness and kurtosis -------------------------------------------
@@ -809,8 +803,8 @@ skew_kurt_calc <- function(lon_step){
 
 # Load the global SSTa
 registerDoParallel(cores = 50)
-# system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
-# saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
+system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
+saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
 # SSTa_ridge <- SSTa_stats %>% 
@@ -826,6 +820,9 @@ registerDoParallel(cores = 50)
 
 
 # 9: Comparison of corrected category bottom limit ------------------------
+
+# Four panel map showing the difference in count for each pixel per category
+# between the old and new methods
 
 
 # 10: Spatial correlations ------------------------------------------------
