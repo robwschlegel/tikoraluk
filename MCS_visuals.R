@@ -576,7 +576,7 @@ TS_coast <- Hobday_Fig_3_MCS(TS_data, c("2007-01-01", "2008-12-31"), intensity_c
 ggsave("graph/MCS/TS_coast.png", TS_coast, height = 14, width = 5)
 
 # Combine the three notorious MCS multi-panel figures
-fig_3 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("a)", "b)", "c)"))
+fig_3 <- ggarrange(TS_coast, FL_2003_summer, AO_blob, ncol = 3, nrow = 1, labels = c("A)", "B)", "C)"))
 ggsave("graph/MCS/fig_3.png", fig_3, height = 14, width = 15)
 ggsave("graph/MCS/fig_3.pdf", fig_3, height = 14, width = 15)
 
@@ -663,7 +663,7 @@ fig_4c <- fig_4_func("i_max_mean")
 fig_4d <- fig_4_func("i_cum_mean")
 
 fig_4 <- ggpubr::ggarrange(fig_4a, fig_4b, fig_4c, fig_4d, ncol = 2, nrow = 2, 
-                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
+                           align = "hv", labels = c("A)", "B)", "C)", "D)"))
 ggsave("graph/MCS/fig_4.png", fig_4, height = 7, width = 16)
 ggsave("graph/MCS/fig_4.pdf", fig_4, height = 7, width = 16)
 
@@ -677,7 +677,7 @@ fig_5c <- fig_4_func("i_max_mean", mean_plot = F)
 fig_5d <- fig_4_func("i_cum_mean", mean_plot = F)
 
 fig_5 <- ggpubr::ggarrange(fig_5a, fig_5b, fig_5c, fig_5d, ncol = 2, nrow = 2, 
-                           align = "hv", labels = c("a)", "b)", "c)", "d)"))
+                           align = "hv", labels = c("A)", "B)", "C)", "D)"))
 ggsave("graph/MCS/fig_5.png", fig_5, height = 7, width = 16)
 ggsave("graph/MCS/fig_5.pdf", fig_5, height = 7, width = 16)
 
@@ -728,7 +728,7 @@ fig_6b <- fig_6_func("dur")
 fig_6c <- fig_6_func("i_max")
 fig_6d <- fig_6_func("i_cum")
 
-fig_6 <- ggpubr::ggarrange(fig_6a, fig_6b, fig_6c, fig_6d, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+fig_6 <- ggpubr::ggarrange(fig_6a, fig_6b, fig_6c, fig_6d, ncol = 2, nrow = 2, labels = c("A)", "B)", "C)", "D)"))
 ggsave("graph/MCS/fig_6.png", fig_6, height = 8, width = 16)
 # ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16) # Too large as a vector file
 
@@ -830,12 +830,13 @@ plot_kurt <- SSTa_prep%>%
 plot_kurt
 
 # Save
-fig_7 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"))
+fig_7 <- ggpubr::ggarrange(map_skew, map_kurt, plot_skew, plot_kurt, 
+                           ncol = 2, nrow = 2, labels = c("A)", "B)", "C)", "D)"))
 ggsave("graph/MCS/fig_7.png", fig_7, height = 8, width = 16)
 # ggsave("graph/MCS/fig_6.pdf", fig_6, height = 8, width = 16) # Too large as a vector file
 
 
-# Figure 8 ----------------------------------------------------------------
+# Figure S1 ---------------------------------------------------------------
 # Figures showing what the temperature threshold must be per pixel to reach the four categories
 
 # Function for loading and extracting the lowest MCS threshold per pixel
@@ -902,12 +903,12 @@ map_MHW_thresh <- MHW_thresh %>%
   theme(panel.border = element_rect(colour = "black", fill = NA))
 
 # Combine maps
-fig_8 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("a)", "b)"))
+fig_8 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("A)", "B)"))
 ggsave("graph/MCS/fig_8.png", fig_8, height = 4, width = 16)
 ggsave("graph/MCS/fig_8.pdf", fig_8, height = 4, width = 16)
 
 
-# Figure 9 ----------------------------------------------------------------
+# Figure S2 ---------------------------------------------------------------
 
 # The difference between the standard category definition and one corrected for -1.8C
 
@@ -1007,63 +1008,8 @@ fig_9b <- BI_data  %>%
         legend.position = "right")
 # fig_9b
 
-# The top panel: original categories
-fig_9c <- hole_clim  %>% 
-  filter(t >= "2010-07-01", t <= "2011-06-30") %>%
-  ggplot(aes(x = t)) +
-  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
-  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
-  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
-  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
-  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
-  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
-  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
-  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
-  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
-  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
-  scale_colour_manual(name = "Line colours", values = lineCol,
-                      breaks = c("Temperature", "Climatology", "Threshold",
-                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
-  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
-  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-2.8, -1.4), expand = c(0, 0)) +
-  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
-                                                   size = c(1, 1, 1, 1, 1, 1)))) +
-  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
-  theme(panel.border = element_rect(colour = "black", fill = NA),
-        legend.position = "right")
-# fig_9c
-
-# Bottom panel: the categories corrected for -1.8C
-fig_9d <- hole_clim  %>% 
-  filter(t >= "2010-07-01", t <= "2011-06-30") %>%
-  ggplot(aes(x = t)) +
-  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
-  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
-  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
-  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
-  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
-  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
-  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
-  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
-  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
-  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
-  scale_colour_manual(name = "Line colours", values = lineCol,
-                      breaks = c("Temperature", "Climatology", "Threshold",
-                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
-  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
-  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-2.8, -1.4), expand = c(0, 0)) +
-  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
-                                                   size = c(1, 1, 1, 1, 1, 1)))) +
-  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
-  theme(panel.border = element_rect(colour = "black", fill = NA),
-        legend.position = "right")
-# fig_9d
-
 # Combine and save
-fig_9 <- ggpubr::ggarrange(fig_9a, fig_9b, fig_9c, fig_9d,
-                           ncol = 2, nrow = 2, labels = c("a)", "b)", "c)", "d)"), 
+fig_9 <- ggpubr::ggarrange(fig_9a, fig_9b, ncol = 2, nrow = 2, labels = c("A)", "B)"), 
                            legend = "bottom", common.legend = T)
 ggsave("graph/MCS/fig_9.png", fig_9, height = 8, width = 10)
 ggsave("graph/MCS/fig_9.pdf", fig_9, height = 8, width = 10)

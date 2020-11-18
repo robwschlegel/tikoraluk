@@ -21,12 +21,27 @@ library(tidync)
 library(broom)
 library(e1071)
 library(ggridges)
-# remotes::install_github("robwschlegel/heatwaveR")
+# remotes::install_github("robwschlegel/heatwaveR", force = T)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 
 # TO DO
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
+
+# Check on one pixel
+SST <- tidync(OISST_files[which(lon_OISST == -178.625)]) %>%
+  hyper_filter(lat = lat == -10.875) %>% 
+  hyper_tibble() %>% 
+  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+  dplyr::rename(t = time, temp = sst)
+SST_clim <- ts2clm(SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
+SST_event <- detect_event(SST_clim, coldSpells = T)
+SST_event_event <- SST_event$event
+SST_event_clim <- SST_event$climatology
+SST_cat <- category(SST_event, climatology = T, season = "peak")
+SST_cat_event <- SST_cat$event
+SST_cat_clim <- SST_cat$climatology
+# write_csv(SST, "test_SST.csv")
 
 
 # 2: Full calculations  ---------------------------------------------------
@@ -47,7 +62,7 @@ MCS_calc <- function(lon_row){
   
   # Make calculations
   MCS_res <- SST %>%
-    filter(lat == -63.375, lon == 0.125) %>% 
+    # filter(lat == -63.375, lon == 0.125) %>% # tester...
     group_by(lon, lat) %>%
     nest() %>% 
     mutate(clim = purrr::map(data, ts2clm, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10),
@@ -189,12 +204,10 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
   fig_title <- paste0("MCS categories of ",chosen_year, extra_bit,
                       "\n",product_name,"; Climatogy period: ",chosen_clim)
   
-  ## Load data
-  
   ## Load/Process data
   # Categories per pixel
   if(file.exists(paste0("annual_summary_MCS/cat_pixel_MCS_",chosen_year,".Rds")) & !force_calc){
-    MCS_cat_pixel <- readRDS(paste0("annual_summary_MCS/cat_pixel_MCS_",chosen_year,".Rds"))
+    MCS_cat_pixel <- readRDS(paste0("annual_summary_MCS/MCS_cat_pixel_",chosen_year,".Rds"))
   } else{
     
     # system.time(
@@ -203,10 +216,12 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     # na.omit()
     # ) # 12 seconds
     
+    # The sum of intensities per pixel for the year
     MCS_intensity <- MCS_cat %>% 
       group_by(lon, lat) %>% 
       summarise(intensity_sum = sum(intensity), .groups = "drop")
     
+    # The earliest date of the highest category of event + the sum of intensities
     # system.time(
     MCS_cat_pixel <- MCS_cat %>% 
       dplyr::select(-event_no) %>% 
@@ -245,8 +260,15 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     
     # Complete dates by categories data.frame
     full_grid <- expand_grid(t = seq(as.Date(paste0(chosen_year,"-01-01")), max(MCS_cat$t), by = "day"), 
-                             category = as.factor(levels(MCS_cat$category))) %>% 
-      mutate(category = factor(category, levels = levels(MCS_cat$category)))
+                             category = as.factor(levels(MCS_cat$category)),
+                             name = c("category", "category_correct"))# %>% 
+      # mutate(category = factor(category, levels = levels(MCS_cat$category))) %>% 
+      # mutate(category_correct = paste0("category_correct_",category)) %>% 
+      # mutate(category = paste0("category_",category))
+    
+    # tester... 
+    # test <- MCS_cat_pixel %>% 
+    #   filter(lat == -10.875, lon == -178.625)
     
     # system.time(
     MCS_cat_single <- MCS_cat_pixel %>%
@@ -255,10 +277,10 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
       group_by(t, name) %>%
       count(category) %>%
       dplyr::rename(first_n = n) %>% 
-      # ungroup() %>% 
-      right_join(full_grid, by = c("t", "category")) %>%
+      ungroup() %>%
+      right_join(full_grid, by = c("t", "category", "name")) %>%
       mutate(first_n = ifelse(is.na(first_n), 0, first_n)) %>% 
-      arrange(t) %>% 
+      arrange(t, name, category) %>% 
       group_by(name, category) %>%
       mutate(first_n_cum = cumsum(first_n)) %>% 
       ungroup()
@@ -395,11 +417,14 @@ MCS_total_state <- function(product, chosen_clim){
   MCS_cat_daily_files <- MCS_cat_daily_files[!grepl("total", MCS_cat_daily_files)]
   
   # Create mean values of daily count
-  cat_daily_mean <- map_dfr(MCS_cat_daily_files[1:4], readRDS) %>%
+  cat_daily_mean <- map_dfr(MCS_cat_daily_files, readRDS) %>%
     mutate(t = lubridate::year(t)) %>%
     group_by(t, name, category) %>%
     summarise(cat_n = mean(cat_n, na.rm = T), .groups = "drop") %>%
-    mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4))
+    mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4)) %>%
+    # mutate(cat_prop_daily_mean = "A") %>% 
+    na.omit() %>% 
+    data.frame()
   
   # Extract only values from December 31st
   cat_daily <- map_dfr(MCS_cat_daily_files, readRDS) %>%
@@ -413,8 +438,6 @@ MCS_total_state <- function(product, chosen_clim){
   # Save and exit
   saveRDS(cat_daily, paste0("annual_summary_MCS/MCS_cat_daily_total.Rds"))
 }
-
-#### RWS: Pick up from here ####
 
 ## Run them all
 # MCS_total_state("OISST", "1982-2011")
@@ -431,7 +454,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Daily MHW occurrence", x = NULL) +
+    labs(y = "Daily MCS occurrence", x = NULL) +
     coord_cartesian(expand = F) +
     theme(axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
@@ -448,7 +471,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Total MHW occurrence", x = NULL) +
+    labs(y = "Total MCS occurrence", x = NULL) +
     coord_cartesian(expand = F) +
     theme(axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
@@ -464,7 +487,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
     scale_y_continuous(limits = c(0, 50),
                        breaks = seq(10, 40, length.out = 3)) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "MHW days/pixel", x = NULL) +
+    labs(y = "MCS days/pixel", x = NULL) +
     coord_cartesian(expand = F) +
     theme(axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
@@ -478,12 +501,12 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   min_year <- min(df$t)
   max_year <- max(df$t)
   clim_title <- gsub("-", " - ", chosen_clim)
-  fig_title <- paste0("MHW category summaries: ",min_year," - ",max_year,
+  fig_title <- paste0("MCS category summaries: ",min_year," - ",max_year,
                       "\n",product_title,"; Climatogy period: ",clim_title)
   
   # Stick them together and save
   fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic, fig_prop_historic,
-                                        ncol = 3, align = "hv", labels = c("(a)", "(b)", "(c)"), hjust = -0.1,
+                                        ncol = 3, align = "hv", labels = c("(A)", "(B)", "(C)"), hjust = -0.1,
                                         font.label = list(size = 14), common.legend = T, legend = "bottom")
   ggsave(fig_ALL_historic, filename = paste0("graph/summary/",product,"_cat_historic_"
                                              ,chosen_clim,".png"), height = 4.25, width = 12)
@@ -805,7 +828,11 @@ registerDoParallel(cores = 50)
 # 9: Comparison of corrected category bottom limit ------------------------
 
 
-# 10: Check on MCS hole in Antarctica -------------------------------------
+# 10: Spatial correlations ------------------------------------------------
+
+
+
+# 11: Check on MCS hole in Antarctica -------------------------------------
 
 # There is a hole in the MCS results in the Southern Ocean where no MCS are reported
 # After going through the brief analysis below it appears that the issue is that 
