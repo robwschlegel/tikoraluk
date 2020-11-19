@@ -509,22 +509,6 @@ MCS_thresh_func <- function(lon_step){
 # saveRDS(MCS_thresh, "data/MCS_thresh.Rds")
 MCS_thresh <- readRDS("data/MCS_thresh.Rds")
 
-# Do the same for MHWs
-MHW_thresh_func <- function(lon_step){
-  MHW_thresh <- tidync::tidync(dir("../data/thresh/", full.names = T)[lon_step]) %>% 
-    tidync::hyper_tibble() %>% 
-    mutate(diff = thresh - seas,
-           thresh_2x = thresh + diff,
-           thresh_3x = thresh_2x + diff,
-           thresh_4x = thresh_3x + diff) %>% 
-    group_by(lon, lat) %>% 
-    summarise(thresh_4x = max(thresh_4x, na.rm = T), .groups = "drop")
-}
-
-# Load all of the max Cat 4 thresholds
-doParallel::registerDoParallel(cores = 50)
-MHW_thresh <- plyr::ldply(1:1440, MHW_thresh_func, .parallel = T, .paropts = c(.inorder = FALSE))
-
 # Map of the Cat 4 thresholds for the MCSs
 map_MCS_thresh <- MCS_thresh %>% 
   ggplot(aes(x = lon, y = lat)) +
@@ -537,17 +521,33 @@ map_MCS_thresh <- MCS_thresh %>%
   theme(panel.border = element_rect(colour = "black", fill = NA),
         legend.position = "top")
 
+# Do the same for MHWs
+# MHW_thresh_func <- function(lon_step){
+#   MHW_thresh <- tidync::tidync(dir("../data/thresh/", full.names = T)[lon_step]) %>% 
+#     tidync::hyper_tibble() %>% 
+#     mutate(diff = thresh - seas,
+#            thresh_2x = thresh + diff,
+#            thresh_3x = thresh_2x + diff,
+#            thresh_4x = thresh_3x + diff) %>% 
+#     group_by(lon, lat) %>% 
+#     summarise(thresh_4x = max(thresh_4x, na.rm = T), .groups = "drop")
+# }
+
+# Load all of the max Cat 4 thresholds
+# doParallel::registerDoParallel(cores = 50)
+# MHW_thresh <- plyr::ldply(1:1440, MHW_thresh_func, .parallel = T, .paropts = c(.inorder = FALSE))
+
 # Map of the Cat 4 thresholds for the MCSs
-map_MHW_thresh <- MHW_thresh %>% 
-  ggplot(aes(x = lon, y = lat)) +
-  geom_raster(aes(fill = thresh_4x)) +
-  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  geom_contour(aes(z = thresh_4x), colour = "black", breaks = c(-1.8, 35)) +
-  scale_fill_gradient2("Cat. IV threshold", low = "blue", high = "red") +
-  coord_quickmap(expand = F, ylim = c(-70, 70)) +
-  theme_void() +
-  theme(panel.border = element_rect(colour = "black", fill = NA),
-        legend.position = "top")
+# map_MHW_thresh <- MHW_thresh %>% 
+#   ggplot(aes(x = lon, y = lat)) +
+#   geom_raster(aes(fill = thresh_4x)) +
+#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+#   geom_contour(aes(z = thresh_4x), colour = "black", breaks = c(-1.8, 35)) +
+#   scale_fill_gradient2("Cat. IV threshold", low = "blue", high = "red") +
+#   coord_quickmap(expand = F, ylim = c(-70, 70)) +
+#   theme_void() +
+#   theme(panel.border = element_rect(colour = "black", fill = NA),
+#         legend.position = "top")
 
 # Combine maps
 # fig_S1 <- ggpubr::ggarrange(map_MCS_thresh, map_MHW_thresh, ncol = 2, nrow = 1, labels = c("A)", "B)"))
