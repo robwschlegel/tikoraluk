@@ -395,8 +395,8 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
 registerDoParallel(cores = 50)
-plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
-            product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
+# plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
+#             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
 # 5: Total summaries ------------------------------------------------------
@@ -433,7 +433,7 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run it
-MCS_total_state("OISST", "1982-2011")
+# MCS_total_state("OISST", "1982-2011")
 
 ## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
@@ -508,8 +508,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 
 ## Run it
 # OISST
-MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -654,7 +654,7 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 registerDoParallel(cores = 50)
-plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
+# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
 
 # Load all results into one brick
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
@@ -723,7 +723,9 @@ var_mean_trend_fig <- function(var_name){
 }
 
 # Run them all
-plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+# plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
+
+# Global average trends
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
@@ -761,8 +763,8 @@ MHW_v_MCS_func <- function(lon_row){
 }
 
 registerDoParallel(cores = 50)
-system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F)))
-saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
+# system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F))) # 104 seconds
+# saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
 
 
 # 8: SSTa skewness and kurtosis -------------------------------------------
@@ -797,13 +799,14 @@ skew_kurt_calc <- function(lon_step){
               anom_kurt = round(kurtosis(anom), 2),
               anom_min = min(anom),
               anom_mean = round(mean(anom), 2),
-              anom_max = max(anom), .groups = "drop")
+              anom_max = max(anom),
+              anom_sd = sd(anom), .groups = "drop")
   return(skew_kurt)
 }
 
 # Load the global SSTa
-registerDoParallel(cores = 50)
-system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1001 seconds
+registerDoParallel(cores = 25)
+system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1106 seconds
 saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
