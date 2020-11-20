@@ -139,6 +139,8 @@ TS_bound <- c(22, 26, 116, 122)
 TS_data <- load_MCS_ALL(TS_bound)
 
 # TO DO: Consider searching for the day that has the highest total max intensity pixels
+# Consider allowing this function to ingest multiple datasets so they can be plotted together at the same time
+# This would then allow binning of the figures by row so that they can share legends
 
 # testers...
 # date_range <- c("2014-01-01", "2016-12-31")

@@ -525,11 +525,11 @@ MCS_trend_calc <- function(lon_step){
   
   # Unpack categories
   MCS_cat <- MCS_res %>%
-    dplyr::select(-event) %>% 
-    unnest(cols = cat) %>% 
+    dplyr::select(-event, -cat) %>% 
+    unnest(cols = cat_correct) %>% 
     filter(row_number() %% 2 == 0) %>% 
-    filter(nrow(cat$event) > 0) %>% 
-    unnest(cols = cat) %>% 
+    filter(nrow(cat_correct$event) > 0) %>% 
+    unnest(cols = cat_correct) %>% 
     ungroup() %>% 
     mutate(category = factor(category, levels = c("I Moderate", "II Strong",
                                                   "III Severe", "IV Extreme")),
@@ -538,7 +538,7 @@ MCS_trend_calc <- function(lon_step){
   
   # Unpack event metrics and join
   MCS_event <- MCS_res %>%
-    dplyr::select(-cat) %>% 
+    dplyr::select(-cat, -cat_correct) %>% 
     unnest(cols = event) %>% 
     filter(row_number() %% 2 == 0) %>% 
     filter(nrow(event$event) > 0) %>%
@@ -554,7 +554,8 @@ MCS_trend_calc <- function(lon_step){
   suppressMessages(
   MCS_metric <- MCS_event %>% 
     group_by(lon, lat, year) %>% 
-    summarise(dur_mean = mean(duration, na.rm = T),
+    summarise(count = n(),
+              dur_mean = mean(duration, na.rm = T),
               dur_sum = sum(duration, na.rm = T),
               i_mean = mean(intensity_mean, na.rm = T),
               i_max_mean = mean(intensity_max, na.rm = T),
@@ -654,10 +655,7 @@ MCS_trend_calc <- function(lon_step){
 
 # Run all
 registerDoParallel(cores = 50)
-# plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)
-
-# Load all results into one brick
-MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+# system.time(plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)) # xxx seconds
 
 # Figures of trends and annual states
 var_mean_trend_fig <- function(var_name){
@@ -722,10 +720,19 @@ var_mean_trend_fig <- function(var_name){
   ggsave(paste0("graph/summary/mean_trend_",var_name,".png"), full_map, width = 12, height = 12)
 }
 
-# Run them all
+# Load all picel values/trends into one brick
+# MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+# unique(MCS_count_trend$name)
+
+# Create all variable maps
 # plyr::l_ply(unique(MCS_count_trend$name), var_mean_trend_fig, .parallel = T)
 
 # Global average trends
+# MCS_count_trend %>% 
+#   filter(name %in% c("total_count", "dur_mean", "i_max_mean", "i_cum_mean")) %>% 
+#   group_by(name) %>% 
+#   summarise(mean_slope = mean(slope, na.rm = T),
+#             median_slope = median(slope, na.rm = T))
 
 
 # 7: MHWs minus MCSs ------------------------------------------------------
@@ -804,10 +811,10 @@ skew_kurt_calc <- function(lon_step){
   return(skew_kurt)
 }
 
-# Load the global SSTa
-registerDoParallel(cores = 25)
-system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1106 seconds
-saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
+# Calculate global SSTa stats
+# registerDoParallel(cores = 25)
+# system.time(SSTa_stats <- plyr::ldply(lon_OISST, skew_kurt_calc, .parallel = T, .paropts = c(.inorder = F))) # 1106 seconds
+# saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # Show a ridegplot with the fill for kurtosis and the colour for skewness
 # SSTa_ridge <- SSTa_stats %>% 
@@ -824,12 +831,159 @@ saveRDS(SSTa_stats, "data/SSTa_stats.Rds")
 
 # 9: Comparison of corrected category bottom limit ------------------------
 
-# Four panel map showing the difference in count for each pixel per category
-# between the old and new methods
+# Function for getting the total count of each category per pixel
+MCS_cat_count_calc <- function(lon_step){
+  
+  # Start
+  lon_step_pad <- str_pad(lon_step, 4, pad = "0")
+  print(paste0("Began run on ",lon_step," at ", Sys.time()))
+  
+  # Load chosen file
+  MCS_res <- readRDS(MCS_lon_files[lon_step])
+  
+  # Unpack old categories
+  MCS_cat <- MCS_res %>%
+    dplyr::select(-event, -cat_correct) %>% 
+    unnest(cols = cat) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    filter(nrow(cat$event) > 0) %>% 
+    unnest(cols = cat) %>% 
+    ungroup() %>% 
+    mutate(method = "old")
+  
+  # Unpack new categories
+  MCS_cat_correct <- MCS_res %>%
+    dplyr::select(-event, -cat) %>% 
+    unnest(cols = cat_correct) %>% 
+    filter(row_number() %% 2 == 0) %>% 
+    filter(nrow(cat_correct$event) > 0) %>% 
+    unnest(cols = cat_correct) %>% 
+    ungroup() %>% 
+    mutate(method = "new")
+  rm(MCS_res); gc()
+  
+  # Combine and process
+  MCS_cat_all <- rbind(MCS_cat, MCS_cat_correct) %>% 
+    mutate(category = factor(category, levels = c("I Moderate", "II Strong",
+                                                  "III Severe", "IV Extreme")),
+           season = factor(season, levels = c("Spring", "Summer", "Fall", "Winter"))) %>% 
+    group_by(lon, lat, method, category) %>% 
+    mutate(cat_count = n()) %>% 
+    # pivot_wider(values_from = cat_count, names_from = category)
+    ungroup() %>% 
+    group_by(lon, lat, method, category, cat_count) %>% 
+    summarise(p_moderate = mean(p_moderate),
+              p_strong = mean(p_strong),
+              p_severe = mean(p_severe),
+              p_extreme = mean(p_extreme), .groups = "drop")
+  return(MCS_cat_all)
+}
+
+# Calculate global MCS category counts and proportions
+registerDoParallel(cores = 50)
+# system.time(MCS_cat_count <- plyr::ldply(1:1440, MCS_cat_count_calc, .parallel = T, .paropts = c(.inorder = F))) # xxx seconds
+# saveRDS(MCS_cat_count, "data/MCS_cat_count.Rds")
+
+# Prep data for plotting
+MCS_cat_count <- readRDS("data/MCS_cat_count.Rds")
+MCS_cat_count_proc <- MCS_cat_count %>% 
+  dplyr::select(lon:cat_count) %>% 
+  pivot_wider(values_from = cat_count, names_from = c(method, category)) %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% 
+  mutate(`I Moderate` = `new_I Moderate` - `old_I Moderate`,
+         `II Strong` = `new_II Strong` - `old_II Strong`,
+         `III Severe` = `new_III Severe` - `old_III Severe`,
+         `IV Extreme` = `new_IV Extreme` - `old_IV Extreme`) %>% 
+  dplyr::select(lon, lat, `I Moderate`:`IV Extreme`) %>% 
+  pivot_longer(cols = `I Moderate`:`IV Extreme`, names_to = "category", values_to = "diff") %>% 
+  mutate(category = factor(category, levels = c("I Moderate", "II Strong",
+                                                "III Severe", "IV Extreme")))
+
+# Four panel map showing difference in count for each pixel per category between old and new methods
+MCS_cat_count_diff_map <- MCS_cat_count_proc %>% 
+  # mutate(value = case_when(value <= value_q10 ~ value_q10,
+                           # value >= value_q90 ~ value_q90,
+                           # TRUE ~ value)) %>% 
+  filter(lat >= -70, lat <= 70) %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_tile(aes(fill = diff)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  scale_fill_gradient2("Total count: new - original", low = "blue", high = "red") +
+  # scale_fill_viridis_c("Mean\n(annual)") +
+  # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+  #                                      max(OISST_ocean_coords$lat))) +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
+  facet_wrap(~category) +
+  theme_void() +
+  # guides(fill = guide_legend(override.aes = list(size = 10))) +
+  # labs(title = var_name) +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        legend.position = "top",
+        panel.background = element_rect(fill = "grey90"))
+MCS_cat_count_diff_map
+ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7)
 
 
 # 10: Spatial correlations ------------------------------------------------
 
+# Load mean values
+MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+SSTa_stats <- readRDS("data/SSTa_stats.Rds")
+MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
+global_stats <- MCS_count_trend %>% 
+  left_join(filter(SSTa_stats, season == "Total"), by = c("lon", "lat")) %>% 
+  left_join(MHW_v_MCS, by = c("lon", "lat"))
+
+## Calculate spatial correlations
+# cor count vs. duration
+global_stats %>% 
+  filter(name %in% c("dur_mean", "total_count")) %>% 
+  dplyr::select(lon, lat, name, value) %>% 
+  pivot_wider(values_from = value) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
+
+# cor max int. vs. SSTa SD
+global_stats %>% 
+  filter(name %in% c("i_max_mean")) %>% 
+  dplyr::select(lon, lat, name, value, anom_sd) %>% 
+  pivot_wider(values_from = value) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "i_max_mean", y = "anom_sd"))
+
+# cor max. int. vs. cum. int.
+global_stats %>% 
+  filter(name %in% c("i_max_mean", "i_cum_mean")) %>% 
+  dplyr::select(lon, lat, name, value) %>% 
+  pivot_wider(values_from = value) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "i_max_mean", y = "i_cum_mean"))
+
+# cor count vs. duration trend
+global_stats %>% 
+  filter(name %in% c("dur_mean", "total_count")) %>% 
+  dplyr::select(lon, lat, name, slope) %>% 
+  pivot_wider(values_from = slope) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
+
+# cor duration vs. int. cum. trend
+global_stats %>% 
+  filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
+  dplyr::select(lon, lat, name, slope) %>% 
+  pivot_wider(values_from = slope) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "dur_mean", y = "i_cum_mean"))
+  
+# cor MHW-MCS intensity vs. SSTa skewness
+global_stats %>% 
+  # filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
+  dplyr::select(lon, lat, anom_skew, i_mean) %>% 
+  distinct() %>% 
+  # pivot_wider(values_from = slope) %>%
+  na.omit() %>% 
+  summarise(r = correlation::cor_test(., x = "anom_skew", y = "i_mean"))
 
 
 # 11: Check on MCS hole in Antarctica -------------------------------------
