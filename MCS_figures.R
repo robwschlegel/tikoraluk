@@ -23,6 +23,22 @@ library(doParallel); registerDoParallel(cores = 50)
 # Load icons for map
 
 # Create matrix of lon/lat values from Table 1
+fig_1_table <- data.frame(lon = c(-96.1, -76.3, 3.0, -80.6, 118.2),
+                          lat = c(28.5, 35.4, 54.0, 28.8, 24.8),
+                          year = c(1941, 1958, 1962, 1977, 2008),
+                          impact = c("Fish kill", "Fish kill", "Fish kill", "Coral mortality", "Mass death"))
+
+# Map
+fig_1 <- ggplot(fig_1_table, aes(x = lon, y = lat)) +
+  geom_point(aes(colour = year, shape = impact)) +
+  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+  labs(x = NULL, y = NULL) +
+  coord_quickmap(expand = F, ylim = c(-70, 70)) +
+  theme_void() +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "top")
+fig_1
+
 
 
 # Figure 2 ----------------------------------------------------------------
