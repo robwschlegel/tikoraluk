@@ -416,7 +416,7 @@ MCS_total_state <- function(product, chosen_clim){
     summarise(cat_n = mean(cat_n, na.rm = T), .groups = "drop") %>%
     mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4)) %>%
     # mutate(cat_prop_daily_mean = "A") %>% 
-    na.omit() %>% 
+    # na.omit() %>% 
     data.frame()
   
   # Extract only values from December 31st
@@ -433,13 +433,16 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run it
-# MCS_total_state("OISST", "1982-2011")
+MCS_total_state("OISST", "1982-2011")
 
 ## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
   
+  # Chose category system
+  df_filter <- filter(df, name == "category_correct")
+  
   # Stacked barplot of global daily count of MHWs by category
-  fig_count_historic <- ggplot(df, aes(x = t, y = cat_prop_daily_mean)) +
+  fig_count_historic <- ggplot(df_filter, aes(x = t, y = cat_prop_daily_mean)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -456,7 +459,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   # fig_count_historic
   
   # Stacked barplot of cumulative percent of ocean affected by MHWs
-  fig_cum_historic <- ggplot(df, aes(x = t, y = first_n_cum_prop)) +
+  fig_cum_historic <- ggplot(df_filter, aes(x = t, y = first_n_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -473,7 +476,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   # fig_cum_historic
   
   # Stacked barplot of average cumulative MHW days per pixel
-  fig_prop_historic <- ggplot(df, aes(x = t, y = cat_n_prop)) +
+  fig_prop_historic <- ggplot(df_filter, aes(x = t, y = cat_n_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -491,8 +494,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   # Create the figure title
   product_title <- product
   if(product == "OISST") product_title <- "NOAA OISST"
-  min_year <- min(df$t)
-  max_year <- max(df$t)
+  min_year <- min(df_filter$t)
+  max_year <- max(df_filter$t)
   clim_title <- gsub("-", " - ", chosen_clim)
   fig_title <- paste0("MCS category summaries: ",min_year," - ",max_year,
                       "\n",product_title,"; Climatogy period: ",clim_title)
@@ -508,8 +511,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 
 ## Run it
 # OISST
-# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
