@@ -863,12 +863,32 @@ MCS_cat_count_calc <- function(lon_step){
     unnest(cols = cat_correct) %>% 
     ungroup() %>% 
     mutate(method = "new")
+  
+  # Calculate ice categories from new categories
+  MCS_ice_ref <- MCS_res %>%
+    dplyr::select(-cat, -cat_correct) %>% 
+    unnest(cols = event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(cols = event) %>% 
+    ungroup() %>% 
+    filter(thresh < -1.5, event_no > 0) %>% 
+    mutate(ice = TRUE) %>% 
+    dplyr::select(lon, lat, event_no, ice) %>% 
+    distinct()
+  MCS_cat_ice <- MCS_cat_correct %>% 
+    left_join(MCS_ice_ref, by = c("lon", "lat", "event_no")) %>% 
+    mutate(method = "ice",
+           category = as.character(category),
+           category = case_when(ice == TRUE ~ "V Ice",
+                                TRUE ~ category)) %>% 
+    dplyr::select(-ice)
+  
   rm(MCS_res); gc()
   
   # Combine and process
-  MCS_cat_all <- rbind(MCS_cat, MCS_cat_correct) %>% 
+  MCS_cat_all <- rbind(MCS_cat, MCS_cat_correct, MCS_cat_ice) %>% 
     mutate(category = factor(category, levels = c("I Moderate", "II Strong",
-                                                  "III Severe", "IV Extreme")),
+                                                  "III Severe", "IV Extreme", "V Ice")),
            season = factor(season, levels = c("Spring", "Summer", "Fall", "Winter"))) %>% 
     group_by(lon, lat, method, category) %>% 
     mutate(cat_count = n()) %>% 
@@ -884,23 +904,30 @@ MCS_cat_count_calc <- function(lon_step){
 
 # Calculate global MCS category counts and proportions
 registerDoParallel(cores = 50)
-# system.time(MCS_cat_count <- plyr::ldply(1:1440, MCS_cat_count_calc, .parallel = T, .paropts = c(.inorder = F))) # xxx seconds
+# system.time(MCS_cat_count <- plyr::ldply(1:1440, MCS_cat_count_calc, .parallel = T, .paropts = c(.inorder = F))) # 222 seconds
 # saveRDS(MCS_cat_count, "data/MCS_cat_count.Rds")
 
 # Prep data for plotting
 MCS_cat_count <- readRDS("data/MCS_cat_count.Rds")
+MCS_cat_count_n <- MCS_cat_count %>% 
+  filter(method == "ice") %>% 
+  mutate(category = "total count") %>% 
+  group_by(lon, lat, category) %>% 
+  summarise(diff = sum(cat_count), .groups = "drop")
 MCS_cat_count_proc <- MCS_cat_count %>% 
   dplyr::select(lon:cat_count) %>% 
   pivot_wider(values_from = cat_count, names_from = c(method, category)) %>% 
   mutate_all(~replace(., is.na(.), 0)) %>% 
-  mutate(`I Moderate` = `new_I Moderate` - `old_I Moderate`,
-         `II Strong` = `new_II Strong` - `old_II Strong`,
-         `III Severe` = `new_III Severe` - `old_III Severe`,
-         `IV Extreme` = `new_IV Extreme` - `old_IV Extreme`) %>% 
-  dplyr::select(lon, lat, `I Moderate`:`IV Extreme`) %>% 
-  pivot_longer(cols = `I Moderate`:`IV Extreme`, names_to = "category", values_to = "diff") %>% 
-  mutate(category = factor(category, levels = c("I Moderate", "II Strong",
-                                                "III Severe", "IV Extreme")))
+  mutate(`I Moderate` = `ice_I Moderate` - `old_I Moderate`,
+         `II Strong` = `ice_II Strong` - `old_II Strong`,
+         `III Severe` = `ice_III Severe` - `old_III Severe`,
+         `IV Extreme` = `ice_IV Extreme` - `old_IV Extreme`,
+         `V Ice` = `ice_V Ice`) %>% 
+  dplyr::select(lon, lat, `I Moderate`:`V Ice`) %>% 
+  pivot_longer(cols = `I Moderate`:`V Ice`, names_to = "category", values_to = "diff") %>% 
+  rbind(MCS_cat_count_n) %>% 
+  mutate(category = factor(category, levels = c("I Moderate", "II Strong", "III Severe", 
+                                                "IV Extreme", "V Ice", "total count")))
 
 # Four panel map showing difference in count for each pixel per category between old and new methods
 MCS_cat_count_diff_map <- MCS_cat_count_proc %>% 
@@ -916,7 +943,7 @@ MCS_cat_count_diff_map <- MCS_cat_count_proc %>%
   # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
   #                                      max(OISST_ocean_coords$lat))) +
   coord_quickmap(expand = F, ylim = c(-70, 70)) +
-  facet_wrap(~category) +
+  facet_wrap(~category, ncol = 2) +
   theme_void() +
   # guides(fill = guide_legend(override.aes = list(size = 10))) +
   # labs(title = var_name) +
@@ -925,10 +952,10 @@ MCS_cat_count_diff_map <- MCS_cat_count_proc %>%
         legend.position = "top",
         panel.background = element_rect(fill = "grey90"))
 MCS_cat_count_diff_map
-ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7)
+ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7, height = 5)
 
 
-# 10: Spatial correlations ------------------------------------------------
+# 11: Spatial correlations ------------------------------------------------
 
 # Load mean values
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
@@ -989,7 +1016,7 @@ global_stats %>%
   summarise(r = correlation::cor_test(., x = "anom_skew", y = "i_mean"))
 
 
-# 11: Check on MCS hole in Antarctica -------------------------------------
+# 12: Check on MCS hole in Antarctica -------------------------------------
 
 # There is a hole in the MCS results in the Southern Ocean where no MCS are reported
 # After going through the brief analysis below it appears that the issue is that 
