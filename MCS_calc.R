@@ -450,7 +450,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Daily MCS occurrence", x = NULL) +
+    labs(y = "Daily MCS pixels", x = NULL) +
     coord_cartesian(expand = F) +
     theme(axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
@@ -467,7 +467,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Total MCS occurrence", x = NULL) +
+    labs(y = "Total MCS pixels", x = NULL) +
     coord_cartesian(expand = F) +
     theme(axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
