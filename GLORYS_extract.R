@@ -9,6 +9,7 @@
 library(tidyverse)
 library(tidync)
 library(FNN)
+library(doParallel); registerDoParallel(cores = 50)
 
 
 # Extraction coordinates --------------------------------------------------
@@ -29,16 +30,22 @@ ggplot(data = JP_points, aes(x = lon, y = lat)) +
 
 # GLORYS files ------------------------------------------------------------
 
-GLORYS_files <- dir("../../sofiad/TEMP_ANOMALIES", pattern = "new", full.names = T)
+# Surface files
+GLORYS_files <- dir("../../data/GLORYS_Global", pattern = "thetao_depth_0", full.names = T)
 
 # The GLORYS grid
-GLORYS_grid <-   tidync_GLORYS <- tidync(GLORYS_files[1]) %>% 
-  tidync::activate("D1,D0") %>% 
-  hyper_tibble()
+# GLORYS_grid <- tidync(GLORYS_files[1]) %>% 
+  # hyper_filter(latitude = between(latitude, 1, 10)) %>% 
+  # tidync::activate("D1") %>%
+  # hyper_tibble()
+GLORYS_ocean <- tidync(GLORYS_files[1]) %>% 
+  hyper_filter(time = time == 376956) %>% 
+  hyper_tibble() %>%
+  dplyr::select(longitude, latitude) %>% 
+  distinct()
 
 
-
-# Extract data ------------------------------------------------------------
+# Functions ---------------------------------------------------------------
 # Due to the dispersed nature of the data points I think it will be more efficient
 # to load each pixel individually
 
@@ -46,7 +53,7 @@ GLORYS_grid <-   tidync_GLORYS <- tidync(GLORYS_files[1]) %>%
 # testers...
 # coords <- JP_points
 grid_match <- function(coords){
-  grid_index <-  knnx.index(data = as.matrix(GLORYS_grid[,1:2]),
+  grid_index <-  knnx.index(data = as.matrix(GLORYS_ocean[,5:6]),
                              query = as.matrix(coords[,1:2]), k = 1) %>% 
     data.frame(idx = .) %>% 
     distinct()
@@ -55,39 +62,63 @@ grid_match <- function(coords){
   return(grid_points)
 }
 
-# Extract data for one point
+# Extract one year of data for one pixel
 # testers...
 # coord <- grid_points[1,]
-# GLORYS_file <- GLORYS_files[1]
+# GLORYS_file <- GLORYS_files[1] # Problem files: 4, 13, 14
 extract_GLORYS_one <- function(GLORYS_file, coord){
-  system.time(
-    tidync_GLORYS <- tidync(GLORYS_file) %>% 
-      # tidync::activate("D1,D0") %>% 
-      # hyper_dims()
-      hyper_filter(x = x == coord$x, 
-                   y = y == coord$y) %>%
-      # hyper_filter(time = between(time, 1, 2)) %>% 
-      hyper_tibble() %>% 
-      left_join(coord, by = c("x", "y")) %>% 
-      # mutate(t = as.Date(time_counter, origin = "1950-01-01"))
-      # mutate(t = as.POSIXct(time_counter*3600, origin = "1950-01-01"))
-      mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01")))
-  )
+  # system.time(
+  tidync_GLORYS_one <- tidync(GLORYS_file) %>% 
+    hyper_filter(x = x == coord$x, 
+                 y = y == coord$y) %>%
+    hyper_tibble() %>% 
+    left_join(coord, by = c("x", "y")) %>% 
+    mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01")))
+  # ) ~1 second
+  
+  # May need to correct time stamps
+  if(min(tidync_GLORYS_one$time_counter) == 1){
+    tidync_GLORYS_one$t <- seq(as.Date("1996-01-01"), as.Date("1996-12-31"), by = "day")
+  }
+  if(min(tidync_GLORYS_one$time_counter) < -1){
+    tidync_GLORYS_one$t <- seq(from = as.Date("2005-01-01"), length.out = nrow(tidync_GLORYS_one), by = "day")
+  }
+  
+  # Columns may also have different names
+  if("nav_lat.x" %in% colnames(tidync_GLORYS_one)){
+    tidync_GLORYS_one <- tidync_GLORYS_one %>% 
+      dplyr::rename(temp = votemper, lon = nav_lon.x, lat = nav_lat.x) %>%
+      dplyr::select(lon, lat, t, temp)
+  } else{
+    tidync_GLORYS_one <- tidync_GLORYS_one %>% 
+      dplyr::rename(temp = votemper, lon = nav_lon, lat = nav_lat) %>%
+      dplyr::select(lon, lat, t, temp)
+  }
 }
 
-system.time(
-  tidync_GLORYS <- tidync(GLORYS_files[1]) %>% 
-    # tidync::activate("D1,D0") %>% 
-    # hyper_dims()
-    hyper_filter(x = between(x, 100, 400), 
-                 y = between(y, 100, 400)) %>%
-    # hyper_filter(time = between(time, 1, 2)) %>% 
-    hyper_tibble() %>% 
-    left_join(GLORYS_grid, by = c("x", "y")) %>% 
-    # mutate(t = as.Date(time_counter, origin = "1950-01-01"))
-    # mutate(t = as.POSIXct(time_counter*3600, origin = "1950-01-01"))
-    mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01")))
-)
+# Extract all years of data for one pixel
+extract_GLORYS_all <- function(coord){
+  # system.time(
+    tidync_GLORYS_all <- plyr::ldply(GLORYS_files, extract_GLORYS_one, coord = coord, .parallel = T)
+  # ) # ~2 seconds
+}
 
-nc <- ncdf4::nc_open(GLORYS_files[1])
-ncdf4::ncvar_get()
+# Extract all years of data for all pixels
+extract_GLORYS_coords <- function(coords){
+  match_coords <- grid_match(coords)
+  system.time(
+  tidync_GLORYS_full <- plyr::ddply(match_coords[1:2,], c("row_idx"), extract_GLORYS_all, 
+                                    .progress = "text", .paropts = c(.inorder = )) %>% 
+    dplyr::select(-row_idx)
+  ) # 3 seconds for 2
+  
+  # Join site coords and exit
+}
+
+
+# Extract data ------------------------------------------------------------
+
+
+# Annual summaries --------------------------------------------------------
+
+
