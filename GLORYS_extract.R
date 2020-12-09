@@ -21,7 +21,7 @@ JP_points <- read_csv("extracts/npp_light_2020-10-09.csv") %>%
   na.omit()
 
 # Have a peek at the data
-ggplot(data = JP_points, aes(x = lon, y = lat)) +
+ggplot(data = JP_points, aes(x = site_lon, y = site_lat)) +
   borders() +
   geom_point(colour = "red") +
   coord_quickmap(expand = F) +
@@ -31,14 +31,28 @@ ggplot(data = JP_points, aes(x = lon, y = lat)) +
 # GLORYS files ------------------------------------------------------------
 
 # Surface files
-GLORYS_files <- dir("../../data/GLORYS_Global", pattern = "thetao_depth_0", full.names = T)
+# GLORYS_files <- dir("../../data/GLORYS_Global", pattern = "thetao_depth_0", full.names = T)
+# GLORYS_files <- dir("../../sofiad/UVT_FILES", pattern = "T_", full.names = T)
+GLORYS_files <- c(dir("../../sofiad/UVT_FILES/INTERP_DATA", pattern = "T_interp_...._2D.nc", full.names = T),
+                  # dir(c(paste0("../../sofiad/UVT_FILES/INTERP_DATA/F",seq(1994, 2007))), full.names = T))
+                  dir("../../sofiad/UVT_FILES", pattern = "T_...._2D.nc", full.names = T))
 
 # The GLORYS grid
+GLORYS_grid <- tidync(GLORYS_files[1]) %>%
+  # hyper_filter(latitude = between(latitude, 1, 10)) %>%
+  tidync::activate("D1,D0") %>%
+  hyper_tibble() %>% 
+  distinct()
 GLORYS_ocean <- tidync(GLORYS_files[1]) %>% 
-  hyper_filter(time = time == 376956) %>% 
-  hyper_tibble() %>%
-  dplyr::select(longitude, latitude) %>% 
+  hyper_filter(x = x == 1,) %>% 
+  # hyper_filter(time_counter = time_counter == 376956) %>% #,
+               # deptht = deptht < 0.5) %>% 
+  hyper_tibble() #%>%
+  dplyr::select(x, y) %>% 
   distinct() %>% 
+  left_join(GLORYS_grid, by = c("x", "y")) %>% 
+  dplyr::select(x, y, nav_lon, nav_lat) %>%
+  # distinct() %>% 
   mutate(idx = 1:n())
 
 
@@ -51,7 +65,7 @@ GLORYS_ocean <- tidync(GLORYS_files[1]) %>%
 # coords <- JP_points
 grid_match <- function(coords){
   grid_index <- data.frame(coords,
-                           idx = knnx.index(data = as.matrix(GLORYS_ocean[,1:2]),
+                           idx = knnx.index(data = as.matrix(GLORYS_ocean[,3:4]),
                                             query = as.matrix(coords[,1:2]), k = 1))
   grid_points <- left_join(grid_index, GLORYS_ocean, by = c("idx")) %>% 
     mutate(plyr_idx = 1:n(), idx = NULL)
@@ -63,22 +77,26 @@ grid_match <- function(coords){
 # coord <- grid_points[2,]
 # GLORYS_file <- GLORYS_files[1] # Problem files: 4, 13, 14
 extract_GLORYS_one <- function(GLORYS_file, coord){
-  # system.time(
+  system.time(
   tidync_GLORYS_one <- tidync(GLORYS_file) %>% 
-    hyper_filter(longitude = longitude == coord$longitude, 
-                 latitude = latitude == coord$latitude) %>%
+    hyper_filter(x = x == coord$x,
+                 y = y == coord$y) %>%
+    # hyper_filter(longitude = longitude %in% coord$longitude, 
+    #              latitude = latitude == coord$latitude) %>%
     hyper_tibble() %>% 
-    mutate(t = as.Date(as.POSIXct(time*3600, origin = "1950-01-01"))) %>% 
-    dplyr::rename(lon = longitude, lat = latitude, temp = thetao) %>% 
-    dplyr::select(lon, lat, t, temp)
-  # ) # <1 second
+    mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01"))) %>% 
+    # dplyr::rename(lon = nav_lon, lat = nav_lat, temp = votemper, depth = deptht) %>% 
+    dplyr::rename(temp = votemper, depth = deptht) %>% 
+    dplyr::select(x, y, t, depth, temp) %>% 
+    distinct()
+  ) # 135 seconds, 73 seconds if already run, 4 seconds if the system isn't hanging...
 }
 
 # Extract all years of data for one pixel
 extract_GLORYS_all <- function(coord){
-  # system.time(
-    tidync_GLORYS_all <- plyr::ldply(GLORYS_files, extract_GLORYS_one, coord = coord, .parallel = T)
-  # ) # ~4 seconds
+  system.time(
+  tidync_GLORYS_all <- plyr::ldply(GLORYS_files[1:4], extract_GLORYS_one, coord = coord, .parallel = T)
+  ) # ~4 seconds
 }
 
 # Extract all years of data for all pixels
