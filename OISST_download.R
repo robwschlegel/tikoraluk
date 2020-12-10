@@ -10,8 +10,9 @@ library(tidyverse)
 library(rerddap)
 library(ncdf4)
 library(abind)
+library(geosphere)
 # library(tidync)
-doMC::registerDoMC(cores = 25) # 50 cores exceeds available RAM
+library(doParallel); registerDoParallel(cores = 25) # 50 cores exceeds available RAM
 
 # The information for the NOAA OISST data
 # info(datasetid = "ncdc_oisst_v2_avhrr_by_time_zlev_lat_lon", url = "https://www.ncei.noaa.gov/erddap/")
@@ -23,6 +24,23 @@ load("../tikoraluk/metadata/lon_lat_OISST.RData")
 load("../tikoraluk/metadata/lon_OISST.RData")
 lon_lat_OISST <- dplyr::arrange(lon_lat_OISST, lon, lat)
 OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
+
+# Calculate square kilometres per pixel
+# This function assumes a lon lat column on a 0.25 degree grid
+grid_size <- function(df){
+  # Distance for longitude
+  lon_dist <- distm(c(df$lon-0.125, df$lat), c(df$lon+0.125, df$lat), fun = distHaversine)/1000
+  # Distance for latitude
+  lat_dist <- distm(c(df$lon, df$lat+0.125), c(df$lon, df$lat-0.125), fun = distHaversine)/1000
+  # Total area
+  sq_area <- data.frame(sq_area = lon_dist*lat_dist)
+  # Combine and exit
+  res <- cbind(df, sq_area)
+  return(res)
+}
+lon_lat_OISST_area <- plyr::ddply(mutate(lon_lat_OISST, plyr_idx = 1:n()), c("plyr_idx"), grid_size, .parallel = T)
+lon_lat_OISST_area$plyr_idx <- NULL
+save(lon_lat_OISST_area, file = "metadata/lon_lat_OISST_area.RData")
 
 # Current date range
 # load()
