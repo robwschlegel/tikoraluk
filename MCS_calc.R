@@ -25,6 +25,9 @@ library(ggridges)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 
+# Corrdinates with surface area
+load("metadata/lon_lat_OISST_area.RData")
+
 # TO DO
 # Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
 
@@ -94,6 +97,8 @@ MCS_calc <- function(lon_row){
 # date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
 # date_range <- c(as.Date("1982-01-01"), as.Date("1982-01-04"))
 load_sub_cat_clim <- function(cat_lon_file, date_range){
+  
+  # The original MCS methodology
   cat_sub <- readRDS(cat_lon_file) %>%
     dplyr::select(-event, -cat_correct) %>% 
     unnest(cols = cat) %>% 
@@ -102,6 +107,8 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
     unnest(cols = cat) %>% 
     ungroup() %>% 
     filter(t >= date_range[1], t <= date_range[2])
+  
+  # Those corrected for the 1.8C freezing point
   cat_correct_sub <- readRDS(cat_lon_file) %>%
     dplyr::select(-event, -cat) %>% 
     unnest(cols = cat_correct) %>% 
@@ -110,10 +117,32 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
     unnest(cols = cat_correct) %>% 
     ungroup() %>% 
     filter(t >= date_range[1], t <= date_range[2])
-  cat_clim_sub <- left_join(cat_sub, cat_correct_sub, 
+  
+  # The categories corrected for near-ice events
+  cat_ice_ref <- readRDS(cat_lon_file)  %>%
+    dplyr::select(-cat, -cat_correct) %>% 
+    unnest(cols = event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(cols = event) %>% 
+    ungroup() %>% 
+    filter(thresh < -1.5, event_no > 0,
+           t >= date_range[1], t <= date_range[2]) %>% 
+    mutate(ice = TRUE) %>% 
+    dplyr::select(lon, lat, event_no, ice) %>%
+    distinct()
+  cat_ice_sub <- cat_correct_sub %>% 
+    left_join(cat_ice_ref, by = c("lon", "lat", "event_no")) %>% 
+    mutate(category_ice = as.character(category),
+           category_ice = case_when(ice == TRUE ~ "V Ice",
+                                    TRUE ~ category)) %>% 
+    dplyr::select(-ice, -category)
+  
+  # Join and exit
+  cat_clim_sub <- left_join(cat_sub, cat_correct_sub,
                             by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
+    left_join(cat_ice_sub, by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
     dplyr::rename(category = category.x, category_correct = category.y)
-  rm(cat_sub, cat_correct_sub); gc()
+  rm(cat_sub, cat_correct_sub, cat_ice_ref, cat_ice_sub); gc()
   return(cat_clim_sub)
 }
 
@@ -142,10 +171,15 @@ cat_clim_global_daily <- function(date_range){
   cat_clim_daily <- plyr::ldply(MCS_lon_files, load_sub_cat_clim,
                                 .parallel = T, date_range = date_range) %>%
     mutate(intensity = round(intensity, 2),
-           category = factor(category, levels = c("I Moderate", "II Strong",
-                                                  "III Severe", "IV Extreme")),
-           category_correct = factor(category_correct, levels = c("I Moderate", "II Strong",
-                                                                  "III Severe", "IV Extreme"))) %>%
+           category = factor(category, 
+                             levels = c("I Moderate", "II Strong",
+                                        "III Severe", "IV Extreme")),
+           category_correct = factor(category_correct, 
+                                     levels = c("I Moderate", "II Strong",
+                                                "III Severe", "IV Extreme")),
+           category_ice = factor(category_ice,
+                                 levels = c("I Moderate", "II Strong",
+                                            "III Severe", "IV Extreme", "V Ice"))) %>%
     data.frame()
   
   # NB: Running this on too many cores may cause RAM issues
@@ -158,7 +192,7 @@ cat_clim_global_daily <- function(date_range){
 
 # NB: Better not to run the entire 30+ years at once
 # registerDoParallel(cores = 50)
-# cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31")))
+# cat_clim_global_daily(date_range = c(as.Date("1982-01-01"), as.Date("1990-12-31"))) # ~20 minutes
 # registerDoParallel(cores = 50)
 # cat_clim_global_daily(date_range = c(as.Date("1991-01-01"), as.Date("2000-12-31")))
 # registerDoParallel(cores = 50)
@@ -173,7 +207,7 @@ cat_clim_global_daily <- function(date_range){
 max_event_date <- function(df){
   df %>% 
     group_by(lat) %>% 
-    filter(as.integer(category_correct) == max(as.integer(category_correct))) %>% 
+    filter(as.integer(category_ice) == max(as.integer(category_ice))) %>% 
     filter(t == min(t)) %>% 
     ungroup()
 }
@@ -227,7 +261,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
       dplyr::select(-event_no) %>% 
       na.omit() %>% 
       plyr::ddply(., c("lon"), max_event_date, .parallel = T) %>% 
-      unique() %>%
+      distinct() %>%
       left_join(MCS_intensity, by = c("lon", "lat"))
     # ) # 14 seconds
     saveRDS(MCS_cat_pixel, file = paste0("annual_summary_MCS/MCS_cat_pixel_",chosen_year,".Rds"))
@@ -237,12 +271,14 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     MCS_cat_count <- lazy_dt(MCS_cat) %>% 
       group_by(lon, lat, event_no) %>% 
       summarise(max_cat = max(as.integer(category)),
-                max_cat_correct = max(as.integer(category_correct))) %>% 
+                max_cat_correct = max(as.integer(category_correct)),
+                max_cat_ice = max(as.integer(category_ice))) %>% 
       data.frame() %>% 
       dplyr::select(-event_no) %>% 
       mutate(max_cat = factor(max_cat, levels = c(1:4),  labels = levels(MCS_cat$category)),
-             max_cat_correct = factor(max_cat_correct, levels = c(1:4),  labels = levels(MCS_cat$category))) %>% 
-      pivot_longer(cols = max_cat:max_cat_correct) %>% 
+             max_cat_correct = factor(max_cat_correct, levels = c(1:4),  labels = levels(MCS_cat$category)),
+             max_cat_ice = factor(max_cat_ice, levels = c(1:5),  labels = levels(MCS_cat$category_ice))) %>% 
+      pivot_longer(cols = max_cat:max_cat_ice) %>% 
       group_by(lon, lat, name) %>% 
       table() %>% 
       as.data.frame() %>% 
@@ -260,13 +296,13 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     
     # Complete dates by categories data.frame
     full_grid <- expand_grid(t = seq(as.Date(paste0(chosen_year,"-01-01")), max(MCS_cat$t), by = "day"), 
-                             category = as.factor(levels(MCS_cat$category)),
-                             name = c("category", "category_correct"))
+                             category = as.factor(levels(MCS_cat$category_ice)),
+                             name = c("category", "category_correct", "category_ice"))
     
     # system.time(
     MCS_cat_single <- MCS_cat_pixel %>%
-      dplyr::select(lon, lat, t, category, category_correct) %>% 
-      pivot_longer(cols = category:category_correct, values_to = "category") %>% 
+      dplyr::select(lon, lat, t, category, category_correct, category_ice) %>% 
+      pivot_longer(cols = category:category_ice, values_to = "category") %>% 
       group_by(t, name) %>%
       count(category) %>%
       dplyr::rename(first_n = n) %>% 
@@ -281,7 +317,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     
     # system.time(
     MCS_cat_daily <- MCS_cat %>% 
-      pivot_longer(cols = category:category_correct, values_to = "category") %>% 
+      pivot_longer(cols = category:category_ice, values_to = "category") %>% 
       group_by(t, name) %>%
       count(category) %>% 
       ungroup() %>% 
