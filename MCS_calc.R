@@ -299,7 +299,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
                              category = as.factor(levels(MCS_cat$category_ice)),
                              name = c("category", "category_correct", "category_ice"))
     
-    # Summary of the count of the first time the largest category pixel occurs at each pixel and the cumulative values
+    # The count and area of the first time the largest category pixel occurs at each pixel and the cumulative values
     # system.time(
     MCS_cat_first <- MCS_cat_pixel %>%
       dplyr::select(lon, lat, t, category, category_correct, category_ice) %>% 
@@ -308,67 +308,50 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
       group_by(t, name, category) %>%
       summarise(first_n = n(),
                 first_area = sum(sq_area), .groups = "drop") %>% 
-      # count(category) %>%
-      # dplyr::rename(first_n = n) %>% 
-      # ungroup() %>%
       right_join(full_grid, by = c("t", "category", "name")) %>%
       mutate(first_n = ifelse(is.na(first_n), 0, first_n),
-             first_area = ifelse(is.na(first_area), 0, first_area)) %>% 
+             first_n_prop = round(first_n/nrow(OISST_ocean_coords), 4),
+             first_area = ifelse(is.na(first_area), 0, first_area),
+             first_area_prop = round(first_area/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
       arrange(t, name, category) %>% 
       group_by(name, category) %>%
       mutate(first_n_cum = cumsum(first_n),
-             first_area_cum = cumsum(first_area)) %>% 
-      ungroup() %>% 
-      mutate(first_n_prop = round(first_n/nrow(OISST_ocean_coords), 4),
-             first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4))
+             first_area_cum = cumsum(first_area),
+             first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
+             first_area_cum_prop = round(first_area_cum/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
+      ungroup()
     # ) # 1 second
     
-    # The total area of ocean of daily categories and cumulative throughout the year
-    MCS_cat_area <- MCS_cat %>%
+    # The count and area of categories of MCSs happening on a given day, and cumulatively throughout the year
+    # system.time(
+    MCS_cat_daily <- MCS_cat %>% 
       dplyr::select(lon, lat, t, category, category_correct, category_ice) %>% 
       right_join(lon_lat_OISST_area, by = c("lon", "lat")) %>% 
       pivot_longer(cols = category:category_ice, values_to = "category") %>% 
       group_by(t, name, category) %>%
-      summarise(cat_area = sum(sq_area), .groups = "drop") %>% 
-      ungroup() %>%
-      right_join(full_grid, by = c("t", "category", "name")) %>%
-      mutate(cat_area = ifelse(is.na(cat_area), 0, cat_area)) %>% 
+      summarise(cat_n = n(),
+                cat_area = sum(sq_area), .groups = "drop") %>% 
+      right_join(full_grid, by = c("t", "category", "name")) %>% 
+      mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n),
+             cat_n_prop = round(cat_n/nrow(OISST_ocean_coords), 4),
+             cat_area = ifelse(is.na(cat_area), 0, cat_area),
+             cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
       arrange(t, name, category) %>% 
       group_by(name, category) %>%
-      mutate(cat_area_cum = cumsum(cat_area)) %>% 
-      ungroup() %>% 
-      mutate(cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 4),
-             cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 4))
-    
-    # The count of categories of MCSs happening on a given day, and cumulatively throughout the year
-    # Joined with the previous two data.frames
-    # system.time(
-    MCS_cat_daily <- MCS_cat %>% 
-      pivot_longer(cols = category:category_ice, values_to = "category") %>% 
-      group_by(t, name) %>%
-      count(category) %>% 
-      ungroup() %>% 
-      right_join(full_grid, by = c("t", "category", "name")) %>% 
-      dplyr::rename(cat_n = n) %>% 
-      mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
-      group_by(name, category) %>% 
       mutate(cat_n_cum = cumsum(cat_n),
-             cat_n_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
-      ungroup() %>% 
-      right_join(MCS_cat_first, by = c("t", "name", "category")) %>% 
-      right_join(MCS_cat_area, by = c("t", "name", "category"))
+             cat_area_cum = cumsum(cat_area),
+             cat_n_cum_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4),
+             cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
+      right_join(MCS_cat_first, by = c("t", "name", "category"))
     # ) # 1 second
     saveRDS(MCS_cat_daily, file = paste0("annual_summary_MCS/MCS_cat_daily_",chosen_year,".Rds"))
   }
 
   # Chose the type of categories to display
-  MCS_cat_daily <- MCS_cat_daily %>%
-    filter(name == "category_ice") %>% 
-    mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
-           cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+  MCS_cat_filter <- filter(MCS_cat_daily, name == "category_ice")
   
   # Extract small data.frame for easier labeling
-  MCS_cat_daily_labels <- MCS_cat_daily %>% 
+  MCS_cat_filter_labels <- MCS_cat_filter %>% 
     group_by(category) %>% 
     filter(t == max(t)) %>% 
     ungroup() %>% 
@@ -378,21 +361,22 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
   # Global map of MHW occurrence
   fig_map <- ggplot(MCS_cat_pixel, aes(x = lon, y = lat)) +
     # geom_tile(data = OISST_ice_coords, fill = "powderblue", colour = NA, alpha = 0.5) +
-    geom_tile(aes(fill = category_correct), colour = NA) +
+    geom_tile(aes(fill = category_ice), colour = NA) +
     geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
     scale_fill_manual("Category", values = MCS_colours) +
     coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
                                          max(OISST_ocean_coords$lat))) +
     theme_void() +
     guides(fill = guide_legend(override.aes = list(size = 10))) +
-    theme(legend.position = "bottom",
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          legend.position = "bottom",
           legend.text = element_text(size = 14),
           legend.title = element_text(size = 16),
           panel.background = element_rect(fill = "grey90"))
   # fig_map
   
   # Stacked barplot of global daily count of MHWs by category
-  fig_count <- ggplot(MCS_cat_daily, aes(x = t, y = cat_prop)) +
+  fig_count <- ggplot(MCS_cat_filter, aes(x = t, y = cat_area_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = F,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -400,17 +384,18 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_date(date_breaks = "2 months", date_labels = "%Y-%m") +
-    labs(y = "Global MCS count\n(non-cumulative)", x = "Day of the year") +
+    labs(y = "Daily MCS coverage for ocean\n(non-cumulative)", x = "Day of the year") +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 15),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 15),
           axis.text = element_text(size = 13))
   # fig_count
   
   # Stacked barplot of cumulative percent of ocean affected by MHWs
-  fig_cum <- ggplot(MCS_cat_daily, aes(x = t, y = first_n_cum_prop)) +
+  fig_cum <- ggplot(MCS_cat_filter, aes(x = t, y = first_area_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = F,
              position = position_stack(reverse = TRUE), width = 1) +
-    geom_hline(data = MCS_cat_daily_labels, show.legend = F,
+    geom_hline(data = MCS_cat_filter_labels, show.legend = F,
                aes(yintercept = label_first_n_cum, colour = category)) +
     scale_fill_manual("Category", values = MCS_colours) +
     scale_colour_manual("Category", values = MCS_colours) +
@@ -418,23 +403,25 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_date(date_breaks = "2 months", date_labels = "%Y-%m") +
-    labs(y = "Top MCS category per pixel\n(cumulative)", x = "Day of first occurrence") +
+    labs(y = "Top MCS category for ocean\n(cumulative)", x = "Day of first occurrence") +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 15),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 15),
           axis.text = element_text(size = 13))
   # fig_cum
   
   # Stacked barplot of average cumulative MHW days per pixel
-  fig_prop <- ggplot(MCS_cat_daily, aes(x = t, y = cat_n_prop)) +
+  fig_prop <- ggplot(MCS_cat_filter, aes(x = t, y = cat_area_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = F,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
-    scale_y_continuous(breaks = round(seq(sum(MCS_cat_daily_labels$cat_n_prop)*0.25,
-                                          sum(MCS_cat_daily_labels$cat_n_prop)*0.75, length.out = 3), 0)) +
+    scale_y_continuous(breaks = round(seq(sum(MCS_cat_filter_labels$cat_area_cum_prop)*0.25,
+                                          sum(MCS_cat_filter_labels$cat_area_cum_prop)*0.75, length.out = 3), 0)) +
     scale_x_date(date_breaks = "2 months", date_labels = "%Y-%m") +  
-    labs(y = "Average MCS days per pixel\n(cumulative)", x = "Day of the year") +
+    labs(y = "Average MCS days for ocean\n(cumulative)", x = "Day of the year") +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 15),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 15),
           axis.text = element_text(size = 13))
   # fig_prop
   
@@ -477,8 +464,9 @@ MCS_total_state <- function(product, chosen_clim){
   cat_daily_mean <- map_dfr(MCS_cat_daily_files, readRDS) %>%
     mutate(t = lubridate::year(t)) %>%
     group_by(t, name, category) %>%
-    summarise(cat_n = mean(cat_n, na.rm = T), .groups = "drop") %>%
-    mutate(cat_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4)) %>%
+    # summarise_all(mean, .groups = "drop") %>% 
+    summarise(cat_area_prop_mean = mean(cat_area_prop, na.rm = T), .groups = "drop") %>%
+    # mutate(cat_n_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4)) %>%
     # mutate(cat_prop_daily_mean = "A") %>% 
     # na.omit() %>% 
     data.frame()
@@ -488,8 +476,8 @@ MCS_total_state <- function(product, chosen_clim){
     # cat_daily <- map_dfr(dir("data/annual_summary/v2.0", pattern = "cat_daily",
     # full.names = T), readRDS) %>% # The old v2.0 OISST data
     filter(lubridate::month(t) == 12, lubridate::day(t) == 31) %>%
-    mutate(t = lubridate::year(t),
-           first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
+    mutate(t = lubridate::year(t)) %>% #,
+           # first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
     left_join(cat_daily_mean, by = c("t", "name", "category"))
   
   # Save and exit
@@ -503,10 +491,10 @@ MCS_total_state <- function(product, chosen_clim){
 MCS_total_state_fig <- function(df, product, chosen_clim){
   
   # Chose category system
-  df_filter <- filter(df, name == "category_correct")
+  df_filter <- filter(df, name == "category_ice")
   
   # Stacked barplot of global daily count of MHWs by category
-  fig_count_historic <- ggplot(df_filter, aes(x = t, y = cat_prop_daily_mean)) +
+  fig_count_historic <- ggplot(df_filter, aes(x = t, y = cat_area_prop_mean)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -514,16 +502,17 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Daily MCS pixels", x = NULL) +
+    labs(y = "Average daily MCS \ncoverage for ocean", x = NULL) +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 14),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
           legend.title = element_text(size = 18),
           legend.text = element_text(size = 16))
   # fig_count_historic
   
   # Stacked barplot of cumulative percent of ocean affected by MHWs
-  fig_cum_historic <- ggplot(df_filter, aes(x = t, y = first_n_cum_prop)) +
+  fig_cum_historic <- ggplot(df_filter, aes(x = t, y = first_area_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
@@ -531,25 +520,27 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                        breaks = seq(0.2, 0.8, length.out = 4),
                        labels = paste0(seq(20, 80, by = 20), "%")) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "Total MCS pixels", x = NULL) +
+    labs(y = "Total ocean experienceing \nat least one MCS", x = NULL) +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 14),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
           legend.title = element_text(size = 18),
           legend.text = element_text(size = 16))
   # fig_cum_historic
   
   # Stacked barplot of average cumulative MHW days per pixel
-  fig_prop_historic <- ggplot(df_filter, aes(x = t, y = cat_n_prop)) +
+  fig_prop_historic <- ggplot(df_filter, aes(x = t, y = cat_area_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
     scale_fill_manual("Category", values = MCS_colours) +
     scale_y_continuous(limits = c(0, 50),
                        breaks = seq(10, 40, length.out = 3)) +
     scale_x_continuous(breaks = seq(1982, 2019, 5)) +
-    labs(y = "MCS days/pixel", x = NULL) +
+    labs(y = "Total MCS days for ocean", x = NULL) +
     coord_cartesian(expand = F) +
-    theme(axis.title = element_text(size = 14),
+    theme(panel.border = element_rect(colour = "black", fill = NA),
+          axis.title = element_text(size = 14),
           axis.text = element_text(size = 12),
           legend.title = element_text(size = 18),
           legend.text = element_text(size = 16))
@@ -575,8 +566,8 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 
 ## Run it
 # OISST
-MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+# MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
+# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------

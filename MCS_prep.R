@@ -76,7 +76,8 @@ MCS_colours <- c(
   "I Moderate" = "#A4D4E0",
   "II Strong" = "#5B80A6",
   "III Severe" = "#2A3C66",
-  "IV Extreme" = "#111433"
+  "IV Extreme" = "#111433",
+  "V Ice" = "thistle1"
 )
 
 # OISST coords
