@@ -418,6 +418,13 @@ ggsave("graph/MCS/fig_5.pdf", fig_5, height = 7, width = 16)
 
 
 # Figure 6 ----------------------------------------------------------------
+# Global annual summaries of MCSs
+
+
+
+
+# Figure 7 ----------------------------------------------------------------
+# Comparison of SSTa skewness and MHW vs. MCS intensity
 
 # Load the MCS vs. MHW results
 MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
@@ -428,7 +435,7 @@ MHW_v_MCS_long <- MHW_v_MCS %>%
   na.omit()
 
 # Figure for plotting the panels
-fig_6_func <- function(var_name){
+fig_7_func <- function(var_name){
   
   # Basic filter
   df <- MHW_v_MCS_long %>% 
@@ -456,7 +463,7 @@ fig_6_func <- function(var_name){
 }
 
 # Plot a metric
-fig_6a <- fig_6_func("i_max") +
+fig_7a <- fig_7_func("i_max") +
   labs(fill = "Max. intensity (°C)")
 
 # Prep SSTa stats
@@ -480,7 +487,7 @@ skew_quants <- SSTa_stats %>%
             q90 = quantile(value, 0.9))
 
 # Map of skewness per pixel
-fig_6b <- SSTa_stats %>% 
+fig_7b <- SSTa_stats %>% 
   filter(name == "skewness", season == "Total") %>% 
   mutate(value = case_when(value <= skew_quants$q10 ~ skew_quants$q10,
                            value >= skew_quants$q90 ~ skew_quants$q90,
@@ -495,9 +502,9 @@ fig_6b <- SSTa_stats %>%
         legend.position = "top")
 # map_skew
 
-fig_6 <- ggpubr::ggarrange(fig_6a, fig_6b, ncol = 2, nrow = 1, labels = c("A)", "B)"))
-ggsave("graph/MCS/fig_6.png", fig_6, height = 4, width = 16)
-ggsave("graph/MCS/fig_6.pdf", fig_6, height = 4, width = 16)
+fig_7 <- ggpubr::ggarrange(fig_7a, fig_7b, ncol = 2, nrow = 1, labels = c("A)", "B)"))
+ggsave("graph/MCS/fig_7.png", fig_7, height = 4, width = 16)
+ggsave("graph/MCS/fig_7.pdf", fig_7, height = 4, width = 16)
 
 
 # Figure S1 ---------------------------------------------------------------

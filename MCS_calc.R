@@ -25,7 +25,7 @@ library(ggridges)
 library(heatwaveR); packageVersion("heatwaveR")
 library(doParallel); registerDoParallel(cores = 50)
 
-# Corrdinates with surface area
+# Coordinates with surface area
 load("metadata/lon_lat_OISST_area.RData")
 
 # TO DO
@@ -266,7 +266,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     # ) # 14 seconds
     saveRDS(MCS_cat_pixel, file = paste0("annual_summary_MCS/MCS_cat_pixel_",chosen_year,".Rds"))
     
-    ## Summarise
+    # Summarise the count of how many of each category of events were experienced in each pixel
     # system.time(
     MCS_cat_count <- lazy_dt(MCS_cat) %>% 
       group_by(lon, lat, event_no) %>% 
@@ -299,22 +299,49 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
                              category = as.factor(levels(MCS_cat$category_ice)),
                              name = c("category", "category_correct", "category_ice"))
     
+    # Summary of the count of the first time the largest category pixel occurs at each pixel and the cumulative values
     # system.time(
-    MCS_cat_single <- MCS_cat_pixel %>%
+    MCS_cat_first <- MCS_cat_pixel %>%
       dplyr::select(lon, lat, t, category, category_correct, category_ice) %>% 
+      right_join(lon_lat_OISST_area, by = c("lon", "lat")) %>% 
       pivot_longer(cols = category:category_ice, values_to = "category") %>% 
-      group_by(t, name) %>%
-      count(category) %>%
-      dplyr::rename(first_n = n) %>% 
-      ungroup() %>%
+      group_by(t, name, category) %>%
+      summarise(first_n = n(),
+                first_area = sum(sq_area), .groups = "drop") %>% 
+      # count(category) %>%
+      # dplyr::rename(first_n = n) %>% 
+      # ungroup() %>%
       right_join(full_grid, by = c("t", "category", "name")) %>%
-      mutate(first_n = ifelse(is.na(first_n), 0, first_n)) %>% 
+      mutate(first_n = ifelse(is.na(first_n), 0, first_n),
+             first_area = ifelse(is.na(first_area), 0, first_area)) %>% 
       arrange(t, name, category) %>% 
       group_by(name, category) %>%
-      mutate(first_n_cum = cumsum(first_n)) %>% 
-      ungroup()
+      mutate(first_n_cum = cumsum(first_n),
+             first_area_cum = cumsum(first_area)) %>% 
+      ungroup() %>% 
+      mutate(first_n_prop = round(first_n/nrow(OISST_ocean_coords), 4),
+             first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4))
     # ) # 1 second
     
+    # The total area of ocean of daily categories and cumulative throughout the year
+    MCS_cat_area <- MCS_cat %>%
+      dplyr::select(lon, lat, t, category, category_correct, category_ice) %>% 
+      right_join(lon_lat_OISST_area, by = c("lon", "lat")) %>% 
+      pivot_longer(cols = category:category_ice, values_to = "category") %>% 
+      group_by(t, name, category) %>%
+      summarise(cat_area = sum(sq_area), .groups = "drop") %>% 
+      ungroup() %>%
+      right_join(full_grid, by = c("t", "category", "name")) %>%
+      mutate(cat_area = ifelse(is.na(cat_area), 0, cat_area)) %>% 
+      arrange(t, name, category) %>% 
+      group_by(name, category) %>%
+      mutate(cat_area_cum = cumsum(cat_area)) %>% 
+      ungroup() %>% 
+      mutate(cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 4),
+             cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 4))
+    
+    # The count of categories of MCSs happening on a given day, and cumulatively throughout the year
+    # Joined with the previous two data.frames
     # system.time(
     MCS_cat_daily <- MCS_cat %>% 
       pivot_longer(cols = category:category_ice, values_to = "category") %>% 
@@ -328,14 +355,15 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
       mutate(cat_n_cum = cumsum(cat_n),
              cat_n_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4)) %>% 
       ungroup() %>% 
-      right_join(MCS_cat_single, by = c("t", "name", "category"))
+      right_join(MCS_cat_first, by = c("t", "name", "category")) %>% 
+      right_join(MCS_cat_area, by = c("t", "name", "category"))
     # ) # 1 second
     saveRDS(MCS_cat_daily, file = paste0("annual_summary_MCS/MCS_cat_daily_",chosen_year,".Rds"))
   }
-  
-  # Add prop columns for more accurate plotting
+
+  # Chose the type of categories to display
   MCS_cat_daily <- MCS_cat_daily %>%
-    filter(name == "category_correct") %>% # Change this line to rather select the corrected categories
+    filter(name == "category_ice") %>% 
     mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
            cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
   
@@ -469,7 +497,7 @@ MCS_total_state <- function(product, chosen_clim){
 }
 
 ## Run it
-MCS_total_state("OISST", "1982-2011")
+# MCS_total_state("OISST", "1982-2011")
 
 ## Create figures
 MCS_total_state_fig <- function(df, product, chosen_clim){
