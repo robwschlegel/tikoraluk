@@ -13,6 +13,7 @@ library(geosphere)
 library(doParallel); registerDoParallel(cores = 50)
 
 
+
 # Extraction coordinates --------------------------------------------------
 
 JP_points <- read_csv("extracts/npp_light_2020-10-09.csv") %>% 
@@ -33,11 +34,11 @@ ggplot(data = JP_points, aes(x = site_lon, y = site_lat)) +
 # GLORYS files ------------------------------------------------------------
 
 # Surface files
-# GLORYS_files <- dir("../../data/GLORYS_Global", pattern = "thetao_depth_0", full.names = T)
-# GLORYS_files <- dir("../../sofiad/UVT_FILES", pattern = "T_", full.names = T)
 GLORYS_files <- c(dir("../../sofiad/UVT_FILES", pattern = "T_...._2D.nc", full.names = T),
                   dir(c(paste0("../../sofiad/UVT_FILES/INTERP_DATA/F",seq(1994, 2007))), 
-                      pattern = c(paste0("T_interp_...._2D_new_", seq(1, 22))), full.names = T))
+                      pattern = c("T_interp_...._2D_new_1"), full.names = T),
+                  dir(c(paste0("../../sofiad/UVT_FILES/INTERP_DATA/F",seq(1994, 2007))), 
+                      pattern = c("T_interp_...._2D_new_2"), full.names = T))
 
 # The GLORYS grid
 GLORYS_grid <- tidync(GLORYS_files[1]) %>% # Be careful if this index above is changed
@@ -85,45 +86,47 @@ grid_match <- function(coords){
 # Extract one year of data for one pixel
 # testers...
 # coord <- grid_points[2,]
-# GLORYS_file1 <- GLORYS_files[13]
+# coord <- match_coords[2,]
+# GLORYS_file <- GLORYS_files[146]
 extract_GLORYS_one <- function(GLORYS_file, coord){
   
   print(paste0("Began run on ", GLORYS_file))
   
-  if(str_detect(GLORYS_file, "INTERP")){
-    # y_fix <- coord$y
-    deptht_fix <- 2 # This is just a placeholder
-  } else {
-    # y_fix <- coord$y
-    deptht_fix <- 100
-  }
-  system.time(
+  # Extract the data
+  # system.time(
     tidync_GLORYS_one <- tidync(GLORYS_file) %>% 
       hyper_filter(x = x == coord$x,
-                   y = y == coord$y,
-                   deptht = deptht < deptht_fix) %>%
-      # hyper_filter(longitude = longitude %in% coord$longitude, 
-      #              latitude = latitude == coord$latitude) %>%
+                   y = y == coord$y) %>%
       hyper_tibble() %>% 
       distinct() %>% 
       mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01"))) %>% 
-      # dplyr::rename(lon = nav_lon, lat = nav_lat, temp = votemper, depth = deptht) %>% 
       dplyr::rename(temp = votemper, depth = deptht) %>% 
-      dplyr::select(x, y, t, depth, temp)
-  ) # 114 seconds, 94 seconds if already run, 2 seconds if the system isn't hanging...
+      dplyr::select(x, y, t, depth, temp) %>% 
+      left_join(coord, by = c("x", "y")) %>% 
+      dplyr::select(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth, temp) %>% 
+      distinct() # This shouldn't do anything..
+  # ) # 114 seconds, 94 seconds if already run, 2 seconds if the system isn't hanging...
+  
+    # Correct depth if necessary and exit
   if(str_detect(GLORYS_file, "INTERP")){
-    tidync_GLORYS_one <- mutate(tidync_GLORYS_one, depth = GLORYS_depth$deptht[tidync_GLORYS_one$depth[1]])
+    list_fix <- str_split(GLORYS_file, "_")
+    depth_fix <- as.numeric(sapply(str_split(sapply(list_fix, "[[", 8), ".nc"), "[[", 1))
+    year_fix <- as.numeric(sapply(list_fix, "[[", 5))
+    tidync_GLORYS_one <- tidync_GLORYS_one %>% 
+      mutate(depth = GLORYS_depth$deptht[depth_fix],
+             t = seq(from = as.Date(paste0(year_fix,"-01-01")), by = "day", length.out = nrow(.)))
   }
   return(tidync_GLORYS_one)
 }
 
 # Extract all years of data for one pixel
 extract_GLORYS_all <- function(coord){
+  
+  print(paste0("Began run on ", coord$plyr_idx))
+  
   # system.time(
-  tidync_GLORYS_all <- plyr::ldply(GLORYS_files, extract_GLORYS_one, coord = coord, .parallel = T) %>% 
-    left_join(match_coords[,1:7], by = c("x", "y")) %>% 
-    dplyr::select(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth, temp) %>% 
-    distinct() # This shouldn't do anything..
+  tidync_GLORYS_all <- plyr::ldply(GLORYS_files, extract_GLORYS_one, coord = coord, 
+                                   .parallel = T, .paropts = c(.inorder = FALSE))
   # ) # 98 seconds, 65 if run, 1 second if not hanging
   return(tidync_GLORYS_all)
 }
@@ -131,15 +134,16 @@ extract_GLORYS_all <- function(coord){
 # Extract all years of data for all pixels
 extract_GLORYS_coords <- function(coords){
   
-  # Get nearest coordinates
+  # Match the coordinates
   match_coords <- grid_match(coords)
   
   # Extract all data
   # system.time(
   tidync_GLORYS_full <- plyr::ddply(match_coords, c("plyr_idx"), extract_GLORYS_all, 
-                                    .progress = "text", .paropts = c(.inorder = FALSE)) %>% 
+                                    .parallel = F, .paropts = c(.inorder = FALSE)) %>% 
     dplyr::select(-plyr_idx)
   # ) # 196 seconds for 2, 43 seconds if already run once, 4 seconds if not hanging...
+  
   return(tidync_GLORYS_full)
 }
 
@@ -148,7 +152,7 @@ extract_GLORYS_coords <- function(coords){
 
 # system.time(
 JP_data <- extract_GLORYS_coords(JP_points)
-# ) # 74 minutes
+# ) # ~ 18 minutes for one site
 write_csv(JP_data, file = "extracts/JP_data.csv")
 
 
@@ -156,8 +160,8 @@ write_csv(JP_data, file = "extracts/JP_data.csv")
 
 JP_annual <- JP_data %>% 
   mutate(t = lubridate::year(t)) %>% 
-  group_by(site_lon, site_lat, t) %>% 
-  summarise(temp = mean(temp, na.rm = T))
+  group_by(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth) %>% 
+  summarise(temp = mean(temp, na.rm = T), .groups = "drop")
 write_csv(JP_annual, file = "extracts/JP_annual.csv")
 
 
