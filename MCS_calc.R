@@ -446,7 +446,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
 registerDoParallel(cores = 50)
-# plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = T,
+# plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = F,
 #             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
 
