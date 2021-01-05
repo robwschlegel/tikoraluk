@@ -557,7 +557,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
   
   # Stick them together and save
   fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic, fig_prop_historic,
-                                        ncol = 3, align = "hv", labels = c("(A)", "(B)", "(C)"), hjust = -0.1,
+                                        ncol = 3, align = "hv", labels = c("A)", "B)", "C)"), hjust = -0.1,
                                         font.label = list(size = 14), common.legend = T, legend = "bottom")
   ggsave(fig_ALL_historic, filename = paste0("graph/summary/",product,"_cat_historic_"
                                              ,chosen_clim,".png"), height = 4.25, width = 12)

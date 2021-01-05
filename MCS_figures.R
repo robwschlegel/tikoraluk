@@ -420,7 +420,78 @@ ggsave("graph/MCS/fig_5.pdf", fig_5, height = 7, width = 16)
 # Figure 6 ----------------------------------------------------------------
 # Global annual summaries of MCSs
 
+# Load data
+MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
 
+# Chose category system
+MCS_total_filter <- filter(MCS_total, name == "category_ice")
+
+# Stacked barplot of global daily count of MHWs by category
+fig_count_historic <- ggplot(MCS_total_filter, aes(x = t, y = cat_area_prop_mean)) +
+  geom_bar(aes(fill = category), stat = "identity", show.legend = T,
+           position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_y_continuous(limits = c(0, 1),
+                     breaks = seq(0.2, 0.8, length.out = 4),
+                     labels = paste0(seq(20, 80, by = 20), "%")) +
+  scale_x_continuous(breaks = seq(1982, 2019, 5)) +
+  labs(y = "Average daily MCS \ncoverage for ocean", x = NULL) +
+  coord_cartesian(expand = F) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.title = element_text(size = 18),
+        legend.text = element_text(size = 16))
+# fig_count_historic
+
+# Stacked barplot of cumulative percent of ocean affected by MHWs
+fig_cum_historic <- ggplot(MCS_total_filter, aes(x = t, y = first_area_cum_prop)) +
+  geom_bar(aes(fill = category), stat = "identity", show.legend = T,
+           position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_y_continuous(limits = c(0, 1),
+                     breaks = seq(0.2, 0.8, length.out = 4),
+                     labels = paste0(seq(20, 80, by = 20), "%")) +
+  scale_x_continuous(breaks = seq(1982, 2019, 5)) +
+  labs(y = "Total ocean experienceing \nat least one MCS", x = NULL) +
+  coord_cartesian(expand = F) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.title = element_text(size = 18),
+        legend.text = element_text(size = 16))
+# fig_cum_historic
+
+# Stacked barplot of average cumulative MHW days per pixel
+fig_prop_historic <- ggplot(MCS_total_filter, aes(x = t, y = cat_area_cum_prop)) +
+  geom_bar(aes(fill = category), stat = "identity", show.legend = T,
+           position = position_stack(reverse = TRUE), width = 1) +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_y_continuous(limits = c(0, 50),
+                     breaks = seq(10, 40, length.out = 3)) +
+  scale_x_continuous(breaks = seq(1982, 2019, 5)) +
+  labs(y = "Total MCS days for ocean", x = NULL) +
+  coord_cartesian(expand = F) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.title = element_text(size = 18),
+        legend.text = element_text(size = 16))
+# fig_prop_historic
+
+# Create the figure title
+product_title <- "NOAA OISST"
+min_year <- min(MCS_total_filter$t)
+max_year <- max(MCS_total_filter$t)
+fig_title <- paste0("MCS category summaries: ",min_year," - ",max_year,
+                    "\n",product_title,"; Climatogy period: 1982 - 2011")
+
+# Stick them together and save
+fig_6 <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic, fig_prop_historic,
+                           ncol = 3, align = "hv", labels = c("A)", "B)", "C)"), hjust = -0.1,
+                           font.label = list(size = 14), common.legend = T, legend = "bottom")
+ggsave(fig_6, filename = paste0("graph/MCS/fig_6.png"), height = 4.25, width = 12)
+ggsave(fig_6, filename = paste0("graph/MCS/fig_6.pdf"), height = 4.25, width = 12)
 
 
 # Figure 7 ----------------------------------------------------------------
