@@ -8,6 +8,10 @@
 # 6: Trends 
 # 7: MHWs minus MCSs
 # 8: SSTa skewness and kurtosis
+# 9: Comparison of corrected categories
+# 10: Spatial correlations
+# 11: Check on MCS hole in Antarctica
+# 12: Comparison of near-ice SST pixels
 
 
 # 1: Setup ----------------------------------------------------------------
@@ -240,7 +244,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
   
   ## Load/Process data
   # Categories per pixel
-  if(file.exists(paste0("annual_summary_MCS/cat_pixel_MCS_",chosen_year,".Rds")) & !force_calc){
+  if(file.exists(paste0("annual_summary_MCS/MCS_cat_pixel_",chosen_year,".Rds")) & !force_calc){
     MCS_cat_pixel <- readRDS(paste0("annual_summary_MCS/MCS_cat_pixel_",chosen_year,".Rds"))
   } else{
     
@@ -355,7 +359,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
     group_by(category) %>% 
     filter(t == max(t)) %>% 
     ungroup() %>% 
-    mutate(label_first_n_cum = cumsum(first_n_cum_prop))
+    mutate(label_first_n_cum = cumsum(first_area_cum_prop))
   
   ## Create figures
   # Global map of MHW occurrence
@@ -1010,7 +1014,7 @@ MCS_cat_count_diff_map
 ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7, height = 5)
 
 
-# 11: Spatial correlations ------------------------------------------------
+# 10: Spatial correlations ------------------------------------------------
 
 # Load mean values
 MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
@@ -1071,7 +1075,7 @@ global_stats %>%
   summarise(r = correlation::cor_test(., x = "anom_skew", y = "i_mean"))
 
 
-# 12: Check on MCS hole in Antarctica -------------------------------------
+# 11: Check on MCS hole in Antarctica -------------------------------------
 
 # There is a hole in the MCS results in the Southern Ocean where no MCS are reported
 # After going through the brief analysis below it appears that the issue is that 
@@ -1080,7 +1084,7 @@ global_stats %>%
 # On second pass it appears that the detect_event() function is changing the threshold
 # after it was already calculated...
 
-# Load comparison data to find the hole easily vi NA results
+# Load comparison data to find the hole easily via NA results
 MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
 
 # Extract example coords: lon = -37.875, lat = -75.875
@@ -1106,4 +1110,11 @@ hole_MCS <- detect_event(hole_clim_MCS, coldSpells = T)
 
 # Look at results
 hole_MCS_clim <- hole_MCS$climatology
+
+
+# 12: Comparison of near-ice SST pixels -----------------------------------
+
+# Use Japan ice edge as a surface gradient for some pixels on a latitude transect
+
+# Also create a schematic of the different corrections to categories
 
