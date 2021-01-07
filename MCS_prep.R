@@ -52,7 +52,8 @@ lineCol <- c(
   "Threshold" = "darkorchid",
   "2x Threshold" = "darkorchid",
   "3x Threshold" = "darkorchid",
-  "4x Threshold" = "darkorchid"
+  "4x Threshold" = "darkorchid",
+  "< -1.5C" = "darkorchid"
 )
 
 # Set category fill colours
@@ -60,15 +61,8 @@ fillCol <- c(
   "Moderate" = MCS_palette[1],
   "Strong" = MCS_palette[2],
   "Severe" = MCS_palette[3],
-  "Extreme" = MCS_palette[4]
-)
-
-# The MHW colour palette
-MHW_colours <- c(
-  "Moderate" = "#ffc866",
-  "Strong" = "#ff6900",
-  "Severe" = "#9e0000",
-  "Extreme" = "#2d0000"
+  "Extreme" = MCS_palette[4],
+  "Ice" = "thistle1"
 )
 
 # The MCS colour palette

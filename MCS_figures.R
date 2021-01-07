@@ -673,13 +673,39 @@ BI_data <- FL_data$clim_data %>%
   mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
          thresh_2x_new = thresh + diff_new,
          thresh_3x_new = thresh_2x_new + diff_new,
-         thresh_4x_new = thresh_3x_new + diff_new) 
+         thresh_4x_new = thresh_3x_new + diff_new) %>% 
+  mutate(thresh_5x = ifelse(thresh < -1.5, thresh, -1.5))
+  
 
 # Further subset for correct hatching
 BI_data_sub <- BI_data %>% 
   filter(event_no == 69)
 
-# The top panel: original categories
+# Extract an ice-edge data point to show the effect of ice category
+ice_SST <- tidync(OISST_files[which(lon_OISST == 147.875)]) %>% 
+  hyper_tibble() %>% 
+  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+  dplyr::rename(t = time, temp = sst) %>% 
+  filter(lat == 59.375)
+
+# Calculate clims etc.
+ice_clim <- ts2clm(ice_SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10) %>% 
+  mutate(diff = thresh - seas,
+         thresh_2x = thresh + diff,
+         thresh_3x = thresh_2x + diff,
+         thresh_4x = thresh_3x + diff) %>% 
+  mutate(diff_new = case_when(thresh_4x+diff <= -1.8 ~ -(thresh+1.8)/4, TRUE ~ diff),
+         thresh_2x_new = thresh + diff_new,
+         thresh_3x_new = thresh_2x_new + diff_new,
+         thresh_4x_new = thresh_3x_new + diff_new) %>% 
+  mutate(thresh_5x = ifelse(thresh < -1.5, thresh, -1.5))
+
+# Subset for hatching
+ice_clim_sub <- ice_clim %>% 
+  filter(t >= "2019-12-01", t <= "2020-05-30",
+         temp <= thresh)
+
+# Top left panel: original categories
 fig_S2a <- BI_data  %>% 
   ggplot(aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
@@ -699,15 +725,15 @@ fig_S2a <- BI_data  %>%
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-10, 30), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-10, 30), breaks = c(0, 10, 20), expand = c(0, 0)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = expression(paste("Temperature (°C)")), x = NULL) +
   theme(panel.border = element_rect(colour = "black", fill = NA),
         legend.position = "right")
-# fig_S2a
+fig_S2a
 
-# Bottom panel: the categories corrected for -1.8C
+# Top middle panel: the categories corrected for -1.8C
 fig_S2b <- BI_data  %>% 
   ggplot(aes(x = t)) +
   geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
@@ -727,17 +753,140 @@ fig_S2b <- BI_data  %>%
                                  "2x Threshold", "3x Threshold", "4x Threshold")) +
   scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
   scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
-  scale_y_continuous(limits = c(-10, 30), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-10, 30), breaks = c(0, 10, 20), expand = c(0, 0)) +
   guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
                                                    size = c(1, 1, 1, 1, 1, 1)))) +
   labs(y = expression(paste("Temperature (°C)")), x = NULL) +
   theme(panel.border = element_rect(colour = "black", fill = NA),
         legend.position = "right")
-# fig_S2b
+fig_S2b
+
+# Top right panel: the ice categories < -1.5C
+fig_S2c <- BI_data  %>% 
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_flame(aes(y = thresh_5x, y2 = temp, fill = "Ice")) +
+  geom_ribbon_pattern(data = BI_data_sub, aes(ymin = seas, ymax = temp), 
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
+  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = thresh_5x, col = "< -1.5C"), size = 0.2, linetype = "solid") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold", "< -1.5C")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme", "Ice")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(limits = c(-10, 30), breaks = c(0, 10, 20), expand = c(0, 0)) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted", "solid"),
+                                                   size = c(1, 1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+fig_S2c
+
+# Bottom left panel: original categories
+fig_S2d <- ice_clim  %>% 
+  filter(t >= "2019-12-01", t <= "2020-05-30") %>%
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x, y2 = temp, fill = "Extreme")) +
+  geom_ribbon_pattern(data = ice_clim_sub, aes(ymin = seas, ymax = temp),
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
+  geom_line(aes(y = thresh_2x, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(breaks = c(0, -2.5, -5)) +
+  coord_cartesian(ylim = c(-7.5, 2.5), expand = F) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+fig_S2d
+
+# Bottom middle panel: the categories corrected for -1.8C
+fig_S2e <- ice_clim  %>% 
+  filter(t >= "2019-12-01", t <= "2020-05-30") %>%
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_ribbon_pattern(data = ice_clim_sub, aes(ymin = seas, ymax = temp),
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
+  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(breaks = c(0, -2.5, -5)) +
+  coord_cartesian(ylim = c(-7.5, 2.5), expand = F) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted"),
+                                                   size = c(1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "right")
+fig_S2e
+
+# Bottom right panel: the ice categories < -1.5C
+fig_S2f <- ice_clim  %>% 
+  filter(t >= "2019-12-01", t <= "2020-05-30") %>%
+  ggplot(aes(x = t)) +
+  geom_flame(aes(y = thresh, y2 = temp, fill = "Moderate"), n = 5, n_gap = 2) +
+  geom_flame(aes(y = thresh_2x_new, y2 = temp, fill = "Strong")) +
+  geom_flame(aes(y = thresh_3x_new, y2 = temp, fill = "Severe")) +
+  geom_flame(aes(y = thresh_4x_new, y2 = temp, fill = "Extreme")) +
+  geom_flame(aes(y = thresh_5x, y2 = temp, fill = "Ice")) +
+  geom_ribbon_pattern(data = ice_clim_sub, aes(ymin = seas, ymax = temp),
+                      pattern = 'stripe', fill = NA, colour  = 'black') +
+  geom_line(aes(y = thresh_2x_new, col = "2x Threshold"), size = 0.2, linetype = "dashed") +
+  geom_line(aes(y = thresh_3x_new, col = "3x Threshold"), size = 0.2, linetype = "dotdash") +
+  geom_line(aes(y = thresh_4x_new, col = "4x Threshold"), size = 0.2, linetype = "dotted") +
+  geom_line(aes(y = thresh_5x, col = "< -1.5C"), size = 0.2, linetype = "solid") +
+  geom_line(aes(y = seas, col = "Climatology"), size = 0.6) +
+  geom_line(aes(y = thresh, col = "Threshold"), size = 0.6) +
+  geom_line(aes(y = temp, col = "Temperature"), size = 0.4) +
+  scale_colour_manual(name = "Line colours", values = lineCol,
+                      breaks = c("Temperature", "Climatology", "Threshold",
+                                 "2x Threshold", "3x Threshold", "4x Threshold", "< -1.5C")) +
+  scale_fill_manual(name = "Category", values = fillCol, breaks = c("Moderate", "Strong", "Severe", "Extreme", "Ice")) +
+  scale_x_date(date_labels = "%b %Y", expand = c(0, 0)) +
+  scale_y_continuous(breaks = c(0, -2.5, -5)) +
+  coord_cartesian(ylim = c(-7.5, 2.5), expand = F) +
+  guides(colour = guide_legend(override.aes = list(linetype = c("solid", "solid", "solid", "dashed", "dotdash", "dotted", "solid"),
+                                                   size = c(1, 1, 1, 1, 1, 1, 1)))) +
+  labs(y = expression(paste("Temperature (°C)")), x = NULL) +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        legend.position = "bottom")
+fig_S2f
 
 # Combine and save
-fig_S2 <- ggpubr::ggarrange(fig_S2a, fig_S2b, ncol = 2, nrow = 1, labels = c("A)", "B)"),
-                            legend = "top", common.legend = T)
-ggsave("graph/MCS/fig_S2.png", fig_S2, height = 4, width = 8)
-ggsave("graph/MCS/fig_S2.pdf", fig_S2, height = 4, width = 8)
+fig_S2 <- ggpubr::ggarrange(fig_S2a, fig_S2b, fig_S2c, fig_S2d, fig_S2e, fig_S2f,
+                            ncol = 3, nrow = 2, labels = c("A)", "B)", "C)", "D)", "E)", "F)"),
+                            legend = "bottom", common.legend = T, legend.grob = get_legend(fig_S2f))
+ggsave("graph/MCS/fig_S2.png", fig_S2, height = 8, width = 15)
+ggsave("graph/MCS/fig_S2.pdf", fig_S2, height = 8, width = 15)
 

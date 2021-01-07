@@ -564,14 +564,14 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
                                         ncol = 3, align = "hv", labels = c("A)", "B)", "C)"), hjust = -0.1,
                                         font.label = list(size = 14), common.legend = T, legend = "bottom")
   ggsave(fig_ALL_historic, filename = paste0("graph/summary/",product,"_cat_historic_"
-                                             ,chosen_clim,".png"), height = 4.25, width = 12)
+                                             ,chosen_clim,"_ice.png"), height = 4.25, width = 12)
   # ggsave(fig_ALL_full, filename = paste0("figures/",product,"_cat_historic_",chosen_clim,".eps"), height = 4.25, width = 12)
 }
 
 ## Run it
 # OISST
 # MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -1115,6 +1115,31 @@ hole_MCS_clim <- hole_MCS$climatology
 # 12: Comparison of near-ice SST pixels -----------------------------------
 
 # Use Japan ice edge as a surface gradient for some pixels on a latitude transect
+MCS_Japan <- load_sub_cat_clim(MCS_lon_files[which(lon_OISST == 147.875)], 
+                               date_range = c("1982-01-01", "2020-12-31")) %>% 
+  filter(lat > 30, lat < 70)
 
-# Also create a schematic of the different corrections to categories
+# Thin out the pixels
+sub_lat <- unique(MCS_Japan$lat)[round(seq(1, length(unique(MCS_Japan$lat)), length.out = 10))]
+
+# Lolliplot showing differences in MCS categories as one moves north
+MCS_cat_lat_compare <- MCS_Japan %>% 
+  filter(lat %in% sub_lat) %>% 
+  group_by(lon, lat, event_no) %>% 
+  filter(intensity == min(intensity, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(lat = factor(lat, levels = rev(unique(lat)))) %>% 
+  pivot_longer(cols = category:category_ice) %>% 
+  # ggplot(aes(x = t, y = name)) +
+  ggplot(aes(x = event_no, y = name)) +
+  # geom_lolli(aes(colour = value)) +
+  # geom_point(aes(colour = value), shape = 15) +
+  geom_tile(aes(fill = value), colour = "black") +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_colour_manual("Category", values = MCS_colours) +
+  scale_x_continuous(expand = c(0, 0)) +
+  facet_wrap(~ lat, ncol = 1) +
+  labs(x = "Event #", y = NULL)
+MCS_cat_lat_compare
+ggsave("graph/MCS_cat_lat_compare.png", MCS_cat_lat_compare, height = 16, width = 16)
 

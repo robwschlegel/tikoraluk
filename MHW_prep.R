@@ -9,6 +9,13 @@
 library(tidyverse)
 library(padr)
 
+# The MHW colour palette
+MHW_colours <- c(
+  "Moderate" = "#ffc866",
+  "Strong" = "#ff6900",
+  "Severe" = "#9e0000",
+  "Extreme" = "#2d0000"
+)
 
 # Prep functions ----------------------------------------------------------
 
