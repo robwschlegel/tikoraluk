@@ -98,10 +98,10 @@ MCS_count_trend_files <- dir("annual_summary_MCS", pattern = "count_trend", full
 seas_thresh_files <- dir("../data/thresh", pattern = "MHW.seas.thresh.", full.names = T)
 
 # Metadata
-load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
+load("metadata/OISST_ocean_coords.Rdata")
 
 # The base map
-load("../MHWapp/metadata/map_base.Rdata")
+load("metadata/map_base.Rdata")
 
 # Disable scientific notation
 options(scipen = 9999)
