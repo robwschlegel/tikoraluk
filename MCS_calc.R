@@ -12,6 +12,7 @@
 # 10: Spatial correlations
 # 11: Check on MCS hole in Antarctica
 # 12: Comparison of near-ice SST pixels
+# 13: Sensitivity test of Ice category threshold
 
 
 # 1: Setup ----------------------------------------------------------------
@@ -99,7 +100,7 @@ MCS_calc <- function(lon_row){
 # testers...
 # cat_lon_file <- MCS_lon_files[1]
 # date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
-# date_range <- c(as.Date("1982-01-01"), as.Date("1982-01-04"))
+# date_range <- c(as.Date("1982-01-01"), as.Date("1982-12-31"))
 load_sub_cat_clim <- function(cat_lon_file, date_range){
   
   # The original MCS methodology
@@ -132,10 +133,10 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
     filter(thresh < -1.5, event_no > 0,
            t >= date_range[1], t <= date_range[2]) %>% 
     mutate(ice = TRUE) %>% 
-    dplyr::select(lon, lat, event_no, ice) %>%
+    dplyr::select(lon, lat, t, event_no, ice) %>%
     distinct()
   cat_ice_sub <- cat_correct_sub %>% 
-    left_join(cat_ice_ref, by = c("lon", "lat", "event_no")) %>% 
+    left_join(cat_ice_ref, by = c("lon", "lat", "t", "event_no")) %>% 
     mutate(category_ice = as.character(category),
            category_ice = case_when(ice == TRUE ~ "V Ice",
                                     TRUE ~ category)) %>% 
@@ -471,7 +472,6 @@ MCS_total_state <- function(product, chosen_clim){
     # summarise_all(mean, .groups = "drop") %>% 
     summarise(cat_area_prop_mean = mean(cat_area_prop, na.rm = T), .groups = "drop") %>%
     # mutate(cat_n_prop_daily_mean = round(cat_n/nrow(OISST_ocean_coords), 4)) %>%
-    # mutate(cat_prop_daily_mean = "A") %>% 
     # na.omit() %>% 
     data.frame()
   
@@ -533,7 +533,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
           legend.text = element_text(size = 16))
   # fig_cum_historic
   
-  # Stacked barplot of average cumulative MHW days per pixel
+  # Stacked barplot of average cumulative MHW days for ocean
   fig_prop_historic <- ggplot(df_filter, aes(x = t, y = cat_area_cum_prop)) +
     geom_bar(aes(fill = category), stat = "identity", show.legend = T,
              position = position_stack(reverse = TRUE), width = 1) +
@@ -1143,3 +1143,88 @@ MCS_cat_lat_compare <- MCS_Japan %>%
 MCS_cat_lat_compare
 ggsave("graph/MCS_cat_lat_compare.png", MCS_cat_lat_compare, height = 16, width = 16)
 
+
+# 13: Sensitivity test of Ice category threshold --------------------------
+
+# Function that loads and preps all MCS data with a given ice threshold
+load_ice_thresh <- function(cat_lon_file, ice_thresh){
+  
+  # Load the data
+  cat_data <- readRDS(cat_lon_file)
+  
+  # Subset category data only
+  cat_correct_sub <- cat_data %>%
+    dplyr::select(-event, -cat) %>% 
+    unnest(cols = cat_correct) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    filter(nrow(cat_correct$climatology) > 0) %>%
+    unnest(cols = cat_correct) %>% 
+    ungroup()
+  
+  # Create ice threshold data.frames
+  cat_ice_ref <- cat_data  %>%
+    dplyr::select(-cat, -cat_correct) %>% 
+    unnest(cols = event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(cols = event) %>% 
+    ungroup() %>% 
+    filter(thresh < ice_thresh, event_no > 0) %>% 
+    mutate(ice = TRUE) %>% 
+    dplyr::select(lon, lat, t, event_no, ice) %>%
+    distinct()
+  cat_ice_sub <- cat_correct_sub %>% 
+    left_join(cat_ice_ref, by = c("lon", "lat", "t", "event_no")) %>% 
+    mutate(category_ice = as.character(category),
+           category_ice = case_when(ice == TRUE ~ "V Ice",
+                                    TRUE ~ category),
+           ice_thresh = ice_thresh) %>% 
+    dplyr::select(-ice, -category) %>% 
+    arrange(lat, t)
+  rm(cat_data, cat_correct_sub, cat_ice_ref); gc()
+  return(cat_ice_sub)
+}
+
+test <- load_ice_thresh(MCS_lon_files[1], -0.1)
+
+# Function for calculating global MCS results with a moving Ice category threshold
+# cat_lon_file <- MCS_lon_files[1]
+# ice_thresh <- 0
+ice_cat_test <- function(ice_thresh){
+  
+  # Complete dates by categories data.frame
+  full_grid <- expand_grid(t = seq(min(cat_ice_sub$t), max(cat_ice_sub$t), by = "day"), 
+                           category_ice = levels(as.factor(cat_ice_sub$category_ice)))
+  
+  # Calculate total MCS days in the ocean by category
+  cat_ocean <- cat_ice_sub %>% 
+    dplyr::select(lon, lat, t, category_ice) %>% 
+    right_join(lon_lat_OISST_area, by = c("lon", "lat")) %>% 
+    # pivot_longer(cols = category:category_ice, values_to = "category") %>% 
+    group_by(t, category_ice) %>%
+    summarise(cat_n = n(),
+              cat_area = sum(sq_area), .groups = "drop") %>% 
+    right_join(full_grid, by = c("t", "category_ice")) %>% 
+    mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n),
+           cat_n_prop = round(cat_n/nrow(OISST_ocean_coords), 4),
+           cat_area = ifelse(is.na(cat_area), 0, cat_area),
+           cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 4),
+           year = lubridate::year(t)) %>% 
+    arrange(t, category_ice) %>% 
+    group_by(year, category_ice) %>%
+    mutate(cat_n_cum = cumsum(cat_n),
+           cat_area_cum = cumsum(cat_area),
+           cat_n_cum_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4),
+           cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
+    ungroup()
+  
+  cat_final <- cat_ocean  %>%
+    filter(lubridate::month(t) == 12, lubridate::day(t) == 31) %>%
+    mutate(t = lubridate::year(t))
+  
+  # Join together
+  
+  # Create figure with the values per year as slope of linear model of change in category as threshold decreases
+  
+}
+
+# Load all results and plot them
