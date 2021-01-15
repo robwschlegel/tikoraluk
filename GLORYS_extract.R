@@ -24,11 +24,11 @@ JP_points <- read_csv("extracts/npp_light_2020-10-09.csv") %>%
   data.frame()
 
 # Have a peek at the data
-ggplot(data = JP_points, aes(x = site_lon, y = site_lat)) +
-  borders() +
-  geom_point(colour = "red") +
-  coord_quickmap(expand = F) +
-  labs(x = NULL, y = NULL)
+# ggplot(data = JP_points, aes(x = site_lon, y = site_lat)) +
+#   borders() +
+#   geom_point(colour = "red") +
+#   coord_quickmap(expand = F) +
+#   labs(x = NULL, y = NULL)
 
 
 # GLORYS files ------------------------------------------------------------
