@@ -450,7 +450,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
 
 # Run ALL years
 # NB: Running this in parallel will cause a proper stack overflow
-registerDoParallel(cores = 50)
+# registerDoParallel(cores = 50)
 # plyr::l_ply(1982:2020, MCS_annual_state, .parallel = F, force_calc = F,
 #             product = "OISST", chosen_clim = "1982-2011") # ~50 seconds for one
 
@@ -571,7 +571,7 @@ MCS_total_state_fig <- function(df, product, chosen_clim){
 ## Run it
 # OISST
 # MCS_total <- readRDS("annual_summary_MCS/MCS_cat_daily_total.Rds")
-MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
+# MCS_total_state_fig(MCS_total, "OISST", "1982-2011")
 
 
 # 6: Trends ---------------------------------------------------------------
@@ -716,7 +716,7 @@ MCS_trend_calc <- function(lon_step){
 # ) # 29 seconds
 
 # Run all
-registerDoParallel(cores = 50)
+# registerDoParallel(cores = 50)
 # system.time(plyr::l_ply(1:1440, MCS_trend_calc, .parallel = T)) # xxx seconds
 
 # Figures of trends and annual states
@@ -831,7 +831,7 @@ MHW_v_MCS_func <- function(lon_row){
   return(MHW_v_MCS)
 }
 
-registerDoParallel(cores = 50)
+# registerDoParallel(cores = 50)
 # system.time(MHW_v_MCS <- plyr::ldply(1:1440, MHW_v_MCS_func, .parallel = T, .paropts = c(.inorder = F))) # 104 seconds
 # saveRDS(MHW_v_MCS, "data/MHW_v_MCS.Rds")
 
@@ -962,117 +962,117 @@ MCS_cat_count_calc <- function(lon_step){
 }
 
 # Calculate global MCS category counts and proportions
-registerDoParallel(cores = 50)
+# registerDoParallel(cores = 50)
 # system.time(MCS_cat_count <- plyr::ldply(1:1440, MCS_cat_count_calc, .parallel = T, .paropts = c(.inorder = F))) # 222 seconds
 # saveRDS(MCS_cat_count, "data/MCS_cat_count.Rds")
 
 # Prep data for plotting
-MCS_cat_count <- readRDS("data/MCS_cat_count.Rds")
-MCS_cat_count_n <- MCS_cat_count %>% 
-  filter(method == "ice") %>% 
-  mutate(category = "total count") %>% 
-  group_by(lon, lat, category) %>% 
-  summarise(diff = sum(cat_count), .groups = "drop")
-MCS_cat_count_proc <- MCS_cat_count %>% 
-  dplyr::select(lon:cat_count) %>% 
-  pivot_wider(values_from = cat_count, names_from = c(method, category)) %>% 
-  mutate_all(~replace(., is.na(.), 0)) %>% 
-  mutate(`I Moderate` = `ice_I Moderate` - `old_I Moderate`,
-         `II Strong` = `ice_II Strong` - `old_II Strong`,
-         `III Severe` = `ice_III Severe` - `old_III Severe`,
-         `IV Extreme` = `ice_IV Extreme` - `old_IV Extreme`,
-         `V Ice` = `ice_V Ice`) %>% 
-  dplyr::select(lon, lat, `I Moderate`:`V Ice`) %>% 
-  pivot_longer(cols = `I Moderate`:`V Ice`, names_to = "category", values_to = "diff") %>% 
-  rbind(MCS_cat_count_n) %>% 
-  mutate(category = factor(category, levels = c("I Moderate", "II Strong", "III Severe", 
-                                                "IV Extreme", "V Ice", "total count")))
+# MCS_cat_count <- readRDS("data/MCS_cat_count.Rds")
+# MCS_cat_count_n <- MCS_cat_count %>% 
+#   filter(method == "ice") %>% 
+#   mutate(category = "total count") %>% 
+#   group_by(lon, lat, category) %>% 
+#   summarise(diff = sum(cat_count), .groups = "drop")
+# MCS_cat_count_proc <- MCS_cat_count %>% 
+#   dplyr::select(lon:cat_count) %>% 
+#   pivot_wider(values_from = cat_count, names_from = c(method, category)) %>% 
+#   mutate_all(~replace(., is.na(.), 0)) %>% 
+#   mutate(`I Moderate` = `ice_I Moderate` - `old_I Moderate`,
+#          `II Strong` = `ice_II Strong` - `old_II Strong`,
+#          `III Severe` = `ice_III Severe` - `old_III Severe`,
+#          `IV Extreme` = `ice_IV Extreme` - `old_IV Extreme`,
+#          `V Ice` = `ice_V Ice`) %>% 
+#   dplyr::select(lon, lat, `I Moderate`:`V Ice`) %>% 
+#   pivot_longer(cols = `I Moderate`:`V Ice`, names_to = "category", values_to = "diff") %>% 
+#   rbind(MCS_cat_count_n) %>% 
+#   mutate(category = factor(category, levels = c("I Moderate", "II Strong", "III Severe", 
+#                                                 "IV Extreme", "V Ice", "total count")))
 
 # Four panel map showing difference in count for each pixel per category between old and new methods
-MCS_cat_count_diff_map <- MCS_cat_count_proc %>% 
-  # mutate(value = case_when(value <= value_q10 ~ value_q10,
-                           # value >= value_q90 ~ value_q90,
-                           # TRUE ~ value)) %>% 
-  filter(lat >= -70, lat <= 70) %>% 
-  ggplot(aes(x = lon, y = lat)) +
-  geom_tile(aes(fill = diff)) +
-  geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
-  scale_fill_gradient2("Total count: new - original", low = "blue", high = "red") +
-  # scale_fill_viridis_c("Mean\n(annual)") +
-  # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
-  #                                      max(OISST_ocean_coords$lat))) +
-  coord_quickmap(expand = F, ylim = c(-70, 70)) +
-  facet_wrap(~category, ncol = 2) +
-  theme_void() +
-  # guides(fill = guide_legend(override.aes = list(size = 10))) +
-  # labs(title = var_name) +
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 12),
-        legend.position = "top",
-        panel.background = element_rect(fill = "grey90"))
-MCS_cat_count_diff_map
-ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7, height = 5)
+# MCS_cat_count_diff_map <- MCS_cat_count_proc %>% 
+#   # mutate(value = case_when(value <= value_q10 ~ value_q10,
+#                            # value >= value_q90 ~ value_q90,
+#                            # TRUE ~ value)) %>% 
+#   filter(lat >= -70, lat <= 70) %>% 
+#   ggplot(aes(x = lon, y = lat)) +
+#   geom_tile(aes(fill = diff)) +
+#   geom_polygon(data = map_base, aes(x = lon, y = lat, group = group)) +
+#   scale_fill_gradient2("Total count: new - original", low = "blue", high = "red") +
+#   # scale_fill_viridis_c("Mean\n(annual)") +
+#   # coord_cartesian(expand = F, ylim = c(min(OISST_ocean_coords$lat),
+#   #                                      max(OISST_ocean_coords$lat))) +
+#   coord_quickmap(expand = F, ylim = c(-70, 70)) +
+#   facet_wrap(~category, ncol = 2) +
+#   theme_void() +
+#   # guides(fill = guide_legend(override.aes = list(size = 10))) +
+#   # labs(title = var_name) +
+#   theme(legend.text = element_text(size = 10),
+#         legend.title = element_text(size = 12),
+#         legend.position = "top",
+#         panel.background = element_rect(fill = "grey90"))
+# MCS_cat_count_diff_map
+# ggsave("graph/MCS_cat_count_diff_map.png", MCS_cat_count_diff_map, width = 7, height = 5)
 
 
 # 10: Spatial correlations ------------------------------------------------
 
 # Load mean values
-MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
-SSTa_stats <- readRDS("data/SSTa_stats.Rds")
-MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
-global_stats <- MCS_count_trend %>% 
-  left_join(filter(SSTa_stats, season == "Total"), by = c("lon", "lat")) %>% 
-  left_join(MHW_v_MCS, by = c("lon", "lat"))
+# MCS_count_trend <- plyr::ldply(MCS_count_trend_files, readRDS, .parallel = T)
+# SSTa_stats <- readRDS("data/SSTa_stats.Rds")
+# MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
+# global_stats <- MCS_count_trend %>% 
+#   left_join(filter(SSTa_stats, season == "Total"), by = c("lon", "lat")) %>% 
+#   left_join(MHW_v_MCS, by = c("lon", "lat"))
 
 ## Calculate spatial correlations
 # cor count vs. duration
-global_stats %>% 
-  filter(name %in% c("dur_mean", "total_count")) %>% 
-  dplyr::select(lon, lat, name, value) %>% 
-  pivot_wider(values_from = value) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
+# global_stats %>% 
+#   filter(name %in% c("dur_mean", "total_count")) %>% 
+#   dplyr::select(lon, lat, name, value) %>% 
+#   pivot_wider(values_from = value) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
 
 # cor max int. vs. SSTa SD
-global_stats %>% 
-  filter(name %in% c("i_max_mean")) %>% 
-  dplyr::select(lon, lat, name, value, anom_sd) %>% 
-  pivot_wider(values_from = value) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "i_max_mean", y = "anom_sd"))
+# global_stats %>% 
+#   filter(name %in% c("i_max_mean")) %>% 
+#   dplyr::select(lon, lat, name, value, anom_sd) %>% 
+#   pivot_wider(values_from = value) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "i_max_mean", y = "anom_sd"))
 
 # cor max. int. vs. cum. int.
-global_stats %>% 
-  filter(name %in% c("i_max_mean", "i_cum_mean")) %>% 
-  dplyr::select(lon, lat, name, value) %>% 
-  pivot_wider(values_from = value) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "i_max_mean", y = "i_cum_mean"))
+# global_stats %>% 
+#   filter(name %in% c("i_max_mean", "i_cum_mean")) %>% 
+#   dplyr::select(lon, lat, name, value) %>% 
+#   pivot_wider(values_from = value) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "i_max_mean", y = "i_cum_mean"))
 
 # cor count vs. duration trend
-global_stats %>% 
-  filter(name %in% c("dur_mean", "total_count")) %>% 
-  dplyr::select(lon, lat, name, slope) %>% 
-  pivot_wider(values_from = slope) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
+# global_stats %>% 
+#   filter(name %in% c("dur_mean", "total_count")) %>% 
+#   dplyr::select(lon, lat, name, slope) %>% 
+#   pivot_wider(values_from = slope) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "dur_mean", y = "total_count"))
 
 # cor duration vs. int. cum. trend
-global_stats %>% 
-  filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
-  dplyr::select(lon, lat, name, slope) %>% 
-  pivot_wider(values_from = slope) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "dur_mean", y = "i_cum_mean"))
+# global_stats %>% 
+#   filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
+#   dplyr::select(lon, lat, name, slope) %>% 
+#   pivot_wider(values_from = slope) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "dur_mean", y = "i_cum_mean"))
   
 # cor MHW-MCS intensity vs. SSTa skewness
-global_stats %>% 
-  # filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
-  dplyr::select(lon, lat, anom_skew, i_mean) %>% 
-  distinct() %>% 
-  # pivot_wider(values_from = slope) %>%
-  na.omit() %>% 
-  summarise(r = correlation::cor_test(., x = "anom_skew", y = "i_mean"))
+# global_stats %>% 
+#   # filter(name %in% c("dur_mean", "i_cum_mean")) %>% 
+#   dplyr::select(lon, lat, anom_skew, i_mean) %>% 
+#   distinct() %>% 
+#   # pivot_wider(values_from = slope) %>%
+#   na.omit() %>% 
+#   summarise(r = correlation::cor_test(., x = "anom_skew", y = "i_mean"))
 
 
 # 11: Check on MCS hole in Antarctica -------------------------------------
@@ -1085,72 +1085,69 @@ global_stats %>%
 # after it was already calculated...
 
 # Load comparison data to find the hole easily via NA results
-MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
+# MHW_v_MCS <- readRDS("data/MHW_v_MCS.Rds")
 
 # Extract example coords: lon = -37.875, lat = -75.875
-hole_SST <- tidync(OISST_files[which(lon_OISST == -37.875)]) %>% 
-  hyper_tibble() %>% 
-  mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
-  dplyr::rename(t = time, temp = sst) %>% 
-  filter(lat == -75.875)
+# hole_SST <- tidync(OISST_files[which(lon_OISST == -37.875)]) %>% 
+#   hyper_tibble() %>% 
+#   mutate(time = as.Date(time, origin = "1970-01-01")) %>% 
+#   dplyr::rename(t = time, temp = sst) %>% 
+#   filter(lat == -75.875)
 
 # Calculate clims separately
-hole_clim_MCS <- ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
+# hole_clim_MCS <- ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31"), pctile = 10)
 
 # Plot. Change pctile argument above to see effect here. E.g. pctile = 50 will give the seasonal signal
-hole_clim_MCS %>% 
-  dplyr::select(doy, thresh) %>% 
-  distinct() %>% 
-  ggplot(aes(x = doy, y = thresh)) +
-  geom_line()
+# hole_clim_MCS %>% 
+#   dplyr::select(doy, thresh) %>% 
+#   distinct() %>% 
+#   ggplot(aes(x = doy, y = thresh)) +
+#   geom_line()
 
 # Calculate MHW and MCS
-hole_MHW <- detect_event(ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31")))
-hole_MCS <- detect_event(hole_clim_MCS, coldSpells = T)
+# hole_MHW <- detect_event(ts2clm(hole_SST, climatologyPeriod = c("1982-01-01", "2011-12-31")))
+# hole_MCS <- detect_event(hole_clim_MCS, coldSpells = T)
 
 # Look at results
-hole_MCS_clim <- hole_MCS$climatology
+# hole_MCS_clim <- hole_MCS$climatology
 
 
 # 12: Comparison of near-ice SST pixels -----------------------------------
 
 # Use Japan ice edge as a surface gradient for some pixels on a latitude transect
-MCS_Japan <- load_sub_cat_clim(MCS_lon_files[which(lon_OISST == 147.875)], 
-                               date_range = c("1982-01-01", "2020-12-31")) %>% 
-  filter(lat > 30, lat < 70)
+# MCS_Japan <- load_sub_cat_clim(MCS_lon_files[which(lon_OISST == 147.875)], 
+#                                date_range = c("1982-01-01", "2020-12-31")) %>% 
+#   filter(lat > 30, lat < 70)
 
 # Thin out the pixels
-sub_lat <- unique(MCS_Japan$lat)[round(seq(1, length(unique(MCS_Japan$lat)), length.out = 10))]
+# sub_lat <- unique(MCS_Japan$lat)[round(seq(1, length(unique(MCS_Japan$lat)), length.out = 10))]
 
 # Lolliplot showing differences in MCS categories as one moves north
-MCS_cat_lat_compare <- MCS_Japan %>% 
-  filter(lat %in% sub_lat) %>% 
-  group_by(lon, lat, event_no) %>% 
-  filter(intensity == min(intensity, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(lat = factor(lat, levels = rev(unique(lat)))) %>% 
-  pivot_longer(cols = category:category_ice) %>% 
-  # ggplot(aes(x = t, y = name)) +
-  ggplot(aes(x = event_no, y = name)) +
-  # geom_lolli(aes(colour = value)) +
-  # geom_point(aes(colour = value), shape = 15) +
-  geom_tile(aes(fill = value), colour = "black") +
-  scale_fill_manual("Category", values = MCS_colours) +
-  scale_colour_manual("Category", values = MCS_colours) +
-  scale_x_continuous(expand = c(0, 0)) +
-  facet_wrap(~ lat, ncol = 1) +
-  labs(x = "Event #", y = NULL)
-MCS_cat_lat_compare
-ggsave("graph/MCS_cat_lat_compare.png", MCS_cat_lat_compare, height = 16, width = 16)
+# MCS_cat_lat_compare <- MCS_Japan %>% 
+#   filter(lat %in% sub_lat) %>% 
+#   group_by(lon, lat, event_no) %>% 
+#   filter(intensity == min(intensity, na.rm = T)) %>% 
+#   ungroup() %>% 
+#   mutate(lat = factor(lat, levels = rev(unique(lat)))) %>% 
+#   pivot_longer(cols = category:category_ice) %>% 
+#   # ggplot(aes(x = t, y = name)) +
+#   ggplot(aes(x = event_no, y = name)) +
+#   # geom_lolli(aes(colour = value)) +
+#   # geom_point(aes(colour = value), shape = 15) +
+#   geom_tile(aes(fill = value), colour = "black") +
+#   scale_fill_manual("Category", values = MCS_colours) +
+#   scale_colour_manual("Category", values = MCS_colours) +
+#   scale_x_continuous(expand = c(0, 0)) +
+#   facet_wrap(~ lat, ncol = 1) +
+#   labs(x = "Event #", y = NULL)
+# MCS_cat_lat_compare
+# ggsave("graph/MCS_cat_lat_compare.png", MCS_cat_lat_compare, height = 16, width = 16)
 
 
 # 13: Sensitivity test of Ice category threshold --------------------------
 
-# Function that loads and preps all MCS data with a given ice threshold
-load_ice_thresh <- function(cat_lon_file, ice_thresh){
-  
-  # Load the data
-  cat_data <- readRDS(cat_lon_file)
+# Function that preps MCS ice cat based on a given threshold
+ice_thresh_one <- function(ice_thresh, cat_data){
   
   # Subset category data only
   cat_correct_sub <- cat_data %>%
@@ -1161,7 +1158,7 @@ load_ice_thresh <- function(cat_lon_file, ice_thresh){
     unnest(cols = cat_correct) %>% 
     ungroup()
   
-  # Create ice threshold data.frames
+  # Create ice threshold data.frame
   cat_ice_ref <- cat_data  %>%
     dplyr::select(-cat, -cat_correct) %>% 
     unnest(cols = event) %>% 
@@ -1180,51 +1177,134 @@ load_ice_thresh <- function(cat_lon_file, ice_thresh){
            ice_thresh = ice_thresh) %>% 
     dplyr::select(-ice, -category) %>% 
     arrange(lat, t)
-  rm(cat_data, cat_correct_sub, cat_ice_ref); gc()
+  rm(cat_correct_sub, cat_ice_ref); gc()
   return(cat_ice_sub)
 }
 
-test <- load_ice_thresh(MCS_lon_files[1], -0.1)
-
-# Function for calculating global MCS results with a moving Ice category threshold
-# cat_lon_file <- MCS_lon_files[1]
+# Function that loads and preps all MCS data with a given ice threshold
+# cat_lon_file <- MCS_lon_files[612]
 # ice_thresh <- 0
-ice_cat_test <- function(ice_thresh){
+# ice_thresh_range <- c(-1.8, 0)
+ice_thresh_proc <- function(cat_lon_file, ice_thresh_range){
+  
+  # Load the data
+  paste0("Began run on ",cat_lon_file)
+  cat_data <- readRDS(cat_lon_file)
+  
+  # Create a data.frame with multiple ice thresholds
+  cat_thresh <- plyr::ldply(seq(ice_thresh_range[1], ice_thresh_range[2], by = 0.1),
+                            ice_thresh_one, .parallel = F, cat_data = cat_data)
   
   # Complete dates by categories data.frame
-  full_grid <- expand_grid(t = seq(min(cat_ice_sub$t), max(cat_ice_sub$t), by = "day"), 
-                           category_ice = levels(as.factor(cat_ice_sub$category_ice)))
+  full_grid <- expand_grid(t = seq(min(cat_thresh$t, na.rm = T), max(cat_thresh$t, na.rm = T), by = "day"), 
+                           category_ice = levels(as.factor(cat_thresh$category_ice)),
+                           ice_thresh = seq(min(cat_thresh$ice_thresh), max(cat_thresh$ice_thresh), by = 0.1))
   
   # Calculate total MCS days in the ocean by category
-  cat_ocean <- cat_ice_sub %>% 
-    dplyr::select(lon, lat, t, category_ice) %>% 
+  cat_ocean <- cat_thresh %>% 
+    dplyr::select(lon, lat, t, category_ice, ice_thresh) %>% 
     right_join(lon_lat_OISST_area, by = c("lon", "lat")) %>% 
-    # pivot_longer(cols = category:category_ice, values_to = "category") %>% 
-    group_by(t, category_ice) %>%
+    group_by(t, category_ice, ice_thresh) %>%
     summarise(cat_n = n(),
               cat_area = sum(sq_area), .groups = "drop") %>% 
-    right_join(full_grid, by = c("t", "category_ice")) %>% 
+    right_join(full_grid, by = c("t", "category_ice", "ice_thresh")) %>% 
     mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n),
-           cat_n_prop = round(cat_n/nrow(OISST_ocean_coords), 4),
+           cat_n_prop = round(cat_n/nrow(OISST_ocean_coords), 8),
            cat_area = ifelse(is.na(cat_area), 0, cat_area),
-           cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 4),
+           cat_area_prop = round(cat_area/sum(lon_lat_OISST_area$sq_area), 8),
            year = lubridate::year(t)) %>% 
-    arrange(t, category_ice) %>% 
-    group_by(year, category_ice) %>%
+    arrange(t, category_ice, ice_thresh) %>% 
+    group_by(year, category_ice, ice_thresh) %>%
     mutate(cat_n_cum = cumsum(cat_n),
            cat_area_cum = cumsum(cat_area),
-           cat_n_cum_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 4),
-           cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 4)) %>% 
-    ungroup()
+           cat_n_cum_prop = round(cat_n_cum/nrow(OISST_ocean_coords), 8),
+           cat_area_cum_prop = round(cat_area_cum/sum(lon_lat_OISST_area$sq_area), 8)) %>% 
+    ungroup() %>% 
+    dplyr::select(-year)
   
+  # Final results
   cat_final <- cat_ocean  %>%
     filter(lubridate::month(t) == 12, lubridate::day(t) == 31) %>%
     mutate(t = lubridate::year(t))
-  
-  # Join together
-  
-  # Create figure with the values per year as slope of linear model of change in category as threshold decreases
-  
+
+  # Clean and exit
+  rm(cat_data, cat_thresh, full_grid, cat_ocean); gc()
+  return(cat_final)
 }
 
+# Function for calculating global MCS results with a moving Ice category threshold
+# ice_thresh_range <- c(-1.8, 0)
+ice_thresh_full <- function(ice_thresh_range){
+  
+  # First run this on all of the MCS lon files
+  system.time(
+  ice_data_full <- plyr::ldply(MCS_lon_files, ice_thresh_proc, .parallel = T,
+                               ice_thresh_range = ice_thresh_range)
+  ) # 56 seconds for 1, 63 seconds for 5
+  
+  # Add lon results together
+  ice_data_sum <- ice_data_full %>% 
+    group_by(t, category_ice, ice_thresh) %>% 
+    summarise_all(sum)
+  
+  # save and exit
+  write_rds(ice_data_sum, "data/MCS_ice_thresh_test.Rds")
+}
+
+# Run the analysis
+# registerDoParallel(cores = 25)
+# ice_thresh_full(c(-1.8, 0))
+
 # Load all results and plot them
+ice_thresh_all <- read_rds("data/MCS_ice_thresh_test.Rds")
+
+# Overall summary
+ice_thresh_fig_a <- ice_thresh_all %>% 
+  group_by(ice_thresh, category_ice) %>% 
+  summarise(mean_cum_area_prop = mean(cat_area_cum_prop), .groups = "drop") %>% 
+  ggplot(aes(x = ice_thresh, y = mean_cum_area_prop)) +
+  geom_bar(aes(fill = category_ice), stat = "identity", show.legend = T,
+           position = position_stack(reverse = TRUE), width = 0.1) +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_y_continuous(breaks = c(4, 8, 12)) +
+  labs(y = "Total average \n global MCS days", x = "Threshold for ice category (°C)") +
+  coord_cartesian(expand = F) +
+  theme_bw() +
+  theme(panel.border = element_rect(colour = "black", fill = NA),
+        axis.title = element_text(size = 15),
+        axis.text = element_text(size = 13))
+ice_thresh_fig_a
+
+# Time series figure showing how proportions of MCS days change over years from threshold choice
+ice_thresh_fig_b <- ice_thresh_all %>% 
+  ggplot() +
+  geom_line(aes(x = t, y = cat_area_cum_prop, colour = ice_thresh, group = ice_thresh)) +
+  scale_colour_viridis_c("Ice Threshold", option = "A") +
+  facet_wrap(~category_ice, scales = "free", nrow = 1) +
+  labs(x = NULL, y = "Global MCS days") +
+  theme_bw()
+ice_thresh_fig_b
+
+# Create figure with the values per year as slope of linear model of change in category as threshold decreases
+ice_thresh_fig_c <- ice_thresh_all %>% 
+  group_by(t, category_ice) %>%
+  do(fit_cat = tidy(lm(cat_area_cum_prop ~ ice_thresh, data = .))) %>% 
+  unnest(fit_cat) %>% 
+  filter(term == "ice_thresh") %>% 
+  ggplot() +
+  geom_boxplot(aes(x = category_ice, y = estimate, fill = category_ice),
+               outlier.colour = NA, show.legend = F) +
+  geom_jitter(aes(x = category_ice, y = estimate, colour = t), width = 0.1) +
+  scale_fill_manual("Category", values = MCS_colours) +
+  scale_colour_viridis_c("Year") +
+  facet_wrap(~category_ice, scales = "free", nrow = 1) +
+  labs(x = NULL, y = "Change in global ocean\n MCS days due to rising\n ice category threshold") +
+  theme_bw()
+ice_thresh_fig_c
+
+# Combine and save
+ice_thresh_fig <- ggpubr::ggarrange(ice_thresh_fig_a, ice_thresh_fig_b, ice_thresh_fig_c, 
+                                    ncol = 1, labels = c("A)", "B)", "C)"))
+ice_thresh_fig
+ggsave("graph/MCS_ice_thresh_test.png", ice_thresh_fig, height = 8, width = 12)
+
