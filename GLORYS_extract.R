@@ -90,7 +90,7 @@ grid_match <- function(coords){
 # GLORYS_file <- GLORYS_files[146]
 extract_GLORYS_one <- function(GLORYS_file, coord){
   
-  print(paste0("Began run on ", GLORYS_file))
+  # print(paste0("Began run on ", GLORYS_file))
   
   # Extract the data
   # system.time(
