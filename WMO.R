@@ -26,6 +26,9 @@ MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_198
   mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
          cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
 
+# Total history
+MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds")
+
 
 # Panel A) ----------------------------------------------------------------
 # Map of the highest MHWs per pixel for the year
@@ -47,6 +50,10 @@ cat_prop_stats(MHW_cat_daily_2016)
 cat_prop_stats(MHW_cat_daily_2019)
 cat_prop_stats(MHW_cat_daily_2020)
 
+# Historic record
+total_daily <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_prop_daily_mean))
 
 # Panel C) ----------------------------------------------------------------
 # Overall percent of ocean affected by MHWs
@@ -66,6 +73,14 @@ first_n_cum_prop_stats(MHW_cat_daily_2016)
 first_n_cum_prop_stats(MHW_cat_daily_2019)
 first_n_cum_prop_stats(MHW_cat_daily_2020)
 
+# Years when there were more cat II than I events
+cat_II_over_I <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  dplyr::select(t, first_n_cum_prop, category) %>% 
+  pivot_wider(names_from = category, values_from = first_n_cum_prop) %>% 
+  mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
+         cat_II_over_I = case_when(`II Strong` > `I Moderate` ~ TRUE, TRUE ~ FALSE))
+
 
 # Panel D) ----------------------------------------------------------------
 # Average days of MHWs per pixel
@@ -84,6 +99,11 @@ cat_n_prop_stats <- function(df){
 cat_n_prop_stats(MHW_cat_daily_2016)
 cat_n_prop_stats(MHW_cat_daily_2019)
 cat_n_prop_stats(MHW_cat_daily_2020)
+
+# Historic summary
+total_days <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_n_prop))
 
 
 # Text --------------------------------------------------------------------
