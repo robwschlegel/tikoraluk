@@ -213,7 +213,7 @@ extract_GLORYS_lat <- function(lat_step, shelf_file, coords){
 # Function for multicoring the xtraction of shelf data from one file
 extract_GLORYS_all_lat <- function(shelf_file, coords){
   
-  print(paste0("Began run on ", shelf_file))
+  print(paste0("Began run on ", shelf_file, " at ", Sys.time()))
   
   lat_range <- unique(coords$y)
   
@@ -275,13 +275,21 @@ arctic_bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
 arctic_shelf_data <- extract_GLORYS_shelf(arctic_bbox)
 write_csv(arctic_shelf_data, file = "extracts/arctic_shelf_data.csv")
 
+# Test output
+arctic_shelf_data %>% 
+  filter(t == "1993-01-01", depth > 1) %>% 
+  ggplot(aes(x = nav_lon, y = nav_lat)) +
+  borders() +
+  geom_point(aes(colour = depth)) +
+  coord_quickmap(ylim = c(60, 82))
+
 
 # Monthly summaries -------------------------------------------------------
 
 arctic_shelf_monthly <- arctic_shelf_data %>% 
   mutate(year = lubridate::year(t),
          month = lubridate::month(t)) %>% 
-  group_by(lon, lat, year, month) %>% 
+  group_by(nav_lon, nav_lat, year, month) %>% 
   summarise(temp = mean(temp, na.rm = T))
 write_csv(arctic_shelf_monthly, file = "extracts/arctic_shelf_monthly.csv")
 
