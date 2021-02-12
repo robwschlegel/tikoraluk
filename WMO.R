@@ -38,7 +38,7 @@ MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_198
 cat_prop_stats <- function(df){
   df %>% 
     group_by(category) %>% 
-    summarise(mean = mean(cat_prop)) %>% 
+    summarise(mean = mean(cat_prop), .groups = "drop") %>% 
     mutate(sum = sum(mean))
 }
 
@@ -97,8 +97,8 @@ Another important MHW to note in 2020 was the return of the semi-persistent 'blo
 This event is similar in scale to the original 'blob' that has been rigorously studied.24,25
 An average of 21% of the ocean was experiencing a MHW on any given day in 2020 (Figure 7B). 
 This is an increase from the 20% average of 2019, but less than the 2016 peak of 23%.
-Much more of the ocean experienced MHWs classified as 'strong' (43%) than 'moderate' (28%).
-In total, 82% of the ocean experienced at least one MHW (Figure 7C), which is less than 2019 (84%), and less than the 2016 peak (88%).
-On average, each ocean pixel experienced a total of 65 MHW days (Figure 7D). 
-This is less than 2019 (74) and the 2016 peak (83)."
+Much more of the ocean experienced MHWs classified as 'strong' (45%) than 'moderate' (28%).
+In total, 84% of the ocean experienced at least one MHW (Figure 7C), matching the record for 2019, but less than the 2016 peak (88%).
+On average, each ocean pixel experienced a total of 77 MHW days (Figure 7D). 
+This is greater than 2019 (74) but less than the 2016 peak (83)."
 
