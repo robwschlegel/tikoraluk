@@ -13,7 +13,6 @@ library(geosphere)
 library(doParallel); registerDoParallel(cores = 50)
 
 
-
 # Extraction coordinates --------------------------------------------------
 
 JP_points <- read_csv("extracts/npp_light_2020-10-09.csv") %>% 
@@ -58,16 +57,25 @@ GLORYS_ocean <- tidync(GLORYS_files[1]) %>%  # Be careful if this index above is
   dplyr::select(x, y, nav_lon, nav_lat) %>%
   mutate(idx = 1:n())
 
+# The surface and deepest depth per pixel
+# GLORYS_surface_bottom <- tidync(GLORYS_files[1]) %>%  # Be careful if this index above is changed
+#   hyper_filter(time_counter = time_counter == 385692) %>% 
+#   hyper_tibble() %>% 
+#   na.omit() %>% 
+#   dplyr::rename(depth = deptht) %>% 
+#   dplyr::select(x, y, depth) %>% 
+#   group_by(x, y) %>% 
+#   filter(depth == min(depth) | depth == max(depth)) %>%
+#   ungroup() %>% 
+#   distinct()
+# save(GLORYS_surface_bottom, file = "extracts/GLORYS_surface_bottom.RData")
+load("extracts/GLORYS_surface_bottom.RData")
+
 # Depth index for interp files
 GLORYS_depth <- tidync(GLORYS_files[1]) %>% # Be careful if this index above is changed
   tidync::activate("D0") %>%
   hyper_tibble() %>% 
   distinct() # Be careful not to join to this index until the main data has gone through distinct()
-
-
-# Functions ---------------------------------------------------------------
-# Due to the dispersed nature of the data points I think it will be more efficient
-# to load each pixel individually
 
 # Find the nearest grid cells for each site
 # testers...
@@ -83,6 +91,12 @@ grid_match <- function(coords){
   return(grid_points)
 }
 
+
+# Function for extracting one point ---------------------------------------
+
+# Due to the dispersed nature of the data points I think it will be more efficient
+# to load each pixel individually
+
 # Extract one year of data for one pixel
 # testers...
 # coord <- grid_points[2,]
@@ -94,20 +108,20 @@ extract_GLORYS_one <- function(GLORYS_file, coord){
   
   # Extract the data
   # system.time(
-    tidync_GLORYS_one <- tidync(GLORYS_file) %>% 
-      hyper_filter(x = x == coord$x,
-                   y = y == coord$y) %>%
-      hyper_tibble() %>% 
-      distinct() %>% 
-      mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01"))) %>% 
-      dplyr::rename(temp = votemper, depth = deptht) %>% 
-      dplyr::select(x, y, t, depth, temp) %>% 
-      left_join(coord, by = c("x", "y")) %>% 
-      dplyr::select(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth, temp) %>% 
-      distinct() # This shouldn't do anything..
+  tidync_GLORYS_one <- tidync(GLORYS_file) %>% 
+    hyper_filter(x = x == coord$x,
+                 y = y == coord$y) %>%
+    hyper_tibble() %>% 
+    distinct() %>% 
+    mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01"))) %>% 
+    dplyr::rename(temp = votemper, depth = deptht) %>% 
+    dplyr::select(x, y, t, depth, temp) %>% 
+    left_join(coord, by = c("x", "y")) %>% 
+    dplyr::select(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth, temp) %>% 
+    distinct() # This shouldn't do anything..
   # ) # 114 seconds, 94 seconds if already run, 2 seconds if the system isn't hanging...
   
-    # Correct depth if necessary and exit
+  # Correct depth if necessary and exit
   if(str_detect(GLORYS_file, "INTERP")){
     list_fix <- str_split(GLORYS_file, "_")
     depth_fix <- as.numeric(sapply(str_split(sapply(list_fix, "[[", 8), ".nc"), "[[", 1))
@@ -148,21 +162,137 @@ extract_GLORYS_coords <- function(coords){
 }
 
 
+# Functions for extracting data over the shelf ----------------------------
+
+# Extract data for one latitude slice
+# testers...
+# lat_step <- 2368
+# shelf_file <- shelf_files[1]
+extract_GLORYS_lat <- function(lat_step, shelf_file, coords){
+  
+  # print(paste0("Began run on ", GLORYS_file))
+  
+  # Extract the data
+  # system.time(
+  tidync_GLORYS_raw <- tidync(shelf_file) %>% 
+    hyper_filter(x = between(x, min(coords$x), max(coords$x)),
+                 y = y == lat_step) %>%
+    hyper_tibble() %>% 
+    distinct() 
+  # ) # 114 seconds, 17 seconds if already run, 1 seconds if the system isn't hanging...
+  
+  # Correct depth if necessary and exit
+  if(str_detect(shelf_file, "INTERP")){
+    list_fix <- str_split(shelf_file, "_")
+    depth_fix <- as.numeric(sapply(str_split(sapply(list_fix, "[[", 8), ".nc"), "[[", 1))
+    year_fix <- as.numeric(sapply(list_fix, "[[", 5))
+    tidync_GLORYS_raw <- tidync_GLORYS_raw %>% 
+      group_by(x, y) %>% 
+      mutate(deptht = GLORYS_depth$deptht[depth_fix],
+             t = seq(from = as.Date(paste0(year_fix,"-01-01")), by = "day", length.out = n())) %>%
+      ungroup()
+  } else{
+    tidync_GLORYS_raw <- tidync_GLORYS_raw %>% 
+      mutate(t = as.Date(as.POSIXct(time_counter*3600, origin = "1950-01-01"))) %>% 
+      distinct()
+  }
+  
+  # Finish up
+  tidync_GLORYS_lat <- tidync_GLORYS_raw %>% 
+    dplyr::rename(temp = votemper, depth = deptht) %>% 
+    right_join(shelf_depths, by = c("x", "y", "depth")) %>% 
+    na.omit() %>% 
+    distinct() %>% 
+    left_join(GLORYS_ocean, by = c("x", "y")) %>% 
+    dplyr::select(nav_lon, nav_lat, t, depth, temp) %>% 
+    distinct() # This shouldn't do anything..
+  rm(tidync_GLORYS_raw); gc()
+  return(tidync_GLORYS_lat)
+}
+
+# Function for multicoring the xtraction of shelf data from one file
+extract_GLORYS_all_lat <- function(shelf_file, coords){
+  
+  print(paste0("Began run on ", shelf_file))
+  
+  lat_range <- unique(coords$y)
+  
+  system.time(
+    tidync_GLORYS_all_lat <- plyr::ldply(lat_range, extract_GLORYS_lat, 
+                                         shelf_file = shelf_file, coords = coords, 
+                                         .parallel = T, .paropts = c(.inorder = FALSE))
+  )
+  return(tidync_GLORYS_all_lat)
+}
+
+# Extract data given a specific grid and depth
+# NB: This extracts the surface and bottom depths for pixels over the continental shelf
+# bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
+extract_GLORYS_shelf <- function(bbox){
+  
+  # Match the coordinates
+  match_coords <- grid_match(bbox)
+  if(-180 %in% bbox$site_lon & 180 %in% bbox$site_lon){
+    lon_range <- range(GLORYS_ocean$x)
+  } else {
+    lon_range <- range(bbox$site_lon)
+  }
+  lat_range <- range(match_coords$y)
+  
+  # Depth data
+  # NB: 200 is too restrictive
+  coords <- GLORYS_surface_bottom %>% 
+    filter(y >= min(lat_range),
+           y <= max(lat_range)) %>% 
+    group_by(x, y) %>% 
+    filter(max(depth) < 230) %>% 
+    ungroup() %>% 
+    distinct()
+  
+  # Shelf files
+  # We don't want depth integers of 28 or greater as these are deeper than the shelf
+  shelf_files <- GLORYS_files[!str_detect(GLORYS_files, c("_28.nc"))]
+  shelf_files <- shelf_files[!str_detect(shelf_files, c("_29.nc"))]
+  
+  # Extract all data
+  shelf_grid_res <- plyr::ldply(shelf_files[1], extract_GLORYS_all_lat, coords = coords,
+                                .parallel = F, .paropts = c(.inorder = FALSE))
+}
+
+
 # Extract data ------------------------------------------------------------
 
+# Set cores
+registerDoParallel(cores = 25)
+
 # system.time(
-JP_data <- extract_GLORYS_coords(JP_points)
+# JP_data <- extract_GLORYS_coords(JP_points)
 # ) # ~ 18 minutes for one site
-write_csv(JP_data, file = "extracts/JP_data.csv")
+# write_csv(JP_data, file = "extracts/JP_data.csv")
+
+# Extract Arctic data
+arctic_bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
+arctic_shelf_data <- extract_GLORYS_shelf(arctic_bbox)
+write_csv(arctic_shelf_data, file = "extracts/arctic_shelf_data.csv")
+
+
+# Monthly summaries -------------------------------------------------------
+
+arctic_shelf_monthly <- arctic_shelf_data %>% 
+  mutate(year = lubridate::year(t),
+         month = lubridate::month(t)) %>% 
+  group_by(lon, lat, year, month) %>% 
+  summarise(temp = mean(temp, na.rm = T))
+write_csv(arctic_shelf_monthly, file = "extracts/arctic_shelf_monthly.csv")
 
 
 # Annual summaries --------------------------------------------------------
 
-JP_annual <- JP_data %>% 
-  mutate(t = lubridate::year(t)) %>% 
-  group_by(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth) %>% 
-  summarise(temp = mean(temp, na.rm = T), .groups = "drop")
-write_csv(JP_annual, file = "extracts/JP_annual.csv")
+# JP_annual <- JP_data %>% 
+#   mutate(t = lubridate::year(t)) %>% 
+#   group_by(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth) %>% 
+#   summarise(temp = mean(temp, na.rm = T), .groups = "drop")
+# write_csv(JP_annual, file = "extracts/JP_annual.csv")
 
 
 # Pixel distance from sites -----------------------------------------------
