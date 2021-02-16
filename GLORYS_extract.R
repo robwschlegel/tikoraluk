@@ -200,28 +200,34 @@ extract_GLORYS_lat <- function(lat_step, shelf_file, coords){
   # Finish up
   tidync_GLORYS_lat <- tidync_GLORYS_raw %>% 
     dplyr::rename(temp = votemper, depth = deptht) %>% 
-    right_join(shelf_depths, by = c("x", "y", "depth")) %>% 
+    right_join(coords, by = c("x", "y", "depth")) %>% 
     na.omit() %>% 
     distinct() %>% 
     left_join(GLORYS_ocean, by = c("x", "y")) %>% 
     dplyr::select(nav_lon, nav_lat, t, depth, temp) %>% 
+    mutate(year = lubridate::year(t),
+           month = lubridate::month(t)) %>% 
+    group_by(nav_lon, nav_lat, year, month, depth) %>% 
+    summarise(temp = round(mean(temp, na.rm = T), 2), 
+              depth = round(depth, 2), .groups = "drop") %>% 
     distinct() # This shouldn't do anything..
   rm(tidync_GLORYS_raw); gc()
   return(tidync_GLORYS_lat)
 }
 
 # Function for multicoring the xtraction of shelf data from one file
+# shelf_file <- shelf_files[126]
 extract_GLORYS_all_lat <- function(shelf_file, coords){
   
   print(paste0("Began run on ", shelf_file, " at ", Sys.time()))
   
   lat_range <- unique(coords$y)
   
-  system.time(
-    tidync_GLORYS_all_lat <- plyr::ldply(lat_range, extract_GLORYS_lat, 
-                                         shelf_file = shelf_file, coords = coords, 
-                                         .parallel = T, .paropts = c(.inorder = FALSE))
-  )
+  # system.time(
+  tidync_GLORYS_all_lat <- plyr::ldply(lat_range, extract_GLORYS_lat, 
+                                       shelf_file = shelf_file, coords = coords, 
+                                       .parallel = T, .paropts = c(.inorder = FALSE))
+  # ) # 22 seconds for one lat step, 488 for a full big file, 163 for a full small file
   return(tidync_GLORYS_all_lat)
 }
 
@@ -255,7 +261,7 @@ extract_GLORYS_shelf <- function(bbox){
   shelf_files <- shelf_files[!str_detect(shelf_files, c("_29.nc"))]
   
   # Extract all data
-  shelf_grid_res <- plyr::ldply(shelf_files[1], extract_GLORYS_all_lat, coords = coords,
+  shelf_grid_res <- plyr::ldply(shelf_files, extract_GLORYS_all_lat, coords = coords,
                                 .parallel = F, .paropts = c(.inorder = FALSE))
 }
 
@@ -271,27 +277,20 @@ registerDoParallel(cores = 25)
 # write_csv(JP_data, file = "extracts/JP_data.csv")
 
 # Extract Arctic data
-arctic_bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
-arctic_shelf_data <- extract_GLORYS_shelf(arctic_bbox)
-write_csv(arctic_shelf_data, file = "extracts/arctic_shelf_data.csv")
+# arctic_bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
+# system.time(
+# arctic_shelf_data <- extract_GLORYS_shelf(arctic_bbox)
+# ) # 524 - 1285 seconds for one large file
+# write_csv(arctic_shelf_data, file = "extracts/arctic_shelf_data.csv")
+# arctic_shelf_data <- readr::read_csv("extracts/arctic_shelf_data.csv")
 
 # Test output
-arctic_shelf_data %>% 
-  filter(t == "1993-01-01", depth > 1) %>% 
-  ggplot(aes(x = nav_lon, y = nav_lat)) +
-  borders() +
-  geom_point(aes(colour = depth)) +
-  coord_quickmap(ylim = c(60, 82))
-
-
-# Monthly summaries -------------------------------------------------------
-
-arctic_shelf_monthly <- arctic_shelf_data %>% 
-  mutate(year = lubridate::year(t),
-         month = lubridate::month(t)) %>% 
-  group_by(nav_lon, nav_lat, year, month) %>% 
-  summarise(temp = mean(temp, na.rm = T))
-write_csv(arctic_shelf_monthly, file = "extracts/arctic_shelf_monthly.csv")
+# arctic_shelf_data %>%
+#   filter(year == 2009, month == 1, depth > 1) %>%
+#   ggplot(aes(x = nav_lon, y = nav_lat)) +
+#   borders() +
+#   geom_point(aes(colour = depth)) +
+#   coord_quickmap(ylim = c(60, 82))
 
 
 # Annual summaries --------------------------------------------------------
