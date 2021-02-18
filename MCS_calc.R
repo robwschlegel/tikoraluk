@@ -1,3 +1,5 @@
+# NB: The most recent version of this script may be found at: 'MCSglobal/code/workflow.R'
+
 # The purpose of this script is to provide an easy source for 
 # calculating all of the historic MCSs in one go
 # 1: Setup

@@ -1,3 +1,5 @@
+# NB: The most recent version of this script may be found at: 'MCSglobal/code/functions.R'
+
 # MCS_prep.R
 # This script houses functions and useful bits used by other scripts
 

@@ -1,3 +1,5 @@
+# NB: The most recent version of this script may be found at: 'MCSglobal/code/figures.R'
+
 # MCS_figures.R
 # The purpose of this script is to house the code used to make the figures for the MCS manuscript
 

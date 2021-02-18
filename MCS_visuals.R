@@ -1,3 +1,5 @@
+# NB: The most recent version of this script may be found at: 'MCSglobal/code/visuals.R'
+
 # MCS_visuals.R
 # The purpose of this script is to provide some space were specific MCS visualisations may be made
 
