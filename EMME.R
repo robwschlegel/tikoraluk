@@ -4,16 +4,6 @@
 
 # Setup -------------------------------------------------------------------
 
-# Bounding box
-# - All of the Red sea and Persian Gulf
-# - Levant east of 22°E lon
-# Map
-# - Spatial average over full time series
-# Bar plot
-# - Annual averages of MHW cats
-# Results
-# - Also look at shifts in phenology, onset of Spring specifically
-
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(doParallel); registerDoParallel(cores = 50)
@@ -24,10 +14,10 @@ load("metadata/map_base.Rdata")
 # The MHW colour palette
 # The MHW colour palette
 MHW_colours <- c(
-  "Moderate" = "#ffc866",
-  "Strong" = "#ff6900",
-  "Severe" = "#9e0000",
-  "Extreme" = "#2d0000"
+  "I Moderate" = "#ffc866",
+  "II Strong" = "#ff6900",
+  "III Severe" = "#9e0000",
+  "IV Extreme" = "#2d0000"
 )
 
 # Function that loads a MHW cat file, includes the date, and subsets by bbox
@@ -62,10 +52,10 @@ MHW_cat_files <- dir(paste0("../data/cat_clim"), full.names = T, recursive = T)
 rough_bbox <- c(28, 56, 11, 38)
 
 # Load
-registerDoParallel(cores = 10)
+registerDoParallel(cores = 50)
 system.time(
 MHW_cat <- plyr::ldply(MHW_cat_files, readRDS_date_sub, .parallel = T, bbox = rough_bbox)
-) # 422 seconds on 10 cores
+) # 149 seconds on 10 cores
 
 # Tighter crop for only Levantine Sea, Red Sea, Persian Gulf
 MHW_cat_crop <- MHW_cat %>% 
@@ -89,8 +79,9 @@ MHW_cat_crop %>%
   distinct() %>% 
   ggplot(aes(x = lon, y = lat)) +
   geom_tile(colour = "blue") +
-  geom_polygon(data = map_base, aes(group = group))
-ggsave("test.png") # RStudio outdated, plot panel not working
+  geom_polygon(data = map_base, aes(group = group)) +
+  coord_quickmap(xlim = c(10, 60), ylim = c(10, 40))
+ggsave("EMME_pixels.png")
 
 # Clean up
 rm(MHW_cat); gc()
@@ -140,11 +131,8 @@ MHW_cat_daily <- MHW_cat_crop %>%
          cat_n_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>% 
   ungroup() %>% 
   right_join(MHW_cat_single, by = c("t", "category")) %>% 
-  mutate(year = lubridate::year(t))
-
-# Add prop columns for more accurate plotting
-MHW_cat_daily <- MHW_cat_daily %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4),
+  mutate(year = lubridate::year(t),
+         first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4),
          cat_prop = round(cat_n/nrow(bbox_pixels), 4))
 
 # Extract small data.frame for easier labeling
@@ -154,63 +142,73 @@ MHW_cat_daily_labels <- MHW_cat_daily %>%
   ungroup() %>% 
   mutate(label_first_n_cum = cumsum(first_n_cum_prop))
 
+# Tidy up
+rm(MHW_cat_single); gc()
+
 
 # Total stats figure ------------------------------------------------------
 
-cat_daily_mean <- MHW_cat_daily %>%
+# Now with a year column!
+full_daily_grid <- expand_grid(t = seq(as.Date(paste0("1982-01-01")), as.Date("2020-12-31"), by = "day"), 
+                               category = as.factor(c("I Moderate", "II Strong", "III Severe", "IV Extreme"))) %>% 
+  mutate(year = lubridate::year(t))
+
+# The daily count of the first time the largest category pixel occurs over the whole Med and the cumulative values
+cat_first_annual <- MHW_cat_pixel %>%
+  group_by(t, year, category) %>%
+  summarise(first_n = n(), .groups = "drop") %>%
+  right_join(full_daily_grid, by = c("t", "year", "category")) %>%
+  arrange(year, t, category) %>%
+  mutate(first_n = ifelse(is.na(first_n), 0, first_n),
+         first_n_prop = round(first_n/nrow(bbox_pixels), 4)) %>%
   group_by(year, category) %>%
-  summarise(cat_n = mean(cat_n, na.rm = T), .groups = "drop") %>%
-  ungroup() %>%
-  mutate(cat_prop_daily_mean = round(cat_n/nrow(bbox_pixels), 4))
+  mutate(first_n_cum = cumsum(first_n),
+         first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4)) %>%
+  ungroup()
 
-# Extract only values from December 31st
-cat_daily <- MHW_cat_daily %>%
-  group_by(year) %>% 
-  filter(t == max(t)) %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4)) %>% 
-  dplyr::select(-cat_n) %>% 
-  left_join(cat_daily_mean, by = c("year", "category"))
+# The count of categories of MHWs happening on a given day, and cumulatively throughout the year
+cat_summary_annual <- MHW_cat_daily %>%
+  arrange(year, t, category) %>%
+  group_by(t, year, category) %>%
+  summarise(cat_n = sum(cat_n), .groups = "keep") %>%
+  mutate(cat_n_prop = round(cat_n/nrow(bbox_pixels), 4)) %>%
+  group_by(year, category) %>%
+  mutate(cat_n_cum = cumsum(cat_n),
+         cat_n_cum_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>%
+  right_join(cat_first_annual, by = c("t", "year", "category"))
 
-# Second y-axis labels
-y2_labs <- c("5%", "10%", "15%", "20%", "25%")
-
-# Total summary
 # Create mean values of daily count
-cat_daily_mean <- df %>%
+cat_daily_mean <- cat_summary_annual %>%
   group_by(year, category) %>%
   summarise(cat_n_prop_mean = mean(cat_n_prop, na.rm = T),
             cat_n_cum_prop = max(cat_n_cum_prop, na.rm = T), .groups = "drop")
 
 # Extract only values from December 31st
-cat_daily <- df %>%
+cat_daily <- cat_summary_annual %>%
   group_by(year, category) %>%
-  filter(lubridate::month(t) == month_sub, lubridate::day(t) == day_sub)
-
+  filter(lubridate::month(t) == 12, lubridate::day(t) == 31)
 
 # Load OISST annual global MHW summaries
 OISST_global <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds") %>% 
   group_by(t) %>% 
   mutate(cat_n_prop_stack = cumsum(cat_n_prop),
-         first_n_cum_prop_stack = cumsum(first_n_cum_prop))
+         first_n_cum_prop_stack = cumsum(first_n_cum_prop)) %>% 
+  filter(t <= 2020)
 
 # Stacked barplot of global daily count of MHWs by category
 fig_count_historic <- ggplot(cat_daily_mean, aes(x = year, y = cat_n_cum_prop)) +
   geom_bar(aes(fill = category), stat = "identity", show.legend = T,
            position = position_stack(reverse = TRUE), width = 1) +
-  # geom_line(data = OISST_global, aes(x = t, y = cat_n_prop_stack/dd, colour = category), 
-  # linetype = "dotted", show.legend = F) +
-  geom_point(data = OISST_global, aes(x = t, y = cat_n_prop_stack/dd, fill = category), 
+  geom_point(data = OISST_global, aes(x = t, y = cat_n_prop_stack, fill = category), 
              shape = 21, show.legend = F) +
-  geom_segment(aes(x = 2015, xend = 2019, y = 20, yend = 20), 
-               size = 2, colour = "red", lineend = "round") +
   scale_fill_manual("Category", values = MHW_colours) +
   scale_colour_manual("Category", values = MHW_colours) +
-  scale_y_continuous(limits = c(0, 100),
-                     breaks = seq(20, 80, length.out = 4),
+  scale_y_continuous(limits = c(0, 150),
+                     breaks = seq(30, 120, length.out = 4),
                      sec.axis = sec_axis(name = "Average daily MHW coverage", 
                                          trans = ~ . + 0,
-                                         breaks = c(18.25, 36.5, 54.75, 73, 91.25),
-                                         labels = y2_labs)) +
+                                         breaks = c(36.5, 73, 109.5),
+                                         labels = c("10%", "20%", "30%"))) +
   scale_x_continuous(breaks = seq(1984, 2019, 7)) +
   guides(pattern_colour = FALSE, colour = FALSE) +
   labs(y = "Average MHW days", x = NULL) +
@@ -220,18 +218,14 @@ fig_count_historic <- ggplot(cat_daily_mean, aes(x = year, y = cat_n_cum_prop)) 
         axis.text = element_text(size = 10),
         legend.title = element_text(size = 14),
         legend.text = element_text(size = 12))
-fig_count_historic
+# fig_count_historic
 
 # Stacked barplot of cumulative percent of ocean affected by MHWs
 fig_cum_historic <- ggplot(cat_daily, aes(x = year, y = first_n_cum_prop)) +
   geom_bar(aes(fill = category), stat = "identity", show.legend = T,
            position = position_stack(reverse = TRUE), width = 1) +
-  # geom_line(data = OISST_global, aes(x = t, y = first_n_cum_prop_stack, colour = category), 
-  # linetype = "dotted", show.legend = F) +
   geom_point(data = OISST_global, aes(x = t, y = first_n_cum_prop_stack, fill = category), 
              shape = 21, show.legend = F) +
-  geom_segment(aes(x = 2015, xend = 2019, y = 0.2, yend = 0.2), 
-               size = 2, colour = "red", lineend = "round") +
   scale_fill_manual("Category", values = MHW_colours) +
   scale_colour_manual("Category", values = MHW_colours) +
   scale_y_continuous(position = "right", 
@@ -250,10 +244,8 @@ fig_cum_historic <- ggplot(cat_daily, aes(x = year, y = first_n_cum_prop)) +
 # fig_cum_historic
 
 # Create the figure title
-min_year <- min(cat_daily_mean$year)
-max_year <- max(cat_daily_mean$year)
-fig_title <- paste0("Mediterranean MHW categories summary: ",min_year," - ", max_year, JJASON_bit,
-                    "\nCMEMS Med SST ~4km; Climatogy period: 1982-2011")
+fig_title <- paste0("EMME-CCI MHW categories summary: 1982-2020",
+                    "\nNOAA OISST; Climatogy period: 1982-2011")
 
 # Stick them together and save
 fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic,
@@ -261,7 +253,7 @@ fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic,
                                       font.label = list(size = 14), common.legend = T, legend = "bottom")
 fig_ALL_cap <- grid::textGrob(fig_title, x = 0.01, just = "left", gp = grid::gpar(fontsize = 18))
 fig_ALL_full <- ggpubr::ggarrange(fig_ALL_cap, fig_ALL_historic, heights = c(0.25, 1), nrow = 2)
-# ggsave(fig_ALL_full, filename = "figures/MHW_cat_historic.png", height = 4.25, width = 12)
+ggsave(fig_ALL_full, filename = "EMME_MHW_cat_historic.png", height = 4.25, width = 12)
 
 
 # Shifts in phenology -----------------------------------------------------
@@ -270,5 +262,8 @@ fig_ALL_full <- ggpubr::ggarrange(fig_ALL_cap, fig_ALL_historic, heights = c(0.2
 
 # Map of trends -----------------------------------------------------------
 
-
+# Stack the values and get trends
+cat_daily_mean_stack <- cat_daily_mean %>% 
+  group_by(year) %>% 
+  summarise(cat_n_prop_stack = sum(cat_n_cum_prop), .groups = "drop")
 
