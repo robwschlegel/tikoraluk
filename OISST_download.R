@@ -9,6 +9,7 @@
 library(tidyverse)
 library(rerddap)
 library(ncdf4)
+library(tidync)
 library(abind)
 library(geosphere)
 # library(tidync)
@@ -38,12 +39,13 @@ grid_size <- function(df){
   res <- cbind(df, sq_area)
   return(res)
 }
-lon_lat_OISST_area <- plyr::ddply(mutate(lon_lat_OISST, plyr_idx = 1:n()), c("plyr_idx"), grid_size, .parallel = T)
-lon_lat_OISST_area$plyr_idx <- NULL
-save(lon_lat_OISST_area, file = "metadata/lon_lat_OISST_area.RData")
+# lon_lat_OISST_area <- plyr::ddply(mutate(lon_lat_OISST, plyr_idx = 1:n()), c("plyr_idx"), grid_size, .parallel = T)
+# lon_lat_OISST_area$plyr_idx <- NULL
+# save(lon_lat_OISST_area, file = "metadata/lon_lat_OISST_area.RData")
 
 # Current date range
 # load()
+
 
 # Functions ---------------------------------------------------------------
 
@@ -204,3 +206,42 @@ rm(OISST_2018_prep_1, OISST_2018_prep_2)
 # 
 # ggplot(res2, aes(x = t, y = temp)) +
 #   geom_line()
+
+
+# Monthly global averages -------------------------------------------------
+
+# Function that returns monthly means per pixel
+pixel_monthly <- function(file_idx){
+  file_sub <- OISST_files[file_idx]
+  res <- tidync(file_sub) %>% 
+    hyper_tibble() %>% 
+    dplyr::rename(temp = sst, t = time) %>% 
+    mutate(t = as.Date(t, origin = "1970-01-01"))
+  res_month <- res %>% 
+    mutate(t = lubridate::round_date(t, "month")) %>% 
+    group_by(lon, lat, t) %>% 
+    summarise(temp = round(mean(temp, na.rm = T), 3), .groups = "drop")
+  rm(res); gc()
+  return(res_month)
+}
+registerDoParallel(cores = 50)
+OISST_monthly <- plyr::ldply(1:1440, pixel_monthly, .parallel = T)
+
+# These are then averaged into the global monthly values
+OISST_global_monthly <- OISST_monthly %>% 
+  group_by(t) %>% 
+  summarise(temp = round(mean(temp, na.rm = T), 3), .groups = "drop")
+write_csv(OISST_global_monthly, "extracts/OISST_global_monthly.csv")
+
+# Plot the slope
+OISST_global_monthly_2020 <- OISST_global_monthly %>% 
+  filter(t <= "2020-12-31")
+slope <- lm(temp~seq(1:nrow(OISST_global_monthly_2020)), OISST_global_monthly_2020)
+slope_label <- round(as.numeric(slope$coefficients[2])*12*10, 3)
+ggplot(filter(OISST_global_monthly_2020), aes(x = t, y = temp)) +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  geom_label(aes(x = as.Date("1990-01-01"), y = 14.2, label = paste0("slope = ",slope_label,"°C/dec"))) +
+  scale_x_date(expand = c(0, 0)) +
+  labs(x = NULL, y = "Temperature (°C)", title = "Global monthly NOAA OISST: 1982-2020")
+
