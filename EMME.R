@@ -1,12 +1,22 @@
 # EMME
-# This script houses the code used for the EMME-CCI analyseis
+# This script houses the code used for the EMME-CCI analyses
 
 
 # Setup -------------------------------------------------------------------
 
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
+library(sf)
 library(doParallel); registerDoParallel(cores = 50)
+
+# The MHW cat files
+MHW_cat_files <- dir("../data/cat_clim", full.names = T, recursive = T)
+
+# The MHW lon files
+MHW_lon_files <- dir("../data/cat_lon", full.names = T, recursive = T)
+
+# OISST ocean only pixels 
+load("metadata/OISST_ocean_coords.Rdata")
 
 # Base map for plotting
 load("metadata/map_base.Rdata")
@@ -42,49 +52,84 @@ max_event_date <- function(df){
     ungroup()
 }
 
-# The MHW cat files
-MHW_cat_files <- dir(paste0("../data/cat_clim"), full.names = T, recursive = T)
+# Function for finding and cleaning up points within a given region polygon
+points_in_region <- function(region_in){
+  region_sub <- MEOW %>% 
+    filter(ECOREGION == region_in) %>% 
+    dplyr::select(geometry)
+  region_sub <- as.data.frame(region_sub$geometry[[1]][[1]]) %>%
+    `colnames<-`(c("lon", "lat"))
+  # unnest()
+  coords_in <- OISST_ocean_coords %>% 
+    mutate(in_grid = sp::point.in.polygon(point.x = OISST_ocean_coords[["lon"]], point.y = OISST_ocean_coords[["lat"]], 
+                                          pol.x = region_sub[["lon"]], pol.y = region_sub[["lat"]])) %>% 
+    filter(in_grid >= 1) %>% 
+    mutate(Ecoregion = region_in) %>% 
+    dplyr::select(lon, lat, Ecoregion)
+  return(coords_in)
+}
 
 
-# Load region of interest -------------------------------------------------
+# Establish regions -------------------------------------------------------
+
+# Load MEOW
+MEOW <- read_sf("metadata/MEOW/meow_ecos.shp") %>% 
+  # filter(PROVINCE %in% c("Mediterranean Sea", "Red Sea and Gulf of Aden", "Somali/Arabian"),
+         # !ECOREGION %in% c("Alboran Sea", "Western Mediterranean"))
+  filter(ECOREGION %in% c("Arabian (Persian) Gulf", "Northern and Central Red Sea", "Southern Red Sea",  "Adriatic Sea",
+                          "Levantine Sea", "Tunisian Plateau/Gulf of Sidra", "Ionian Sea", "Aegean Sea"))
+
+# Find SST pixels within Med MEOW
+registerDoParallel(cores = 15)
+ecoregion_pixels <- plyr::ldply(unique(MEOW$ECOREGION), points_in_region, .parallel = T) %>% 
+
+# Plot pixels
+ecoregion_pixels %>% 
+  ggplot(aes(x = lon, y = lat)) +
+  geom_tile(aes(fill = Ecoregion)) +
+  geom_polygon(data = map_base, aes(group = group)) +
+  coord_quickmap(xlim = c(9, 60), ylim = c(10, 50), expand = F) +
+  labs(x = "Longitude (°E)", y = "Latitude (°N)") +
+  # guides(fill = guide_legend(nrow = 3)) +
+  theme(legend.position = "bottom")
+ggsave("EMME_pixels.png", height = 8, width = 8)
+
+
+# Load data by region -----------------------------------------------------
+
 
 # Load rough bounding box
-rough_bbox <- c(28, 56, 11, 38)
+rough_bbox <- c(range(ecoregion_pixels$lon), range(ecoregion_pixels$lat))
 
-# Load
+# Load cat files
 registerDoParallel(cores = 50)
 system.time(
 MHW_cat <- plyr::ldply(MHW_cat_files, readRDS_date_sub, .parallel = T, bbox = rough_bbox)
-) # 149 seconds on 10 cores
+) # 149 seconds on 10 cores, 214 seconds on 50 cores???
 
-# Tighter crop for only Levantine Sea, Red Sea, Persian Gulf
+# Crop Cat files
 MHW_cat_crop <- MHW_cat %>% 
-  mutate(crop_idx = case_when(lon >= 37 & lat >= 36 ~ "crop",
-                              lon >= 44 & lat <= 23 ~ "crop",
-                              TRUE ~ "keep"),
-         year = lubridate::year(t))  %>% 
-  filter(crop_idx == "keep",
-         lat >= 12.5,
-         year <= 2020) %>% 
-  dplyr::select(-crop_idx)
+  right_join(ecoregion_pixels, by = c("lon", "lat")) %>% 
+  mutate(year = lubridate::year(t))
 
-# Unique ocean pixels
-bbox_pixels <- MHW_cat_crop %>% 
-  dplyr::select(lon, lat) %>% 
-  distinct()
+# Load lon files
+
+
+# Crop lon files
+
 
 # Test visual map
 MHW_cat_crop %>% 
   dplyr::select(lon, lat) %>% 
-  distinct() %>% 
+  distinct() %>%  
   ggplot(aes(x = lon, y = lat)) +
   geom_tile(colour = "blue") +
   geom_polygon(data = map_base, aes(group = group)) +
-  coord_quickmap(xlim = c(10, 60), ylim = c(10, 40))
-ggsave("EMME_pixels.png")
+  coord_quickmap(xlim = c(9, 60), ylim = c(10, 50))
+ggsave("EMME_pixels_rough.png")
 
 # Clean up
-rm(MHW_cat); gc()
+rm(MHW_cat, MHW_lon); gc()
 
 
 # Calculate annual stats --------------------------------------------------
@@ -106,31 +151,32 @@ rm(MHW_intensity);gc()
 # Daily count and cumulative count per pixel
 # Complete dates by categories data.frame
 full_grid <- expand_grid(t = seq(as.Date("1982-01-01"), max(MHW_cat_crop$t), by = "day"), 
+                         Ecoregion = unique(ecoregion_pixels$Ecoregion),  
                          category = as.factor(levels(MHW_cat_crop$category))) %>% 
   mutate(category = factor(category, levels = levels(MHW_cat_crop$category)))
 MHW_cat_single <- MHW_cat_pixel %>%
-  group_by(t) %>%
+  group_by(Ecoregion, t) %>%
   count(category) %>%
   dplyr::rename(first_n = n) %>% 
   ungroup() %>% 
-  right_join(full_grid, by = c("t", "category")) %>% 
+  right_join(full_grid, by = c("Ecoregion", "t", "category")) %>% 
   mutate(first_n = ifelse(is.na(first_n), 0, first_n)) %>% 
-  arrange(t) %>% 
+  arrange(Ecoregion, t) %>% 
   group_by(category) %>%
   mutate(first_n_cum = cumsum(first_n)) %>% 
   ungroup()
 MHW_cat_daily <- MHW_cat_crop %>% 
-  group_by(t) %>% 
+  group_by(Ecoregion, t) %>% 
   count(category) %>% 
   ungroup() %>% 
-  right_join(full_grid, by = c("t", "category")) %>% 
+  right_join(full_grid, by = c("Ecoregion", "t", "category")) %>% 
   dplyr::rename(cat_n = n) %>% 
   mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
   group_by(category) %>% 
   mutate(cat_n_cum = cumsum(cat_n),
-         cat_n_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>% 
+         cat_n_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>% # Need to fix the pixel count divider for proportion values. This is a recurring issue below.
   ungroup() %>% 
-  right_join(MHW_cat_single, by = c("t", "category")) %>% 
+  right_join(MHW_cat_single, by = c("Ecoregion", "t", "category")) %>% 
   mutate(year = lubridate::year(t),
          first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4),
          cat_prop = round(cat_n/nrow(bbox_pixels), 4))
