@@ -87,22 +87,6 @@ load_sst_sub <- function(lon_step, sub_pixels){
   return(tidync_OISST)
 }
 
-# Function for loading subset of clim data for desired pixels
-load_MHW_sub <- function(file_name, sub_pixels){
-  load(file_name)
-  res_clim <- MHW_res %>% 
-    unnest(event) %>% 
-    filter(row_number() %% 2 == 1) %>% 
-    unnest(event) %>% 
-    dplyr::select(-cat) %>% 
-    right_join(sub_pixels, by = c("lon", "lat")) %>% 
-    filter(!is.na(t)) %>% 
-    mutate(year = lubridate::year(t)) %>% 
-    dplyr::select(Ecoregion, lon, lat, year, t, everything())
-  rm(MHW_res); gc()
-  return(res_clim)
-}
-
 # Function for finding the first date of the highest category MHW per pixel
 max_event_date <- function(df){
   df %>% 
@@ -143,6 +127,11 @@ MEOW <- read_sf("metadata/MEOW/meow_ecos.shp") %>%
 registerDoParallel(cores = 15)
 ecoregion_pixels <- plyr::ldply(unique(MEOW$ECOREGION), points_in_region, .parallel = T)
 
+# Get ecoregion pixel count for category stats later on
+ecoregion_pixel_count <- ecoregion_pixels %>% 
+  group_by(Ecoregion) %>% 
+  summarise(pixel_count = n(), .groups = "drop")
+
 # Subset MHW lon files accordingly
 MHW_files_sub <- MHW_files[seq(which(lon_OISST == min(ecoregion_pixels$lon)),
                                which(lon_OISST == max(ecoregion_pixels$lon)))]
@@ -169,7 +158,7 @@ rough_bbox <- c(range(ecoregion_pixels$lon), range(ecoregion_pixels$lat))
 registerDoParallel(cores = 10)
 system.time(
 MHW_cat_crop <- plyr::ldply(MHW_cat_files, readRDS_sub, .parallel = T, sub_pixels = ecoregion_pixels)
-) # 306 seconds on 10 cores, 214 seconds on 50 cores???
+) # 352 seconds on 10 cores, 214 seconds on 50 cores???
 gc()
 
 # Load lon files
@@ -180,8 +169,8 @@ SST_crop <- plyr::ldply(unique(ecoregion_pixels$lon), load_sst_sub, .parallel = 
 gc()
 
 # Test visual map
-# MHW_cat_crop %>%
-SST_crop %>%
+MHW_cat_crop %>%
+# SST_crop %>%
   dplyr::select(lon, lat, Ecoregion) %>% 
   distinct() %>%  
   ggplot(aes(x = lon, y = lat)) +
@@ -329,16 +318,16 @@ ggsave("EMME_SST_fig.png", fig_SST_ALL, height = 10, width = 10)
 
 # Sum of intensities per pixel per year
 MHW_intensity <- MHW_cat_crop %>% 
-  group_by(lon, lat, year) %>% 
+  group_by(Ecoregion, lon, lat, year) %>% 
   summarise(intensity_sum = sum(intensity), .groups = "drop")
 
 # Date of highest category per year
 MHW_cat_pixel <- MHW_cat_crop %>% 
   dplyr::select(-event_no) %>% 
-  plyr::ddply(., c("lon", "year"), max_event_date, 
+  plyr::ddply(., c("Ecoregion", "lon", "year"), max_event_date, 
               .parallel = T, .paropts = c(.inorder = FALSE)) %>% 
   unique() %>%
-  left_join(MHW_intensity, by = c("lon", "lat", "year"))
+  left_join(MHW_intensity, by = c("Ecoregion", "lon", "lat", "year"))
 rm(MHW_intensity);gc()
 
 # Daily count and cumulative count per pixel
@@ -365,14 +354,15 @@ MHW_cat_daily <- MHW_cat_crop %>%
   right_join(full_grid, by = c("Ecoregion", "t", "category")) %>% 
   dplyr::rename(cat_n = n) %>% 
   mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
-  group_by(category) %>% 
+  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
+  group_by(Ecoregion, category) %>% 
   mutate(cat_n_cum = cumsum(cat_n),
-         cat_n_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>% # Need to fix the pixel count divider for proportion values. This is a recurring issue below.
+         cat_n_prop = round(cat_n_cum/pixel_count, 4)) %>%
   ungroup() %>% 
   right_join(MHW_cat_single, by = c("Ecoregion", "t", "category")) %>% 
   mutate(year = lubridate::year(t),
-         first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4),
-         cat_prop = round(cat_n/nrow(bbox_pixels), 4))
+         first_n_cum_prop = round(first_n_cum/pixel_count, 4),
+         cat_prop = round(cat_n/pixel_count, 4))
 
 # Extract small data.frame for easier labeling
 MHW_cat_daily_labels <- MHW_cat_daily %>% 
@@ -384,61 +374,60 @@ MHW_cat_daily_labels <- MHW_cat_daily %>%
 # Tidy up
 rm(MHW_cat_single); gc()
 
-
-# MHW cat figure ----------------------------------------------------------
-
 # Now with a year column!
 full_daily_grid <- expand_grid(t = seq(as.Date(paste0("1982-01-01")), as.Date("2020-12-31"), by = "day"), 
+                               Ecoregion = unique(ecoregion_pixels$Ecoregion),  
                                category = as.factor(c("I Moderate", "II Strong", "III Severe", "IV Extreme"))) %>% 
   mutate(year = lubridate::year(t))
 
 # The daily count of the first time the largest category pixel occurs over the whole Med and the cumulative values
 cat_first_annual <- MHW_cat_pixel %>%
-  group_by(t, year, category) %>%
+  group_by(Ecoregion, t, year, category) %>%
   summarise(first_n = n(), .groups = "drop") %>%
-  right_join(full_daily_grid, by = c("t", "year", "category")) %>%
+  right_join(full_daily_grid, by = c("Ecoregion", "t", "year", "category")) %>%
   arrange(year, t, category) %>%
+  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
   mutate(first_n = ifelse(is.na(first_n), 0, first_n),
-         first_n_prop = round(first_n/nrow(bbox_pixels), 4)) %>%
+         first_n_prop = round(first_n/pixel_count, 4)) %>%
   group_by(year, category) %>%
   mutate(first_n_cum = cumsum(first_n),
-         first_n_cum_prop = round(first_n_cum/nrow(bbox_pixels), 4)) %>%
+         first_n_cum_prop = round(first_n_cum/pixel_count, 4)) %>%
   ungroup()
 
 # The count of categories of MHWs happening on a given day, and cumulatively throughout the year
 cat_summary_annual <- MHW_cat_daily %>%
-  arrange(year, t, category) %>%
-  group_by(t, year, category) %>%
+  arrange(Ecoregion, year, t, category) %>%
+  group_by(Ecoregion, t, year, category) %>%
   summarise(cat_n = sum(cat_n), .groups = "keep") %>%
-  mutate(cat_n_prop = round(cat_n/nrow(bbox_pixels), 4)) %>%
+  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
+  mutate(cat_n_prop = round(cat_n/pixel_count, 4)) %>%
   group_by(year, category) %>%
   mutate(cat_n_cum = cumsum(cat_n),
-         cat_n_cum_prop = round(cat_n_cum/nrow(bbox_pixels), 4)) %>%
-  right_join(cat_first_annual, by = c("t", "year", "category"))
+         cat_n_cum_prop = round(cat_n_cum/pixel_count, 4)) %>%
+  right_join(cat_first_annual, by = c("Ecoregion", "t", "year", "category"))
 
 # Create mean values of daily count
 cat_daily_mean <- cat_summary_annual %>%
-  group_by(year, category) %>%
+  group_by(Ecoregion, year, category) %>%
   summarise(cat_n_prop_mean = mean(cat_n_prop, na.rm = T),
-            cat_n_cum_prop = max(cat_n_cum_prop, na.rm = T), .groups = "drop")
+            cat_n_cum_prop = max(cat_n_cum_prop, na.rm = T), .groups = "drop") %>% 
+  group_by(Ecoregion) %>% 
+  mutate(cat_n_cum_prop_cum = cumsum(cat_n_cum_prop)) %>% 
+  ungroup()
 
 # Extract only values from December 31st
 cat_daily <- cat_summary_annual %>%
-  group_by(year, category) %>%
+  group_by(Ecoregion, year, category) %>%
   filter(lubridate::month(t) == 12, lubridate::day(t) == 31)
 
-# Load OISST annual global MHW summaries
-OISST_global <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds") %>% 
-  group_by(t) %>% 
-  mutate(cat_n_prop_stack = cumsum(cat_n_prop),
-         first_n_cum_prop_stack = cumsum(first_n_cum_prop)) %>% 
-  filter(t <= 2020)
+
+# MHW cat figure ----------------------------------------------------------
 
 # Stacked barplot of global daily count of MHWs by category
 fig_count_historic <- ggplot(cat_daily_mean, aes(x = year, y = cat_n_cum_prop)) +
   geom_bar(aes(fill = category), stat = "identity", show.legend = T,
            position = position_stack(reverse = TRUE), width = 1) +
-  geom_point(data = OISST_global, aes(x = t, y = cat_n_prop_stack, fill = category), 
+  geom_point(data = OISST_cat_global_annual, aes(x = t, y = cat_n_prop_stack, fill = category), 
              shape = 21, show.legend = F) +
   scale_fill_manual("Category", values = MHW_colours) +
   scale_colour_manual("Category", values = MHW_colours) +
@@ -457,6 +446,7 @@ fig_count_historic <- ggplot(cat_daily_mean, aes(x = year, y = cat_n_cum_prop)) 
         axis.text = element_text(size = 10),
         legend.title = element_text(size = 14),
         legend.text = element_text(size = 12))
+ggsave("EMME_test.png")
 # fig_count_historic
 
 # Stacked barplot of cumulative percent of ocean affected by MHWs
