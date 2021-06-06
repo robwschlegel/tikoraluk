@@ -240,9 +240,9 @@ system.time(
 SST_ecoregion_stats <- plyr::ddply(SST_ecoregion_annual, c("Ecoregion"), mean_trend_calc, .parallel = T)
 ) # 2 seconds on 10 cores
 
-# Average annual TS per region
-# Add global averages to each for easier plotting
-# Or perhaps add them as a separate geom
+# Global mean and trend
+OISST_global_stats <- mean_trend_calc(rename(OISST_SST_global_annual, temp_annual = temp, year = t)) %>% 
+  mutate(dec_trend = round(dec_trend, 2))
 
 
 # SST figure --------------------------------------------------------------
@@ -278,15 +278,11 @@ map_SST_trend <- SST_pixel_stats %>%
         # legend.box = "vertical")
 # ggsave("EMME_test.png")
 
-# Map just for the Ecoregion legend
-# map_eco_label <- ggplot() +
-#   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
-#   geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, key_glyph = "abline") +
-#   guides(colour = guide_legend(override.aes = list(size = 5))) +
-#   scale_colour_brewer(palette = "Set1") +
-#   labs(colour = "Ecoregion") +
-#   theme(legend.position = "bottom")
-# ggsave("EMME_test.png")
+# Prep labels for plotting
+sst_eco_labels <- SST_ecoregion_stats %>% 
+  arrange(-temp_total) %>% 
+  mutate(dec_trend = round(dec_trend, 2),
+         y_point = rev(seq(16, 30, 2)))
 
 # Time series plots with decadal trends
 ts_eco <- SST_ecoregion_annual %>% 
@@ -295,15 +291,25 @@ ts_eco <- SST_ecoregion_annual %>%
   geom_point(aes(colour = Ecoregion), show.legend = F) +
   geom_line(aes(colour = Ecoregion), key_glyph = "abline") +
   geom_smooth(aes(colour = Ecoregion), method = "lm", se = F, show.legend = F) +
+  geom_label(data = sst_eco_labels, show.legend = F, label.size = 5,
+             aes(label = paste0(dec_trend,"°C/dec."), x = 1978.5, y = y_point, colour = Ecoregion)) +
+  geom_label(data = sst_eco_labels, show.legend = F, label.size = 0,
+             aes(label = paste0(dec_trend,"°C/dec."), x = 1978.5, y = y_point), colour = "black") +
   # Global values
   geom_point(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey") +
   geom_line(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey") +
   geom_smooth(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey",
               method = "lm", se = F, show.legend = F) +
+  geom_label(data = OISST_global_stats, show.legend = F, label.size = 5,
+             aes(label = paste0(dec_trend,"°C/dec."), x = 1978.5, y = 14), colour = "grey") +
+  geom_label(data = OISST_global_stats, show.legend = F, label.size = 0,
+             aes(label = paste0(dec_trend,"°C/dec."), x = 1978.5, y = 14), colour = "black") +
+  # Other bits
   guides(colour = guide_legend(override.aes = list(size = 5))) +
   scale_colour_brewer(palette = "Set1") +
-  scale_y_continuous(breaks = c(13, 17, 21, 25, 29)) +
-  scale_x_continuous(expand = c(0, 0), breaks = c(1987, 1992, 1997, 2002, 2007, 2012, 2017)) +
+  scale_y_continuous(breaks = c(15, 19, 23, 27)) +
+  scale_x_continuous(expand = c(0, 0), limits = c(1975, 2020),
+                     breaks = c(1982, 1987, 1992, 1997, 2002, 2007, 2012, 2017)) +
   labs(x = NULL, y = "Temperature (°C)", colour = "Ecoregion") +
   theme(legend.position = "bottom")
 # ggsave("EMME_test.png")
@@ -315,13 +321,11 @@ fig_SST_maps <- ggpubr::ggarrange(map_SST_total, map_SST_trend,
 # ggsave("EMME_test.png", height = 4, width = 8)
 fig_SST_ALL <- ggpubr::ggarrange(fig_SST_maps, ts_eco, 
                                  ncol = 1, #align = "hv", 
-                                 labels = c(NA, "C)"), heights = c(1, 0.5))
-ggsave("EMME_SST_fig.png", fig_SST_ALL, height = 8, width = 8)
+                                 labels = c(NA, "C)"), heights = c(1, 1))
+ggsave("EMME_SST_fig.png", fig_SST_ALL, height = 10, width = 10)
 
 
 # MHW cat stats -----------------------------------------------------------
-
-
 
 # Sum of intensities per pixel per year
 MHW_intensity <- MHW_cat_crop %>% 
