@@ -7,16 +7,42 @@
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(sf)
+library(tidync)
 library(doParallel); registerDoParallel(cores = 50)
-
-# The MHW cat files
-MHW_cat_files <- dir("../data/cat_clim", full.names = T, recursive = T)
-
-# The MHW lon files
-MHW_lon_files <- dir("../data/cat_lon", full.names = T, recursive = T)
 
 # OISST ocean only pixels 
 load("metadata/OISST_ocean_coords.Rdata")
+
+# OISST lon values only
+lon_OISST <- c(seq(0.125, 179.875, by = 0.25), seq(-179.875, -0.125, by = 0.25))
+
+# OISST SST files
+OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
+
+# The full MHW results by lon step
+MHW_files <- dir("../data/MHW", full.names = T, recursive = T) # NB these only go to 2017
+
+# The MHW cat results by daily global step
+MHW_cat_files <- dir("../data/cat_clim", full.names = T, recursive = T)
+
+# Global OISST MHW cat annual averages
+OISST_cat_global_annual <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1992-2018_total.Rds") %>% 
+  filter(t <= 2020) %>% 
+  group_by(t) %>% 
+  mutate(cat_n_prop_stack = cumsum(cat_n_prop),
+         first_n_cum_prop_stack = cumsum(first_n_cum_prop)) %>% 
+  ungroup()
+
+# Global OISST monthly SST average
+OISST_SST_global_monthly <- read_csv("extracts/OISST_global_monthly.csv")
+
+# Global OISST annual SST average
+OISST_SST_global_annual <- OISST_SST_global_monthly %>% 
+  mutate(t = lubridate::year(t)) %>% 
+  filter(t <= 2020) %>% 
+  group_by(t) %>% 
+  summarise(temp = mean(temp), .groups = "drop") %>% 
+  mutate(Ecoregion = "Global")
 
 # Base map for plotting
 load("metadata/map_base.Rdata")
@@ -30,17 +56,51 @@ MHW_colours <- c(
   "IV Extreme" = "#2d0000"
 )
 
-# Function that loads a MHW cat file, includes the date, and subsets by bbox
-readRDS_date_sub <- function(file_name, bbox){
-  file_date <- sapply(str_split(file_name, "/"), "[[", 5)
-  file_date <- as.Date(sapply(str_split(file_date, "[.]"), "[[", 3))
+# Function that loads a MHW cat file, includes the date, and subsets by desired pixels
+readRDS_sub <- function(file_name, sub_pixels){
   res <- readRDS(file_name)
   res_sub <- res %>% 
-    mutate(t = file_date) %>% 
-    filter(lon >= bbox[1], lon <= bbox[2],
-           lat >= bbox[3], lat <= bbox[4])
+    right_join(sub_pixels, by = c("lon", "lat")) %>% 
+    filter(!is.na(t)) %>% 
+    mutate(year = lubridate::year(t)) %>% 
+    dplyr::select(Ecoregion, lon, lat, year, t, everything())
   rm(res); gc()
   return(res_sub)
+}
+
+# Function for loading SST from NetCDF
+load_sst_sub <- function(lon_step, sub_pixels){
+  
+  # Establish lon row number
+  lon_row <- which(lon_OISST == lon_step)
+
+  # OISST data
+  tidync_OISST <- tidync(OISST_files[lon_row]) %>% 
+    hyper_tibble() %>% 
+    mutate(time = as.Date(time, origin = "1970-01-01"),
+           year = lubridate::year(time)) %>% 
+    right_join(sub_pixels, by = c("lon", "lat")) %>% 
+    dplyr::rename(t = time, temp = sst) %>%
+    filter(!is.na(t)) %>%  
+    dplyr::select(Ecoregion, lon, lat, year, t, everything())
+  gc()
+  return(tidync_OISST)
+}
+
+# Function for loading subset of clim data for desired pixels
+load_MHW_sub <- function(file_name, sub_pixels){
+  load(file_name)
+  res_clim <- MHW_res %>% 
+    unnest(event) %>% 
+    filter(row_number() %% 2 == 1) %>% 
+    unnest(event) %>% 
+    dplyr::select(-cat) %>% 
+    right_join(sub_pixels, by = c("lon", "lat")) %>% 
+    filter(!is.na(t)) %>% 
+    mutate(year = lubridate::year(t)) %>% 
+    dplyr::select(Ecoregion, lon, lat, year, t, everything())
+  rm(MHW_res); gc()
+  return(res_clim)
 }
 
 # Function for finding the first date of the highest category MHW per pixel
@@ -81,7 +141,11 @@ MEOW <- read_sf("metadata/MEOW/meow_ecos.shp") %>%
 
 # Find SST pixels within Med MEOW
 registerDoParallel(cores = 15)
-ecoregion_pixels <- plyr::ldply(unique(MEOW$ECOREGION), points_in_region, .parallel = T) %>% 
+ecoregion_pixels <- plyr::ldply(unique(MEOW$ECOREGION), points_in_region, .parallel = T)
+
+# Subset MHW lon files accordingly
+MHW_files_sub <- MHW_files[seq(which(lon_OISST == min(ecoregion_pixels$lon)),
+                               which(lon_OISST == max(ecoregion_pixels$lon)))]
 
 # Plot pixels
 ecoregion_pixels %>% 
@@ -102,37 +166,162 @@ ggsave("EMME_pixels.png", height = 8, width = 8)
 rough_bbox <- c(range(ecoregion_pixels$lon), range(ecoregion_pixels$lat))
 
 # Load cat files
-registerDoParallel(cores = 50)
+registerDoParallel(cores = 10)
 system.time(
-MHW_cat <- plyr::ldply(MHW_cat_files, readRDS_date_sub, .parallel = T, bbox = rough_bbox)
-) # 149 seconds on 10 cores, 214 seconds on 50 cores???
-
-# Crop Cat files
-MHW_cat_crop <- MHW_cat %>% 
-  right_join(ecoregion_pixels, by = c("lon", "lat")) %>% 
-  mutate(year = lubridate::year(t))
+MHW_cat_crop <- plyr::ldply(MHW_cat_files, readRDS_sub, .parallel = T, sub_pixels = ecoregion_pixels)
+) # 306 seconds on 10 cores, 214 seconds on 50 cores???
+gc()
 
 # Load lon files
-
-
-# Crop lon files
-
+registerDoParallel(cores = 10)
+system.time(
+SST_crop <- plyr::ldply(unique(ecoregion_pixels$lon), load_sst_sub, .parallel = T, sub_pixels = ecoregion_pixels)
+) # 82 seconds on 10 cores
+gc()
 
 # Test visual map
-MHW_cat_crop %>% 
-  dplyr::select(lon, lat) %>% 
+# MHW_cat_crop %>%
+SST_crop %>%
+  dplyr::select(lon, lat, Ecoregion) %>% 
   distinct() %>%  
   ggplot(aes(x = lon, y = lat)) +
-  geom_tile(colour = "blue") +
+  geom_tile(aes(fill = Ecoregion)) +
   geom_polygon(data = map_base, aes(group = group)) +
   coord_quickmap(xlim = c(9, 60), ylim = c(10, 50))
-ggsave("EMME_pixels_rough.png")
-
-# Clean up
-rm(MHW_cat, MHW_lon); gc()
+ggsave("EMME_pixels.png")
 
 
-# Calculate annual stats --------------------------------------------------
+# SST stats ---------------------------------------------------------------
+
+# Function for calculating mean and decadal trend per TS
+# This works with per pixel calcs and per ecoregion
+# testers...
+# df <- SST_pixel_annual %>%
+#   filter(lon == SST_pixel_annual$lon[1],
+#          lat == SST_pixel_annual$lat[1])
+mean_trend_calc <- function(df){
+
+  # Decadal trend
+  dec_trend <- broom::tidy(lm(temp_annual ~ year, df)) %>% 
+    slice(2) %>% 
+    mutate(dec_trend = round(estimate*10, 3)) %>% 
+    dplyr::select(dec_trend, p.value)
+  
+  # Total means
+  mean_total <- df %>% 
+    summarise(temp_total = mean(temp_annual, na.rm = T), .groups = "drop")
+  
+  # Combine and exit
+  res <- cbind(dec_trend, mean_total)
+  rm(df, dec_trend, mean_total); gc()
+  return(res)
+}
+
+## Per pixel stats
+# Annual average per pixel
+SST_pixel_annual <- SST_crop %>% 
+  filter(year <= 2020) %>% # 2021 is not yet complete
+  group_by(Ecoregion, lon, lat, year) %>%
+  summarise(temp_annual = mean(temp, na.rm = T), .groups = "drop")
+
+# Per pixel stats
+system.time(
+SST_pixel_stats <- plyr::ddply(SST_pixel_annual, c("lon", "lat"), mean_trend_calc, .parallel = T)
+) # 143 seconds on 10 cores
+
+## Per ecoregion stats
+# Annual average per ecoregion
+SST_ecoregion_annual <- SST_pixel_annual %>% 
+  group_by(Ecoregion, year) %>%
+  summarise(temp_annual = mean(temp_annual, na.rm = T), .groups = "drop")
+
+# Per ecoregion stats
+system.time(
+SST_ecoregion_stats <- plyr::ddply(SST_ecoregion_annual, c("Ecoregion"), mean_trend_calc, .parallel = T)
+) # 2 seconds on 10 cores
+
+# Average annual TS per region
+# Add global averages to each for easier plotting
+# Or perhaps add them as a separate geom
+
+
+# SST figure --------------------------------------------------------------
+
+# Map of SST mean per pixel SST 
+map_SST_total <- SST_pixel_stats %>%
+  ggplot() +
+  geom_tile(aes(fill = temp_total, x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
+  geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
+  scale_fill_viridis_c(breaks = c(17, 21, 25, 29)) +
+  scale_colour_brewer(palette = "Set1") +
+  labs(x = NULL, y = NULL, fill = "Temp. (°C)") +
+  coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
+  theme(legend.position = "top")
+# ggsave("EMME_test.png")
+
+# Map of decadal trend per pixel
+map_SST_trend <- SST_pixel_stats %>%
+  filter(p.value <= 0.05) %>% 
+  ggplot() +
+  geom_tile(aes(fill = dec_trend, x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
+  geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
+  scale_fill_viridis_c(option = "A") +
+  scale_colour_brewer(palette = "Set1") +
+  labs(x = NULL, y = NULL, 
+       fill = "Temp. trend\n(°C/decade)", colour = "Ecoregion") +
+  coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
+  theme(legend.position = "top")#,
+        # axis.text.y = element_blank(),
+        # axis.ticks.y = element_blank())
+        # legend.box = "vertical")
+# ggsave("EMME_test.png")
+
+# Map just for the Ecoregion legend
+# map_eco_label <- ggplot() +
+#   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
+#   geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, key_glyph = "abline") +
+#   guides(colour = guide_legend(override.aes = list(size = 5))) +
+#   scale_colour_brewer(palette = "Set1") +
+#   labs(colour = "Ecoregion") +
+#   theme(legend.position = "bottom")
+# ggsave("EMME_test.png")
+
+# Time series plots with decadal trends
+ts_eco <- SST_ecoregion_annual %>% 
+  ggplot(aes(x = year, y = temp_annual)) +
+  # Ecoregion values
+  geom_point(aes(colour = Ecoregion), show.legend = F) +
+  geom_line(aes(colour = Ecoregion), key_glyph = "abline") +
+  geom_smooth(aes(colour = Ecoregion), method = "lm", se = F, show.legend = F) +
+  # Global values
+  geom_point(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey") +
+  geom_line(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey") +
+  geom_smooth(data = OISST_SST_global_annual, aes(x = t, y = temp), colour = "grey",
+              method = "lm", se = F, show.legend = F) +
+  guides(colour = guide_legend(override.aes = list(size = 5))) +
+  scale_colour_brewer(palette = "Set1") +
+  scale_y_continuous(breaks = c(13, 17, 21, 25, 29)) +
+  scale_x_continuous(expand = c(0, 0), breaks = c(1987, 1992, 1997, 2002, 2007, 2012, 2017)) +
+  labs(x = NULL, y = "Temperature (°C)", colour = "Ecoregion") +
+  theme(legend.position = "bottom")
+# ggsave("EMME_test.png")
+
+# Combine SST figures
+fig_SST_maps <- ggpubr::ggarrange(map_SST_total, map_SST_trend, 
+                                  ncol = 2, nrow = 1, align = "hv", 
+                                  labels = c("A)", "B)"))
+# ggsave("EMME_test.png", height = 4, width = 8)
+fig_SST_ALL <- ggpubr::ggarrange(fig_SST_maps, ts_eco, 
+                                 ncol = 1, #align = "hv", 
+                                 labels = c(NA, "C)"), heights = c(1, 0.5))
+ggsave("EMME_SST_fig.png", fig_SST_ALL, height = 8, width = 8)
+
+
+# MHW cat stats -----------------------------------------------------------
+
+
 
 # Sum of intensities per pixel per year
 MHW_intensity <- MHW_cat_crop %>% 
@@ -192,7 +381,7 @@ MHW_cat_daily_labels <- MHW_cat_daily %>%
 rm(MHW_cat_single); gc()
 
 
-# Total stats figure ------------------------------------------------------
+# MHW cat figure ----------------------------------------------------------
 
 # Now with a year column!
 full_daily_grid <- expand_grid(t = seq(as.Date(paste0("1982-01-01")), as.Date("2020-12-31"), by = "day"), 
@@ -300,16 +489,4 @@ fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic,
 fig_ALL_cap <- grid::textGrob(fig_title, x = 0.01, just = "left", gp = grid::gpar(fontsize = 18))
 fig_ALL_full <- ggpubr::ggarrange(fig_ALL_cap, fig_ALL_historic, heights = c(0.25, 1), nrow = 2)
 ggsave(fig_ALL_full, filename = "EMME_MHW_cat_historic.png", height = 4.25, width = 12)
-
-
-# Shifts in phenology -----------------------------------------------------
-
-
-
-# Map of trends -----------------------------------------------------------
-
-# Stack the values and get trends
-cat_daily_mean_stack <- cat_daily_mean %>% 
-  group_by(year) %>% 
-  summarise(cat_n_prop_stack = sum(cat_n_cum_prop), .groups = "drop")
 
