@@ -26,12 +26,13 @@ MHW_files <- dir("../data/MHW", full.names = T, recursive = T) # NB these only g
 MHW_cat_files <- dir("../data/cat_clim", full.names = T, recursive = T)
 
 # Global OISST MHW cat annual averages
-OISST_cat_global_annual <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1992-2018_total.Rds") %>% 
+OISST_cat_global_annual <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds") %>% 
   filter(t <= 2020) %>% 
   group_by(t) %>% 
   mutate(cat_n_prop_stack = cumsum(cat_n_prop),
          first_n_cum_prop_stack = cumsum(first_n_cum_prop)) %>% 
-  ungroup()
+  ungroup() %>% 
+  filter(category == "IV Extreme")
 
 # Global OISST monthly SST average
 OISST_SST_global_monthly <- read_csv("extracts/OISST_global_monthly.csv")
@@ -150,22 +151,21 @@ ggsave("EMME_pixels.png", height = 8, width = 8)
 
 # Load data by region -----------------------------------------------------
 
-
 # Load rough bounding box
 rough_bbox <- c(range(ecoregion_pixels$lon), range(ecoregion_pixels$lat))
 
 # Load cat files
-registerDoParallel(cores = 10)
+registerDoParallel(cores = 30)
 system.time(
 MHW_cat_crop <- plyr::ldply(MHW_cat_files, readRDS_sub, .parallel = T, sub_pixels = ecoregion_pixels)
-) # 352 seconds on 10 cores, 214 seconds on 50 cores???
+) # 352 seconds on 10 cores, 172 seconds on 30 cores
 gc()
 
 # Load lon files
-registerDoParallel(cores = 10)
+registerDoParallel(cores = 30)
 system.time(
 SST_crop <- plyr::ldply(unique(ecoregion_pixels$lon), load_sst_sub, .parallel = T, sub_pixels = ecoregion_pixels)
-) # 82 seconds on 10 cores
+) # 66 seconds on 30 cores
 gc()
 
 # Test visual map
@@ -246,7 +246,8 @@ map_SST_total <- SST_pixel_stats %>%
   scale_colour_brewer(palette = "Set1") +
   labs(x = NULL, y = NULL, fill = "Temp. (°C)") +
   coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
-  theme(legend.position = "top")
+  theme(legend.position = "top", 
+        panel.background = element_rect(colour = "black", fill = NULL))
 # ggsave("EMME_test.png")
 
 # Map of decadal trend per pixel
@@ -261,10 +262,8 @@ map_SST_trend <- SST_pixel_stats %>%
   labs(x = NULL, y = NULL, 
        fill = "Temp. trend\n(°C/decade)", colour = "Ecoregion") +
   coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
-  theme(legend.position = "top")#,
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank())
-        # legend.box = "vertical")
+  theme(legend.position = "top", 
+        panel.background = element_rect(colour = "black", fill = NULL))
 # ggsave("EMME_test.png")
 
 # Prep labels for plotting
@@ -300,7 +299,8 @@ ts_eco <- SST_ecoregion_annual %>%
   scale_x_continuous(expand = c(0, 0), limits = c(1975, 2020),
                      breaks = c(1982, 1987, 1992, 1997, 2002, 2007, 2012, 2017)) +
   labs(x = NULL, y = "Temperature (°C)", colour = "Ecoregion") +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom", 
+        panel.background = element_rect(colour = "black", fill = NULL))
 # ggsave("EMME_test.png")
 
 # Combine SST figures
@@ -316,171 +316,132 @@ ggsave("EMME_SST_fig.png", fig_SST_ALL, height = 10, width = 10)
 
 # MHW cat stats -----------------------------------------------------------
 
-# Sum of intensities per pixel per year
-MHW_intensity <- MHW_cat_crop %>% 
-  group_by(Ecoregion, lon, lat, year) %>% 
-  summarise(intensity_sum = sum(intensity), .groups = "drop")
+# Function for calculating mean and decadal trend per TS
+# This works with per pixel calcs and per ecoregion
+# testers...
+# df <- SST_pixel_annual %>%
+#   filter(lon == SST_pixel_annual$lon[1],
+#          lat == SST_pixel_annual$lat[1])
+dur_trend_calc <- function(df){
+  
+  # Decadal trend
+  dec_trend <- broom::tidy(lm(dur_annual ~ year, df)) %>% 
+    slice(2) %>% 
+    mutate(dec_trend = round(estimate*10, 3)) %>% 
+    dplyr::select(dec_trend, p.value)
+  
+  # Total means
+  dur_total <- df %>% 
+    summarise(dur_total = mean(dur_annual, na.rm = T), .groups = "drop")
+  
+  # Combine and exit
+  res <- cbind(dec_trend, dur_total)
+  rm(df, dec_trend, dur_total); gc()
+  return(res)
+}
 
-# Date of highest category per year
-MHW_cat_pixel <- MHW_cat_crop %>% 
-  dplyr::select(-event_no) %>% 
-  plyr::ddply(., c("Ecoregion", "lon", "year"), max_event_date, 
-              .parallel = T, .paropts = c(.inorder = FALSE)) %>% 
-  unique() %>%
-  left_join(MHW_intensity, by = c("Ecoregion", "lon", "lat", "year"))
-rm(MHW_intensity);gc()
+## Per pixel stats
+# Annual average per pixel
+dur_pixel_annual <- MHW_cat_crop %>% 
+  filter(year <= 2020) %>% # 2021 is not yet complete
+  group_by(Ecoregion, lon, lat, year) %>%
+  summarise(dur_annual = n(), .groups = "drop")
 
-# Daily count and cumulative count per pixel
-# Complete dates by categories data.frame
-full_grid <- expand_grid(t = seq(as.Date("1982-01-01"), max(MHW_cat_crop$t), by = "day"), 
-                         Ecoregion = unique(ecoregion_pixels$Ecoregion),  
-                         category = as.factor(levels(MHW_cat_crop$category))) %>% 
-  mutate(category = factor(category, levels = levels(MHW_cat_crop$category)))
-MHW_cat_single <- MHW_cat_pixel %>%
-  group_by(Ecoregion, t) %>%
-  count(category) %>%
-  dplyr::rename(first_n = n) %>% 
-  ungroup() %>% 
-  right_join(full_grid, by = c("Ecoregion", "t", "category")) %>% 
-  mutate(first_n = ifelse(is.na(first_n), 0, first_n)) %>% 
-  arrange(Ecoregion, t) %>% 
-  group_by(category) %>%
-  mutate(first_n_cum = cumsum(first_n)) %>% 
-  ungroup()
-MHW_cat_daily <- MHW_cat_crop %>% 
-  group_by(Ecoregion, t) %>% 
-  count(category) %>% 
-  ungroup() %>% 
-  right_join(full_grid, by = c("Ecoregion", "t", "category")) %>% 
-  dplyr::rename(cat_n = n) %>% 
-  mutate(cat_n = ifelse(is.na(cat_n), 0, cat_n)) %>% 
-  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
-  group_by(Ecoregion, category) %>% 
-  mutate(cat_n_cum = cumsum(cat_n),
-         cat_n_prop = round(cat_n_cum/pixel_count, 4)) %>%
-  ungroup() %>% 
-  right_join(MHW_cat_single, by = c("Ecoregion", "t", "category")) %>% 
-  mutate(year = lubridate::year(t),
-         first_n_cum_prop = round(first_n_cum/pixel_count, 4),
-         cat_prop = round(cat_n/pixel_count, 4))
+# Per pixel stats
+system.time(
+  dur_pixel_stats <- plyr::ddply(dur_pixel_annual, c("lon", "lat"), dur_trend_calc, .parallel = T)
+) # 100 seconds on 30 cores
 
-# Extract small data.frame for easier labeling
-MHW_cat_daily_labels <- MHW_cat_daily %>% 
-  group_by(category) %>% 
-  filter(t == max(t)) %>% 
-  ungroup() %>% 
-  mutate(label_first_n_cum = cumsum(first_n_cum_prop))
+## Per ecoregion stats
+# Annual average per ecoregion
+dur_ecoregion_annual <- dur_pixel_annual %>% 
+  group_by(Ecoregion, year) %>%
+  summarise(dur_annual = round(mean(dur_annual, na.rm = T)), .groups = "drop")
 
-# Tidy up
-rm(MHW_cat_single); gc()
+# Per ecoregion stats
+dur_ecoregion_stats <- plyr::ddply(dur_ecoregion_annual, c("Ecoregion"), dur_trend_calc, .parallel = T)
 
-# Now with a year column!
-full_daily_grid <- expand_grid(t = seq(as.Date(paste0("1982-01-01")), as.Date("2020-12-31"), by = "day"), 
-                               Ecoregion = unique(ecoregion_pixels$Ecoregion),  
-                               category = as.factor(c("I Moderate", "II Strong", "III Severe", "IV Extreme"))) %>% 
-  mutate(year = lubridate::year(t))
-
-# The daily count of the first time the largest category pixel occurs over the whole Med and the cumulative values
-cat_first_annual <- MHW_cat_pixel %>%
-  group_by(Ecoregion, t, year, category) %>%
-  summarise(first_n = n(), .groups = "drop") %>%
-  right_join(full_daily_grid, by = c("Ecoregion", "t", "year", "category")) %>%
-  arrange(year, t, category) %>%
-  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
-  mutate(first_n = ifelse(is.na(first_n), 0, first_n),
-         first_n_prop = round(first_n/pixel_count, 4)) %>%
-  group_by(year, category) %>%
-  mutate(first_n_cum = cumsum(first_n),
-         first_n_cum_prop = round(first_n_cum/pixel_count, 4)) %>%
-  ungroup()
-
-# The count of categories of MHWs happening on a given day, and cumulatively throughout the year
-cat_summary_annual <- MHW_cat_daily %>%
-  arrange(Ecoregion, year, t, category) %>%
-  group_by(Ecoregion, t, year, category) %>%
-  summarise(cat_n = sum(cat_n), .groups = "keep") %>%
-  left_join(ecoregion_pixel_count, by = "Ecoregion") %>% 
-  mutate(cat_n_prop = round(cat_n/pixel_count, 4)) %>%
-  group_by(year, category) %>%
-  mutate(cat_n_cum = cumsum(cat_n),
-         cat_n_cum_prop = round(cat_n_cum/pixel_count, 4)) %>%
-  right_join(cat_first_annual, by = c("Ecoregion", "t", "year", "category"))
-
-# Create mean values of daily count
-cat_daily_mean <- cat_summary_annual %>%
-  group_by(Ecoregion, year, category) %>%
-  summarise(cat_n_prop_mean = mean(cat_n_prop, na.rm = T),
-            cat_n_cum_prop = max(cat_n_cum_prop, na.rm = T), .groups = "drop") %>% 
-  group_by(Ecoregion) %>% 
-  mutate(cat_n_cum_prop_cum = cumsum(cat_n_cum_prop)) %>% 
-  ungroup()
-
-# Extract only values from December 31st
-cat_daily <- cat_summary_annual %>%
-  group_by(Ecoregion, year, category) %>%
-  filter(lubridate::month(t) == 12, lubridate::day(t) == 31)
+# Global mean and trend
+OISST_cat_global_stats <- dur_trend_calc(rename(OISST_cat_global_annual, dur_annual = cat_n_prop_stack, year = t)) %>% 
+  mutate(dec_trend = round(dec_trend))
 
 
 # MHW cat figure ----------------------------------------------------------
 
-# Stacked barplot of global daily count of MHWs by category
-fig_count_historic <- ggplot(cat_daily_mean, aes(x = year, y = cat_n_cum_prop)) +
-  geom_bar(aes(fill = category), stat = "identity", show.legend = T,
-           position = position_stack(reverse = TRUE), width = 1) +
-  geom_point(data = OISST_cat_global_annual, aes(x = t, y = cat_n_prop_stack, fill = category), 
-             shape = 21, show.legend = F) +
-  scale_fill_manual("Category", values = MHW_colours) +
-  scale_colour_manual("Category", values = MHW_colours) +
-  scale_y_continuous(limits = c(0, 150),
-                     breaks = seq(30, 120, length.out = 4),
-                     sec.axis = sec_axis(name = "Average daily MHW coverage", 
-                                         trans = ~ . + 0,
-                                         breaks = c(36.5, 73, 109.5),
-                                         labels = c("10%", "20%", "30%"))) +
-  scale_x_continuous(breaks = seq(1984, 2019, 7)) +
-  guides(pattern_colour = FALSE, colour = FALSE) +
-  labs(y = "Average MHW days", x = NULL) +
-  coord_cartesian(expand = F) +
-  theme(panel.border = element_rect(colour = "black", fill = NA),
-        axis.title = element_text(size = 12),
-        axis.text = element_text(size = 10),
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12))
-ggsave("EMME_test.png")
-# fig_count_historic
+# Map of SST mean per pixel SST 
+map_dur_total <- dur_pixel_stats %>%
+  ggplot() +
+  geom_tile(aes(fill = dur_total, x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
+  geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
+  scale_fill_viridis_c(option = "E") +
+  scale_colour_brewer(palette = "Set1") +
+  labs(x = NULL, y = NULL, fill = "MHW days (n)") +
+  coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
+  theme(legend.position = "top", 
+        panel.background = element_rect(colour = "black", fill = NULL))
+# ggsave("EMME_test.png")
 
-# Stacked barplot of cumulative percent of ocean affected by MHWs
-fig_cum_historic <- ggplot(cat_daily, aes(x = year, y = first_n_cum_prop)) +
-  geom_bar(aes(fill = category), stat = "identity", show.legend = T,
-           position = position_stack(reverse = TRUE), width = 1) +
-  geom_point(data = OISST_global, aes(x = t, y = first_n_cum_prop_stack, fill = category), 
-             shape = 21, show.legend = F) +
-  scale_fill_manual("Category", values = MHW_colours) +
-  scale_colour_manual("Category", values = MHW_colours) +
-  scale_y_continuous(position = "right", 
-                     limits = c(0, 1),
-                     breaks = seq(0.2, 0.8, length.out = 4),
-                     labels = paste0(seq(20, 80, by = 20), "%")) +
-  scale_x_continuous(breaks = seq(1984, 2019, 7)) +
-  labs(y = "Total MHW coverage", x = NULL) +
-  coord_cartesian(expand = F) +
-  theme(panel.border = element_rect(colour = "black", fill = NA),
-        axis.title = element_text(size = 12),
-        axis.text = element_text(size = 10),
-        legend.position = "none",
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12))
-# fig_cum_historic
+# Map of decadal trend per pixel
+map_dur_trend <- dur_pixel_stats %>%
+  filter(p.value <= 0.05) %>% 
+  ggplot() +
+  geom_tile(aes(fill = dec_trend, x = lon, y = lat)) +
+  geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
+  geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
+  scale_fill_viridis_c(option = "B") +
+  scale_colour_brewer(palette = "Set1") +
+  labs(x = NULL, y = NULL, 
+       fill = "MHW trend\n(days/decade)", colour = "Ecoregion") +
+  coord_sf(xlim = c(9, 60), ylim = c(10, 50)) +
+  theme(legend.position = "top", 
+        panel.background = element_rect(colour = "black", fill = NULL))
+# ggsave("EMME_test.png")
 
-# Create the figure title
-fig_title <- paste0("EMME-CCI MHW categories summary: 1982-2020",
-                    "\nNOAA OISST; Climatogy period: 1982-2011")
+# Prep labels for plotting
+dur_eco_labels <- dur_ecoregion_stats %>% 
+  arrange(-dur_total) %>% 
+  mutate(dec_trend = round(dec_trend),
+         y_point = rev(seq(20, 220, length.out = 8)))
 
-# Stick them together and save
-fig_ALL_historic <- ggpubr::ggarrange(fig_count_historic, fig_cum_historic,
-                                      ncol = 2, align = "hv", labels = c("A)", "B)"), hjust = -0.1,
-                                      font.label = list(size = 14), common.legend = T, legend = "bottom")
-fig_ALL_cap <- grid::textGrob(fig_title, x = 0.01, just = "left", gp = grid::gpar(fontsize = 18))
-fig_ALL_full <- ggpubr::ggarrange(fig_ALL_cap, fig_ALL_historic, heights = c(0.25, 1), nrow = 2)
-ggsave(fig_ALL_full, filename = "EMME_MHW_cat_historic.png", height = 4.25, width = 12)
+# Time series plots with decadal trends
+ts_dur_eco <- dur_ecoregion_annual %>% 
+  ggplot(aes(x = year, y = dur_annual)) +
+  # Ecoregion values
+  geom_point(aes(colour = Ecoregion), show.legend = F) +
+  geom_line(aes(colour = Ecoregion), key_glyph = "abline") +
+  geom_smooth(aes(colour = Ecoregion), method = "lm", se = F, show.legend = F) +
+  geom_label(data = dur_eco_labels, show.legend = F, label.size = 5,
+             aes(label = paste0(dec_trend," days/dec."), x = 1978.5, y = y_point, colour = Ecoregion)) +
+  geom_label(data = dur_eco_labels, show.legend = F, label.size = 0,
+             aes(label = paste0(dec_trend," days/dec."), x = 1978.5, y = y_point), colour = "black") +
+  # Global values
+  geom_point(data = OISST_cat_global_annual, aes(x = t, y = cat_n_prop_stack), colour = "grey") +
+  geom_line(data = OISST_cat_global_annual, aes(x = t, y = cat_n_prop_stack), colour = "grey") +
+  geom_smooth(data = OISST_cat_global_annual, aes(x = t, y = cat_n_prop_stack), colour = "grey",
+              method = "lm", se = F, show.legend = F) +
+  geom_label(data = OISST_cat_global_stats, show.legend = F, label.size = 5,
+             aes(label = paste0(dec_trend," days/dec."), x = 1978.5, y = -10), colour = "grey") +
+  geom_label(data = OISST_cat_global_stats, show.legend = F, label.size = 0,
+             aes(label = paste0(dec_trend," days/dec."), x = 1978.5, y = -10), colour = "black") +
+  # Other bits
+  guides(colour = guide_legend(override.aes = list(size = 5))) +
+  scale_colour_brewer(palette = "Set1") +
+  # scale_y_continuous(breaks = c(15, 19, 23, 27)) +
+  scale_x_continuous(expand = c(0, 0), limits = c(1975, 2020),
+                     breaks = c(1982, 1987, 1992, 1997, 2002, 2007, 2012, 2017)) +
+  labs(x = NULL, y = "MHW days", colour = "Ecoregion") +
+  theme(legend.position = "bottom", 
+        panel.background = element_rect(colour = "black", fill = NULL))
+# ggsave("EMME_test.png")
+
+# Combine SST figures
+fig_dur_maps <- ggpubr::ggarrange(map_dur_total, map_dur_trend, 
+                                  ncol = 2, nrow = 1, align = "hv", 
+                                  labels = c("A)", "B)"))
+# ggsave("EMME_test.png", height = 4, width = 8)
+fig_SST_ALL <- ggpubr::ggarrange(fig_dur_maps, ts_dur_eco, 
+                                 ncol = 1, #align = "hv", 
+                                 labels = c(NA, "C)"), heights = c(1, 1))
+ggsave("EMME_dur_fig.png", fig_SST_ALL, height = 10, width = 10)
 
