@@ -11,6 +11,11 @@ library(heatwaveR)
 # Load ocean coordinates for finding proportions
 load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
 
+# Load 1982, the first year
+MHW_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_1982.Rds") %>% 
+  mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
+         cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+
 # Load 2016, the most intense year
 MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2016.Rds") %>% 
   mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
@@ -96,6 +101,7 @@ cat_n_prop_stats <- function(df){
 }
 
 # Get stats
+cat_n_prop_stats(MHW_cat_daily_1982)
 cat_n_prop_stats(MHW_cat_daily_2016)
 cat_n_prop_stats(MHW_cat_daily_2019)
 cat_n_prop_stats(MHW_cat_daily_2020)
