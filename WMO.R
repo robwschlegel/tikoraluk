@@ -8,31 +8,32 @@
 library(tidyverse)
 library(heatwaveR)
 
-# Load ocean coordinates for finding proportions
-load("../MHWapp/metadata/OISST_ocean_coords.Rdata")
-
 # Load 1982, the first year
-MHW_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_1982.Rds") %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
-         cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+MHW_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_1982.Rds")
+MCS_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_1982.Rds")
 
-# Load 2016, the most intense year
-MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2016.Rds") %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
-         cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+# Load the most intense year
+MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2016.Rds")
+# 1982 is the most intense MCS year
+
+# Load the most coverage year
+MCS_cat_daily_1985 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_1985.Rds")
 
 # Load 2019
-MHW_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2019.Rds") %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
-         cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+MHW_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2019.Rds")
+MCS_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2019.Rds")
 
 # Load 2020
-MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2020.Rds") %>% 
-  mutate(first_n_cum_prop = round(first_n_cum/nrow(OISST_ocean_coords), 4),
-         cat_prop = round(cat_n/nrow(OISST_ocean_coords), 4))
+MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2020.Rds")
+MCS_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2020.Rds")
+
+# Load 2021
+MHW_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2021.Rds")
+MCS_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2021.Rds")
 
 # Total history
 MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds")
+MCS_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_total.Rds")
 
 
 # Panel A) ----------------------------------------------------------------
@@ -46,14 +47,19 @@ MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982
 cat_prop_stats <- function(df){
   df %>% 
     group_by(category) %>% 
-    summarise(mean = mean(cat_prop), .groups = "drop") %>% 
+    summarise(mean = mean(cat_area_prop), .groups = "drop") %>% 
     mutate(sum = sum(mean))
 }
 
-# Get stats
+# Get MHW stats
 cat_prop_stats(MHW_cat_daily_2016)
-cat_prop_stats(MHW_cat_daily_2019)
 cat_prop_stats(MHW_cat_daily_2020)
+cat_prop_stats(MHW_cat_daily_2021)
+
+# Get MHW stats
+cat_prop_stats(MHW_cat_daily_2016)
+cat_prop_stats(MHW_cat_daily_2020)
+cat_prop_stats(MHW_cat_daily_2021)
 
 # Historic record
 total_daily <- MHW_total_summary %>% 
@@ -96,15 +102,15 @@ cat_n_prop_stats <- function(df){
     group_by(category) %>%
     filter(t == max(t)) %>% 
     ungroup() %>% 
-    dplyr::select(t, category, cat_n_prop) %>% 
-    mutate(sum = sum(cat_n_prop))
+    dplyr::select(t, category, cat_area_prop) %>% 
+    mutate(sum = sum(cat_area_prop))
 }
 
-# Get stats
+# Get MHW stats
 cat_n_prop_stats(MHW_cat_daily_1982)
 cat_n_prop_stats(MHW_cat_daily_2016)
-cat_n_prop_stats(MHW_cat_daily_2019)
 cat_n_prop_stats(MHW_cat_daily_2020)
+cat_n_prop_stats(MHW_cat_daily_2021)
 
 # Historic summary
 total_days <- MHW_total_summary %>% 
@@ -127,4 +133,10 @@ Much more of the ocean experienced MHWs classified as 'strong' (45%) than 'moder
 In total, 84% of the ocean experienced at least one MHW (Figure 7C), matching the record for 2019, but less than the 2016 peak (88%).
 On average, each ocean pixel experienced a total of 77 MHW days (Figure 7D). 
 This is greater than 2019 (74) but less than the 2016 peak (83)."
+
+# 2021 text
+
+# MHW figure caption
+
+# MCS figure caption
 
