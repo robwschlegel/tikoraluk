@@ -35,9 +35,6 @@ library(doParallel); registerDoParallel(cores = 50)
 # Coordinates with surface area
 load("metadata/lon_lat_OISST_area.RData")
 
-# TO DO
-# Also need to calculate the 1/(days from start to peak) and 1/(days from peak to end) and make maps
-
 # Check on one pixel
 # SST <- tidync(OISST_files[which(lon_OISST == -178.625)]) %>%
 #   hyper_filter(lat = lat == -10.875) %>% 
@@ -98,12 +95,12 @@ MCS_calc <- function(lon_row){
 
 # 3: Daily categories -----------------------------------------------------
 
-# Function for loading a cat_lon slice and extracting a single day of values
+# Function for creating MCS cat_lon files
 # testers...
 # cat_lon_file <- MCS_lon_files[1]
 # date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
 # date_range <- c(as.Date("1982-01-01"), as.Date("1982-12-31"))
-load_sub_cat_clim <- function(cat_lon_file, date_range){
+cat_lon_proc <- function(cat_lon_file, date_range){
   
   # The original MCS methodology
   cat_sub <- readRDS(cat_lon_file) %>%
@@ -145,11 +142,27 @@ load_sub_cat_clim <- function(cat_lon_file, date_range){
     dplyr::select(-ice, -category)
   
   # Join and exit
-  cat_clim_sub <- left_join(cat_sub, cat_correct_sub,
-                            by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
+  cat_lon <- left_join(cat_sub, cat_correct_sub,
+                       by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
     left_join(cat_ice_sub, by = c("lon", "lat", "t", "event_no", "intensity")) %>% 
     dplyr::rename(category = category.x, category_correct = category.y)
   rm(cat_sub, cat_correct_sub, cat_ice_ref, cat_ice_sub); gc()
+  return(cat_lon)
+}
+
+# Run them
+registerDoParallel(cores = 25)
+plyr::l_ply(1:1440, cat_lon_proc, .parallel = T)
+
+# Function for loading a cat_lon slice and extracting a single day of values
+# testers...
+# cat_lon_file <- cat_lon_files[1118]
+# date_range <- c(as.Date("2019-11-01"), as.Date("2020-01-07"))
+load_sub_cat_clim <- function(cat_lon_file, date_range){
+  cat_clim <- readRDS(cat_lon_file)
+  cat_clim_sub <- cat_clim %>%
+    filter(t >= date_range[1], t <= date_range[2])
+  rm(cat_clim)
   return(cat_clim_sub)
 }
 
@@ -160,7 +173,7 @@ save_sub_cat_clim <- function(date_choice, df){
   
   # Establish file name and save location
   cat_clim_year <- lubridate::year(date_choice)
-  cat_clim_dir <- paste0("../data/cat_clim_MCS/",cat_clim_year)
+  cat_clim_dir <- paste0("../data/cat_clim/MCS/",cat_clim_year)
   dir.create(as.character(cat_clim_dir), showWarnings = F)
   cat_clim_name <- paste0("cat.clim.MCS.",date_choice,".Rds")
   
@@ -230,7 +243,7 @@ MCS_annual_state <- function(chosen_year, product, chosen_clim, force_calc = F){
                chosen_clim,"): ", chosen_year," at ",Sys.time()))
   
   ## Find file location
-  MCS_cat_files <- dir(paste0("../data/cat_clim_MCS/", chosen_year), full.names = T)
+  MCS_cat_files <- dir(paste0("../data/cat_clim/MCS/", chosen_year), full.names = T)
   # MCS_cat_files <- dir(paste0("../data/",product,"_cat_MCS/", chosen_year), 
   #                      full.names = T, pattern = chosen_clim)
   

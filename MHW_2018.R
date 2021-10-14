@@ -84,7 +84,7 @@ cat_lon_files <- dir("../data/cat_lon", full.names = T)
 # Load, process, append, and save all 1982 - 2018 MHW data ----------------
 
 # OISST_acast <- function(df){
-#   # Ensurecorrect grid size
+#   # Ensure correct grid size
 #   lon_lat_OISST_sub <- lon_lat_OISST %>% 
 #     filter(lon == df$lon[1])
 #   # Round data for massive file size reduction
