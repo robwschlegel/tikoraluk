@@ -245,3 +245,25 @@ ggplot(filter(OISST_global_monthly_2020), aes(x = t, y = temp)) +
   scale_x_date(expand = c(0, 0)) +
   labs(x = NULL, y = "Temperature (°C)", title = "Global monthly NOAA OISST: 1982-2020")
 
+
+# Extract pixels ----------------------------------------------------------
+
+# Function for extracting and prepping a single pixel
+extract_pixel <- function(lon_1, lat_1, max_date){
+  sst_1 <- tidync(OISST_files[which(lon_OISST == lon_1)]) %>% 
+    hyper_filter(lat = lat == lat_1) %>% 
+    hyper_tibble() %>% 
+    mutate(t = as.Date(time, origin = "1970-01-01")) %>% 
+    filter(t <= max_date) %>%
+    dplyr::rename(temp = sst) %>% 
+    dplyr::select(t, temp)
+}
+
+# Get pixels
+sst_1 <- extract_pixel(112.625, -29.375, "2020-12-31")
+save(sst_1, file = "extracts/sst_1.RData")
+sst_2 <- extract_pixel(9.125, 43.625, "2020-12-31")
+save(sst_2, file = "extracts/sst_2.RData")
+sst_3 <- extract_pixel(293.125, 43.125, "2020-12-31")
+save(sst_3, file = "extracts/sst_3.RData")
+
