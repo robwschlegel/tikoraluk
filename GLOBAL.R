@@ -8,6 +8,11 @@
 
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
+library(gridExtra) # For tables that work with ggplot
+library(grid)
+library(gtable)
+library(gt) # For pretty tables. Not useful because can't be combined with ggplot objects
+# library(ggplotify) # For converting pretty tables to ggplot objects
 library(sf)
 library(tidync)
 library(doParallel); registerDoParallel(cores = 50)
@@ -197,7 +202,7 @@ save(SST_trends, file = "data/SST_trends.RData")
 load("data/SST_trends.RData")
 
 ## Per ecoregion stats
-# Annual average per ecoregion
+# Average per ecoregion
 SST_trends_ecoregion <- SST_trends %>% 
   group_by(Ecoregion) %>%
   summarise(dec_trend_mean = round(mean(dec_trend, na.rm = T), 2),
@@ -205,7 +210,35 @@ SST_trends_ecoregion <- SST_trends %>%
             dec_trend_sd = round(sd(dec_trend, na.rm = T), 2),
             temp_total_mean = round(mean(temp_total, na.rm = T), 2),
             temp_total_range = max(temp_total, na.rm = T) - min(temp_total, na.rm = T),
-            temp_total_sd = round(sd(temp_total, na.rm = T), 2), .groups = "drop")
+            temp_total_sd = round(sd(temp_total, na.rm = T), 2), .groups = "drop") %>% 
+  arrange(-dec_trend_mean) %>% 
+  mutate(rank = 1:n())
+
+# Average per ecoregion
+SST_trends_province <- SST_trends %>% 
+  left_join(MEOW[,c("ECOREGION", "PROVINCE")], by = c("Ecoregion" = "ECOREGION")) %>% 
+  group_by(PROVINCE) %>%
+  summarise(dec_trend_mean = round(mean(dec_trend, na.rm = T), 2),
+            dec_trend_range = max(dec_trend, na.rm = T) - min(dec_trend, na.rm = T),
+            dec_trend_sd = round(sd(dec_trend, na.rm = T), 2),
+            temp_total_mean = round(mean(temp_total, na.rm = T), 2),
+            temp_total_range = max(temp_total, na.rm = T) - min(temp_total, na.rm = T),
+            temp_total_sd = round(sd(temp_total, na.rm = T), 2), .groups = "drop") %>% 
+  arrange(-dec_trend_mean) %>% 
+  mutate(rank = 1:n())
+
+# Average per ecoregion
+SST_trends_realm <- SST_trends %>% 
+  left_join(MEOW[,c("ECOREGION", "REALM")], by = c("Ecoregion" = "ECOREGION")) %>% 
+  group_by(REALM) %>%
+  summarise(dec_trend_mean = round(mean(dec_trend, na.rm = T), 2),
+            dec_trend_range = max(dec_trend, na.rm = T) - min(dec_trend, na.rm = T),
+            dec_trend_sd = round(sd(dec_trend, na.rm = T), 2),
+            temp_total_mean = round(mean(temp_total, na.rm = T), 2),
+            temp_total_range = max(temp_total, na.rm = T) - min(temp_total, na.rm = T),
+            temp_total_sd = round(sd(temp_total, na.rm = T), 2), .groups = "drop") %>% 
+  arrange(-dec_trend_mean) %>% 
+  mutate(rank = 1:n())
 
 # Global mean and trend
 SST_trends_global <- SST_trends %>% 
@@ -215,6 +248,26 @@ SST_trends_global <- SST_trends %>%
             temp_total_mean = round(mean(temp_total, na.rm = T), 2),
             temp_total_range = max(temp_total, na.rm = T) - min(temp_total, na.rm = T),
             temp_total_sd = round(sd(temp_total, na.rm = T), 2), .groups = "drop")
+
+# Create table for plotting
+SST_trends_ecoregion_Med <- SST_trends_ecoregion %>% 
+  left_join(MEOW[,c("ECOREGION", "PROVINCE", "REALM")], by = c("Ecoregion" = "ECOREGION")) %>% 
+  dplyr::select(-geometry) %>% 
+  filter(PROVINCE == "Mediterranean Sea") %>% 
+  dplyr::select(REALM, PROVINCE, Ecoregion, rank, dec_trend_mean, dec_trend_sd) %>% 
+  mutate(grouping = "Ecoregion")
+
+SST_trends_province_Med <- SST_trends_province %>% 
+  left_join(MEOW[,c("PROVINCE", "REALM")], by = c("PROVINCE")) %>% 
+  dplyr::select(-geometry) %>% 
+  distinct() %>% 
+  slice(1:10) %>% 
+  dplyr::select(REALM, PROVINCE, rank, dec_trend_mean, dec_trend_sd)  %>% 
+  mutate(grouping = "Province")
+
+SST_trends_ALL <- bind_rows(SST_trends_ecoregion_Med, SST_trends_province_Med,
+                            mutate(SST_trends_realm, grouping = "Realm")) %>% 
+  dplyr::select(grouping, rank, REALM:dec_trend_sd)
 
 
 # SST figure --------------------------------------------------------------
@@ -238,7 +291,7 @@ map_SST_trend <- SST_trends %>%
   filter(p.value <= 0.05) %>% 
   ggplot() +
   geom_tile(aes(fill = dec_trend, x = lon, y = lat)) +
-  geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
+  # geom_sf(data = MEOW, aes(colour = ECOREGION), fill = NA, show.legend = F) +
   geom_polygon(data = map_base, aes(group = group, x = lon, y = lat)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red") +
   # scale_fill_viridis_c(option = "A") +
@@ -250,17 +303,53 @@ map_SST_trend <- SST_trends %>%
         panel.background = element_rect(colour = "black", fill = NULL))
 map_SST_trend
 
+# Rank tables of ecoregions
+## NB: THis is pretty, but can't be combined with ggplot objects
+med_table <- SST_trends_ALL %>% 
+  dplyr::rename(Realm = REALM, Province = PROVINCE, Rank = rank, Trend = dec_trend_mean, SD = dec_trend_sd) %>% 
+  gt(groupname_col = "grouping") %>% 
+  tab_header(title = md("Mediterannean Sea ecoregions ranked by warming")) %>% 
+  tab_spanner(label = "Decadal warming (°C)", columns = matches("Trend|SD"))
+med_table
+
+# Table theme
+t1 <- ttheme_default(core = list(bg_params = list(fill = c(rep(c("grey90", "grey95"), length.out = 7),
+                                                           rep(c("grey100", "grey95"), length.out = 10),
+                                                           rep(c("grey90", "grey95"), length.out = 12)))))
+
+# Table
+med_table <- SST_trends_ALL %>% 
+  dplyr::rename(Realm = REALM, Province = PROVINCE, Rank = rank, Trend = dec_trend_mean, SD = dec_trend_sd) %>% 
+  dplyr::select(-grouping) %>% 
+  replace(is.na(.), "") %>% 
+  tableGrob(rows = NULL, theme = t1) %>% 
+  gtable_add_grob(grobs = segmentsGrob(
+                    x0 = unit(0,"npc"),
+                    y0 = unit(0,"npc"),
+                    x1 = unit(1,"npc"),
+                    y1 = unit(0,"npc"),
+                    gp = gpar(lwd = 2.0)),
+                  t = 8, b = 8, l = 1, r = 6) %>% 
+  gtable_add_grob(grobs = segmentsGrob(
+    x0 = unit(0,"npc"),
+    y0 = unit(0,"npc"),
+    x1 = unit(1,"npc"),
+    y1 = unit(0,"npc"),
+    gp = gpar(lwd = 2.0)),
+    t = 18, b = 18, l = 1, r = 6)
+plot(med_table)
+
 # Combine SST figures
 fig_SST_maps <- ggpubr::ggarrange(map_SST_total, map_SST_trend, 
                                   ncol = 1, nrow = 2, align = "hv", 
                                   labels = c("A)", "B)"))
-ggsave("graph/GLOBAL_SST.png", fig_SST_maps, height = 11.5, width = 10)
+fig_SST_all <- ggpubr::ggarrange(fig_SST_maps, med_table, ncol = 2, nrow = 1, 
+                                 labels = c(NA, "C)"), widths = c(1, 1))
+ggsave("graph/GLOBAL_SST.png", fig_SST_all, height = 11, width = 19)
 
 
-# Show the ranking of the ecoregions, provinces, and realms
+# MHW analysis ------------------------------------------------------------
 
-
-# Load MHW data -----------------------------------------------------------
 
 # Load cat files
 registerDoParallel(cores = 50)
