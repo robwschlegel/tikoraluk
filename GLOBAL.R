@@ -408,13 +408,13 @@ MHW_analysis <- function(file_name, sub_pixels){
   return(dur_pixel_stats) 
 }
 
-# Run global MEOW MHW uration analysis
-registerDoParallel(cores = 50)
-system.time(
-  MHW_dur_trends <- plyr::ldply(MHW_cat_lon_files, MHW_analysis, .parallel = T, sub_pixels = ecoregion_pixels)
-) # xxx minutes on 50 cores
-gc()
-save(MHW_dur_trends, file = "data/MHW_dur_trends.RData")
+# Run global MEOW MHW duration analysis
+# registerDoParallel(cores = 50)
+# system.time(
+#   MHW_dur_trends <- plyr::ldply(MHW_cat_lon_files, MHW_analysis, .parallel = T, sub_pixels = ecoregion_pixels)
+# ) # xxx minutes on 50 cores
+# gc()
+# save(MHW_dur_trends, file = "data/MHW_dur_trends.RData")
 load("data/MHW_dur_trends.RData")
 
 ## Per ecoregion stats
@@ -430,7 +430,7 @@ MHW_dur_trends_ecoregion <- MHW_dur_trends %>%
   arrange(-dec_trend_mean) %>% 
   mutate(rank = 1:n())
 
-# Average per ecoregion
+# Average per province
 MHW_dur_trends_province <- MHW_dur_trends %>% 
   left_join(MEOW[,c("ECOREGION", "PROVINCE")], by = c("Ecoregion" = "ECOREGION")) %>% 
   group_by(PROVINCE) %>%
@@ -443,7 +443,7 @@ MHW_dur_trends_province <- MHW_dur_trends %>%
   arrange(-dec_trend_mean) %>% 
   mutate(rank = 1:n())
 
-# Average per ecoregion
+# Average per realm
 MHW_dur_trends_realm <- MHW_dur_trends %>% 
   left_join(MEOW[,c("ECOREGION", "REALM")], by = c("Ecoregion" = "ECOREGION")) %>% 
   group_by(REALM) %>%
