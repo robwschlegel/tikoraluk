@@ -31,7 +31,7 @@ base_URL_new <- "http://dap.ceda.ac.uk/thredds/fileServer/neodc/c3s_sst/data/ICD
   # NB: These are historic repos and therefore the dates are static
   # I assume that the 'new' data will be updated through 2019 by the end of 2020
 date_range_old <- seq(as.Date("1981-09-01"), as.Date("2016-12-31"), by = "day")
-date_range_new <- seq(as.Date("2017-01-01"), as.Date("2018-12-31"), by = "day")
+date_range_new <- seq(as.Date("2017-01-01"), as.Date("2020-12-31"), by = "day")
 
 
 # Download function -------------------------------------------------------
