@@ -1,6 +1,6 @@
 # GLOBAL.R
 # This script contains code used for global analyses
-# THis may be SST and/or MHW focussed
+# This may be SST and/or MHW focussed
 # MEOW is also used
 
 
