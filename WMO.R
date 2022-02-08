@@ -113,14 +113,13 @@ cat_prop_stats <- function(df){
     group_by(category) %>%
     filter(t == max(t)) %>% 
     ungroup() %>% 
-    dplyr::select(t, category, cat_area_prop) %>% 
-    mutate(sum = sum(cat_area_prop))
+    dplyr::select(t, category, cat_n_prop) %>% 
+    mutate(sum = sum(cat_n_prop))
 }
 
 # Get MHW stats
 cat_prop_stats(MHW_cat_daily_1982)
 cat_prop_stats(MHW_cat_daily_2016)
-cat_prop_stats(MHW_cat_daily_2019)
 cat_prop_stats(MHW_cat_daily_2020)
 cat_prop_stats(MHW_cat_daily_2021)
 
@@ -130,7 +129,7 @@ total_days <- MHW_total_summary %>%
   summarise(sum(cat_n_prop))
 
 
-# Text --------------------------------------------------------------------
+# WMO text ----------------------------------------------------------------
 
 # 2020
 "Much of the ocean experienced at least a 'Strong' MHW at some point throughout 2020 (Figure 7A).
@@ -210,4 +209,9 @@ NOAA OISST v2: Optimum Interpolation Sea Surface Temperature (OISST):
 Banzon, V. et al., 2016: A Long-Term Record of Blended Satellite and in Situ Sea-Surface
 Temperature for Climate Monitoring, Modeling and Environmental Studies. Earth System
 Science Data, 8(1): 165–176. doi: https://essd.copernicus.org/articles/8/165/2016/."
+
+
+# BAMS text ---------------------------------------------------------------
+
+# Search through old e-mails to retrieve text from correspondence.
 

@@ -75,7 +75,7 @@ doParallel::registerDoParallel(cores = 50)
 # Download all old data: 1981-09-01 to 2016-12-31
 plyr::l_ply(date_range_old, .fun = download_CCI, base_URL = base_URL_old, .parallel = T)
 
-# Download all new data: 2016-01-01 to 2018-12-31
+# Download all new data: 2016-01-01 to 2020-12-31
 plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .parallel = T)
 
 
@@ -109,7 +109,7 @@ plyr::l_ply(date_range_new, .fun = download_CCI, base_URL = base_URL_new, .paral
 
 # Files
 CCI_files <- dir("../data/CCI", full.names = T)
-tidync("../data/CCI/19820620120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc") 
+tidync("../data/CCI/19820620120000-ESACCI-L4_GHRSST-SSTdepth-OSTIA-GLOB_CDR2.1-v02.0-fv01.0.nc")
 
 # Load function
 load_CCI_region <- function(file_name, lon_min, lon_max, lat_min, lat_max){
