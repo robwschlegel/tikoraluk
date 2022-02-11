@@ -210,6 +210,17 @@ Banzon, V. et al., 2016: A Long-Term Record of Blended Satellite and in Situ Sea
 Temperature for Climate Monitoring, Modeling and Environmental Studies. Earth System
 Science Data, 8(1): 165–176. doi: https://essd.copernicus.org/articles/8/165/2016/."
 
+# References
+
+"Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
+A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238."
+
+"Hobday, A. J., Oliver, E. C., Gupta, A. S., Benthuysen, J. A., Burrows, M. T., Donat, M. G., ... & Smale, D. A. (2018). 
+Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173."
+
+"Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
+Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. Journal of Climate, 34(8), 2923-2939."
+
 
 # BAMS text ---------------------------------------------------------------
 
