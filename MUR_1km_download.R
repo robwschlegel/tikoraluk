@@ -65,3 +65,4 @@ ggplot(data = filter(Lab_test, t == "2019-09-01"), aes(x = lon, y = lat)) +
   geom_raster(aes(fill = temp)) +
   # borders() +
   scale_fill_viridis_c()
+
