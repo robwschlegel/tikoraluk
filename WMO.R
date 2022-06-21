@@ -1,5 +1,6 @@
 # WMO
 # This script contains the code used to get the numbers for the annual WMO contribution
+# Also for the decadal 2011-2020 WMO report
 
 
 # Setup -------------------------------------------------------------------
@@ -45,7 +46,7 @@ MCS_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_
 
 # Panel B) ----------------------------------------------------------------
 # Daily count of MHWs by category
-# cat_prop
+# cat_area_prop
 
 cat_prop_stats <- function(df){
   df %>% 
@@ -72,7 +73,7 @@ total_daily <- MHW_total_summary %>%
 
 # Panel C) ----------------------------------------------------------------
 # Overall percent of ocean affected by MHWs
-# first_n_cum_prop
+# first_area_cum_prop
 
 first_cum_prop_stats <- function(df){
   df %>% 
@@ -103,25 +104,40 @@ cat_II_over_I <- MHW_total_summary %>%
   mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
          cat_II_over_I = case_when(`II Strong` > `I Moderate` ~ TRUE, TRUE ~ FALSE))
 
+cat_I_over_II <- MCS_total_summary %>% 
+  group_by(t) %>% 
+  dplyr::select(t, first_area_cum_prop, category) %>% 
+  pivot_wider(names_from = category, values_from = first_area_cum_prop) %>% 
+  mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
+         cat_I_over_II = case_when(`I Moderate` > `II Strong` ~ TRUE, TRUE ~ FALSE))
+
 
 # Panel D) ----------------------------------------------------------------
 # Average days of MHWs per pixel
-# cat_n_prop
+# cat_area_prop
 
 cat_prop_stats <- function(df){
   df %>% 
     group_by(category) %>%
     filter(t == max(t)) %>% 
     ungroup() %>% 
-    dplyr::select(t, category, cat_n_prop) %>% 
-    mutate(sum = sum(cat_n_prop))
+    dplyr::select(t, category, cat_area_cum_prop) %>% 
+    mutate(sum = sum(cat_area_cum_prop))
 }
 
 # Get MHW stats
 cat_prop_stats(MHW_cat_daily_1982)
 cat_prop_stats(MHW_cat_daily_2016)
+cat_prop_stats(MHW_cat_daily_2019)
 cat_prop_stats(MHW_cat_daily_2020)
 cat_prop_stats(MHW_cat_daily_2021)
+
+# Get MCS stats
+cat_prop_stats(MCS_cat_daily_1982)
+cat_prop_stats(MCS_cat_daily_1985)
+cat_prop_stats(MCS_cat_daily_2019)
+cat_prop_stats(MCS_cat_daily_2020)
+cat_prop_stats(MCS_cat_daily_2021)
 
 # Historic summary
 total_days <- MHW_total_summary %>% 
@@ -220,6 +236,117 @@ Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173."
 
 "Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
 Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. Journal of Climate, 34(8), 2923-2939."
+
+
+# Decadal report ----------------------------------------------------------
+
+## NB: Load functions above
+
+## Load 2011-2020 data
+# MHW
+MHW_cat_daily_2011 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2011.Rds")
+MHW_cat_daily_2012 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2012.Rds")
+MHW_cat_daily_2013 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2013.Rds")
+MHW_cat_daily_2014 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2014.Rds")
+MHW_cat_daily_2015 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2015.Rds")
+MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2016.Rds")
+MHW_cat_daily_2017 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2017.Rds")
+MHW_cat_daily_2018 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2018.Rds")
+MHW_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2019.Rds")
+MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2020.Rds")
+# MCS
+MCS_cat_daily_2011 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2011.Rds")
+MCS_cat_daily_2012 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2012.Rds")
+MCS_cat_daily_2013 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2013.Rds")
+MCS_cat_daily_2014 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2014.Rds")
+MCS_cat_daily_2015 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2015.Rds")
+MCS_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2016.Rds")
+MCS_cat_daily_2017 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2017.Rds")
+MCS_cat_daily_2018 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2018.Rds")
+MCS_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2019.Rds")
+MCS_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2020.Rds")
+
+# Total history
+MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds")
+MCS_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_total.Rds")
+
+## Daily count of MHWs by category - cat_area_prop
+# Get MHW stats
+cat_prop_stats(MHW_cat_daily_2020)
+# Get MCS stats
+cat_prop_stats(MCS_cat_daily_2020)
+# Historic record
+total_days <- MHW_total_summary %>% group_by(t) %>% 
+  summarise(average_days = sum(cat_area_cum_prop))
+total_percent_cover <- MHW_total_summary %>% group_by(t) %>% 
+  summarise(average_percent_cover = sum(cat_area_prop_mean))
+
+## Overall percent of ocean affected by MHWs - first_n_cum_prop
+# Get MHW stats
+first_cum_prop_stats(MHW_cat_daily_2020)
+# Get MCS stats
+first_cum_prop_stats(MCS_cat_daily_2020)
+# Total stats
+total_percent_cover <- MHW_total_summary %>% group_by(t) %>% 
+  summarise(average_percent_cover = sum(first_area_cum_prop))
+
+# Years when there were more cat II than I events
+cat_II_over_I <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  dplyr::select(t, first_area_cum_prop, category) %>% 
+  pivot_wider(names_from = category, values_from = first_area_cum_prop) %>% 
+  mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
+         cat_II_over_I = case_when(`II Strong` > `I Moderate` ~ TRUE, TRUE ~ FALSE))
+cat_I_over_II <- MCS_total_summary %>% 
+  group_by(t) %>% 
+  dplyr::select(t, first_area_cum_prop, category) %>% 
+  pivot_wider(names_from = category, values_from = first_area_cum_prop) %>% 
+  mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
+         cat_I_over_II = case_when(`I Moderate` > `II Strong` ~ TRUE, TRUE ~ FALSE))
+
+## Average days of MHWs per pixel - cat_n_prop
+# Get MHW stats
+cat_prop_stats(MHW_cat_daily_2016)
+cat_prop_stats(MHW_cat_daily_2019)
+cat_prop_stats(MHW_cat_daily_2020)
+# Get MCS stats
+cat_prop_stats(MCS_cat_daily_2019)
+cat_prop_stats(MCS_cat_daily_2020)
+# Historic summary
+total_days <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_n_prop))
+
+# List top ten warmest year stats
+  # Warmest of them all
+  # Warmest+coldest years, and compared to individual years from previous decade(s)
+  # Average decadal stats vs overall stats
+
+
+
+# Years with extreme days
+
+
+# Bar plots of change in time of the usual stats, but a bar for each decade
+  # See Figure 1 in previous WMO decadal report
+  # Custom legend with text in the middle and the squares of colour to the left and right
+  # Use different cat names to allow stacked bar plots with MHW and MCS next to each other
+  # Or rather use positive and negative y-axis to show MCS below MHW on the same years
+  # Put years on 0 axis as labels
+
+# List some noteworthy events:
+  # Med - 2003
+  # Western Australia - 2012
+  # NW Atlantic - 2013
+  # The Blob - 2015-18
+  # NZ - 20??
+
+"A defining characteristic of MHWs in this decade (2011-2020) has been the emergence of Category II events over Category I,
+which has remained a consistent feature from 2014-2020. This had occurred only twice before in the historic record (1998, 2010).
+The same cannot  be said for MCSs, for which this has occurred only in the first three years of the available data (1982-1984),
+and at no other point in this or the preceeding decade."
+
+# An interesting metric would be the surface area that experienced 100+ MHW days in a year
 
 
 # BAMS text ---------------------------------------------------------------
