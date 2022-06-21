@@ -8,6 +8,7 @@
 .libPaths(c("~/R-packages", .libPaths()))
 library(tidyverse)
 library(heatwaveR)
+library(ggpmisc)
 
 
 # Years of interest -------------------------------------------------------
@@ -314,7 +315,7 @@ df_bar_sum <- decadal_sum %>%
   unite(var_stat, var_name, name) %>% 
   mutate(value = case_when(type == "MCS" ~ -value, TRUE ~ value)) %>% 
   pivot_wider(values_from = value, names_from = var_stat)
-df_labs <- data.frame(dec = 1:4, labs = c("1982-1990", "1991-2000", "2001-2010", "2011-2020"))
+df_labs <- data.frame(dec = 1:4, labs = c("1982 - 1990", "1991 - 2000", "2001 - 2010", "2011 - 2020"))
 df_colour_palette <- data.frame(category = factor(c("I Moderate", "II Strong", "III Severe", "IV Extreme"),
                                                levels = c("I Moderate", "II Strong", "III Severe", "IV Extreme")),
                                 x = 1:4,
@@ -327,15 +328,12 @@ df_colour_palette <- data.frame(category = factor(c("I Moderate", "II Strong", "
 fig_legend <- ggplot(data = df_colour_palette, aes(x = y, y = rev(category))) +
   geom_tile(fill = df_colour_palette$colour) +
   # geom_hline(aes(yintercept = 0.5)) +
-  geom_label(aes(x = 0.5, y = rev(x), label = category), size = 6) +
+  geom_label(aes(x = 0.5, y = rev(x), label = category)) +
   coord_cartesian(expand = F) +
   labs(x = NULL, y = NULL) +
-  theme(axis.ticks = element_blank(),
-        axis.text = element_blank(),
-        panel.border = element_rect(fill = NA, colour = "black"))
+  theme_void() +
+  theme(panel.border = element_rect(fill = NA, colour = "black"))
 fig_legend
-fig_blank <- ggplot() + geom_blank() + theme(panel.background = element_rect(fill = "white", colour = NA))
-fig_blank
 
 # Daily average and daily percent figure
 fig_day <- ggplot(data = df_bar_cat, aes(x = dec)) +
@@ -345,20 +343,19 @@ fig_day <- ggplot(data = df_bar_cat, aes(x = dec)) +
                 aes(group = type, ymin = daily_cover_min, ymax = daily_cover_max)) +
   geom_hline(aes(yintercept = 0)) +
   geom_label(data = df_labs, aes(x = dec, y = 0, label = labs)) + 
-  ggpmisc::geom_grob(aes(x = 0, y = 0, label = list(cowplot::as_grob(fig_1_a))), vp.width = 0.7, vp.height = 0.7, 
-                     nudge_x = -0.033, add.segments = F)
+  geom_grob(aes(x = 1.2, y = 50, label = list(cowplot::as_grob(fig_legend))), vp.width = 0.3, vp.height = 0.3) +
   # geom_point(data = df_bar_sum, aes(y = daily_cover_mean)) + # The top of the bars
   scale_fill_manual("Category", values = event_colours) +
   scale_y_continuous(limits = c(-27, 65),
                      breaks = c(-20, 20, 40, 60),
                      labels = c("20", "20", "40", "60"),
-                     sec.axis = sec_axis(name = paste0("Daily ocean coverage"), 
+                     sec.axis = sec_axis(name = paste0("Average ocean coverage"), 
                                          trans = ~ . + 0,
                                          breaks = c(-21.9, -14.6, -7.3, 7.3, 14.6, 21.9, 29.2, 36.5, 43.8, 51.1, 58.4),
                                          labels = c("6%", "4%", "2%", "2%", "4%", "6%", "8%", "10%", "12%", "14%", "16%"))) +
   # scale_x_continuous(expand = c(0, 0)) +
   # guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
-  labs(y = paste0("Ocean days"), x = NULL) +
+  labs(y = paste0("Average ocean days"), x = NULL) +
   coord_cartesian(expand = F) +
   theme(panel.border = element_rect(colour = "black", fill = NA),
         axis.title = element_text(size = 12),
@@ -394,71 +391,84 @@ fig_percent <- ggplot(data = df_bar_cat, aes(x = dec)) +
 fig_percent
 
 # Combine and save
-fig_panels <- ggpubr::ggarrange(fig_day, fig_percent, align = "hv")
-fig_legend_white <- ggpubr::ggarrange(fig_blank, fig_legend, fig_blank, ncol = 1, heights = c(1, 1, 1))
-fig_final <- ggpubr::ggarrange(fig_panels, fig_legend_white, nrow = 1, widths = c(6, 1))
-fig_final
-ggsave("graph/WMO_dec_2020.png", width = 13, height = 7)
+fig_final <- ggpubr::ggarrange(fig_percent, fig_day, align = "hv", labels = c("a)", "b)"))
+# fig_final
+ggsave("graph/WMO_dec_2020.png", fig_final, width = 12, height = 6)
+ggsave("graph/WMO_dec_2020.eps", fig_final, width = 12, height = 6)
+
+# Figure caption
+"Figure XX: "
 
 # List some noteworthy events:
   # Med - 2003; Western Australia - 2012; NW Atlantic - 2013; Blob - 2015-18; NZ - 20??
-"It was during this decade that one may say that the focussed study of MHW and MCS began. 
+"One could argue that it was during this decade (2001 - 2010) that the focussed study of marine heatwaves (MHW) and marine cold-spells (MCS) began. 
 There was of course a wealth of literature focussing on these extreme events going back at least as far as 
-19XX (e.g. XXX et al., XXX), but it was with Hobday et al. (2016, 2018) that a numeric definition for these events
-that could produce both locally and globally comparible results started to see widespread use. 
-There is some important criticism of this methodology however that should be considered (see Jacox, 20XX). 
-Of specific importance to note is that with the Hobday definition of MHW/MCS, the warming signal in the temperature time series is 
-not first removed (generally via linear interpolation, but see Wang et al. (2022) for why this is problematic). 
-This is one of the primary reasons why one wll note a general increase in all of the following MHW results, and a decrease for MCS.
-That being said, there was a series of high profile MHW over 2011-2020. Indeed, the only well documented MHW to have occurred 
-in a previous decade was in the Mediterranean in 2003 (Garrabou et al., 20XX), which was driven primarily by the atmospheric heatwave 
-(Ortega et al., 20XX) that killed 66,000 people across Europe (WMO deacadal report 2010).
-The 2011 Western Austalia MHW can be accredited as having finally clarified the need to create a globally
-consistent MHW definition. This event destroyed hundreds of kilometres of coastal kelp forests (Wernberg et al., 20XX),
-most of which have remained as a much less productive scrub turf (Wernberg et al., 20XX). 
+1936 (e.g. Storey & Gudger, 1936), but it was the publication of Hobday et al. (2016, 2018) when a quantitative definition 
+for these events that could produce both locally and globally comparible results started to see widespread use. 
+There is some important criticism of this methodology that should be considered (see opinion in Jacox, 2019), with 
+the most conspicuous being that with the Hobday definition of MHW/MCS, the warming signal in the temperature time series is 
+not first removed (generally via linear interpolation, but see Wang et al. (2022) for rebuttal). 
+This is one of the primary reasons why one will note a general increase in all of the following MHW results, and a decrease for MCS.
+That being said, there was a series of high profile MHW this decade. Indeed, the only well documented MHW to have occurred 
+in a previous decade was in the Mediterranean in 2003 (Garrabou et al., 2009), which was driven primarily by the atmospheric heatwave 
+(Olita et al., 2007) that killed 66,000 people across Europe (WMO, 2013).
+The 2011 Western Austalia MHW can be credited as having finally clarified the need to create a globally
+consistent MHW definition. This event wreaked havoc on hundreds of kilometres of coastal kelp forests (Wernberg et al., 2013),
+most of which have remained as a much less productive scrub turf since (Wernberg et al., 2016). 
 The 2012 Northwest Atlantic MHW occurred at just the right time of year to drive the centre of the North American lobster 
 fishery just far enough north as to cross over an international border,
-making it the first ocean climate event on record to cause political tension between two high income nations (XXX et al., XXX). 
-Without a doubt the largest MHW to have occurred since record keeping beagn was the 2015-2018 event, appropriately nicknamed 'Th Blob'.
-This event covered much of the northeast Pacific and persisted for years, affecting every level in the tophic web (XXX et al., XXX).
-More recently the waters around Tasmania have been expriencing regularly occurring MHW and much of the natural ranges of local species
-are at risk (XXX et al. XXX). As thw orld continues to warm, it is almost a certain that the following decade will be host to a cast
-of newsworthy MHW that far outpaces those of this closing deacde.
-Very little can be said of noteworthy MCS from 2011-2020, with the exception of the semi-persistent 'cold blob' 
-found in the Altantic ocean below Greenland. It has been posited that this may be a sign of the slowing of the AMOC (XXX et al., XXX)."
+making it the first ocean climate event on record to cause political tension between two high income nations (Mills et al., 2013). 
+Without a doubt the largest MHW to have occurred since record keeping began in 1982 was the 2014-2016 event, appropriately nicknamed 'The Blob'.
+This event covered much of the northeast Pacific and persisted for years, affecting every level in the tophic web (Cavole et al., 2016).
+More recently the waters around Tasmania have been expriencing regularly occurring MHW, 
+putting much of the local flora and fauna at risk (Perkins-Kirkpatrick et al., 2019). 
+For more insight on the global risks of MHW to biodiversity and ecosystem services please see Smale et al. (2019).
+As the orld continues to warm, it is almost a certainty that the following decade will be host to a cast
+of newsworthy MHW that far outpaces those of this closing decade.
+Very little can be said of noteworthy MCS from 2011 - 2020, with the exception of the semi-persistent 'cold blob' 
+found in the Altantic ocean below Greenland. It has been positted that this may be a sign of the slowing of the AMOC (Yeager et al., 2016)."
 
 # List top ten warmest year stats
-"The top three years with the highest average daily count of MHWs were 2016, 2020, and 2019 respectively.
-The last eight years of the decade (2013-2020) were all in the top ten highest years of recorded MHW days,
-with 2010 (#8) and 1998 (#9) also being noteworthy. A similar pattern was seen for the overall surface area 
-per year that experienced a MHW.
+"Over 2011-2020, 60% of the surface of the ocean experienced a MHW on any given year, with the highest being 65% in 2016 (Figure XXa).
+The top ten years of MHW coverage contain seven years from this decade, and three from the previous (2000 - 2010). 
+For MCS, the present decadal average is 31.5%, and no years from this or the previous decade are found in the top ten.
+The top three years with the highest average daily count of MHWs were  in 2016, 2020, and 2019 respectively (Figure XXb).
+The last eight years of the decade (2013-2020) were all in the top ten highest years of recorded MHW days, in addition to 2010 (#8) and 1998 (#9). 
 Roughly the opposite has been seen for MCS, with only 2011 (#9) and 2010 (#10) being in the top ten of years with highest daily averages, 
-which is otherwise populated with years from the beginning of the data record. The curious uptick in global MCS days from roughly 2007 
-is due to the ucrrently unstudy increase to the duraiton of MCS in the southern ocean (Schlegel et al., 2022). 
+which is otherwise populated with years from the beginning of the data record. The curious uptick in global MCS days for this decade 
+is due to an increase in the duraiton (but not intensity) of MCS in the southern ocean (Schlegel et al., 2022). 
 Therefore, while 2010 and 2011 may be in the top ten years with the highest average MCS days, 
 the top ten for highest percent cover of the ocean is almost entirely those years from the beginning of recorded data."
 
 # Cat II over cat I observations
-"A defining characteristic of MHWs in this decade (2011-2020) has been the emergence of Category II events over Category I,
+"A defining characteristic of MHWs in this decade (2011-2020) has been the emergence of Category II (Strong) events over Category I (Moderate),
 which has remained a consistent feature from 2014-2020. This had occurred only twice before in the historic record (1998, 2010).
-The same cannot  be said for MCSs, for which this has occurred only in the first three years of the available data (1982-1984),
-and at no other point in this or the preceeding decade."
+The same cannot be said for MCSs, for which this has occurred only in the first three years of the available data (1982-1984),
+and at no other point in this or the preceeding decades."
 
 # Years with extreme days
 "The occurrence of Category IV (Extreme) events was so uncommon in the past that they could hardly be measured on a global scale.
 Now they occur frequently enough that in the current decade the ocean experienced an average of 0.5 extreme days per year (25 times that of MCS), 
 with a record of 1 full day in 2016. While this may sound like a small value, consider that generally for a MHW to experience 
-even one day at Category IV requires a mountain of anomalous temperature, and the occurrence of Category IV events is known
-to be able to change entire ecosystems (e.g. Wernberg et al., 20XX). That the ocean is now experiencing so many Category IV MHW days 
-that when averaged over the entire surface of the ocean they no longer amount to a miniscule fraction should be a worrying sign.
-Indeed, this is exactly what is warned of in Oliver et al. (20XX) when they show in Figure XX the difference in the average daily
-MHW categories for RCP 4.5 vs RCP 8.5. Depending on the emmissions scenario that we humans manage to hold ourselves to into the future, 
-we will either be seeing very few more Category 4 days (RCP4.5), or they will become dominant (RCP8.5).
-In which case it is likely that most ecosystems of the ocean will be forced to change."
+even 1 day at Category IV requires a mountain of anomalous temperature underneath. It is also known that the occurrence of Category IV events may 
+be able to change entire ecosystems (e.g. Wernberg et al., 2016, Smale et al., 2019). 
+That so many Category IV MHW days are occurring that, when averaged over the entire surface of the ocean they 
+no longer amount to a miniscule fraction, should be a worrying sign.
+Indeed, this is exactly what is warned of in Oliver et al. (2019) when they show in Figure 3 the difference in the average daily
+MHW categories for RCP 4.5 vs RCP 8.5. Depending on the emmissions scenario that we humans manage to hold ourselves to, 
+we will either be seeing very few more Category IV days (RCP4.5), or they will become dominant (RCP8.5).
+In which case it is likely that most ecosystems throughout the ocean will be forced to change."
 
 # An interesting metric would be the surface area that experienced 100+ MHW days in a year
 
 # References
+
+"Cavole, L. M., Demko, A. M., Diner, R. E., Giddings, A., Koester, I., Pagniello, C. M., ... & Franks, P. J. (2016). 
+Biological impacts of the 2013–2015 warm-water anomaly in the Northeast Pacific: winners, losers, and the future. Oceanography, 29(2), 273-285."
+
+"Garrabou, J., Coma, R., Bensoussan, N., Bally, M., Chevaldonné, P., Cigliano, M., ... & Cerrano, C. (2009). 
+Mass mortality in Northwestern Mediterranean rocky benthic communities: effects of the 2003 heat wave. Global change biology, 15(5), 1090-1103."
+
 "Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
 A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238."
 
@@ -467,6 +477,45 @@ Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173."
 
 "Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
 Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. Journal of Climate, 34(8), 2923-2939."
+
+"Jacox, M. G. (2019). 
+Marine heatwaves in a changing climate."
+
+"Mills, K. E., Pershing, A. J., Brown, C. J., Chen, Y., Chiang, F. S., Holland, D. S., ... & Wahle, R. A. (2013). 
+Fisheries management in a changing climate: lessons from the 2012 ocean heat wave in the Northwest Atlantic. Oceanography, 26(2), 191-195."
+
+"Olita, A., Sorgente, R., Natale, S., Gaberšek, S., Ribotti, A., Bonanno, A., & Patti, B. (2007). 
+Effects of the 2003 European heatwave on the Central Mediterranean Sea: surface fluxes and the dynamical response. Ocean Science, 3(2), 273-289."
+
+"Oliver, E. C., Burrows, M. T., Donat, M. G., Sen Gupta, A., Alexander, L. V., Perkins-Kirkpatrick, S. E., ... & Smale, D. A. (2019). 
+Projected marine heatwaves in the 21st century and the potential for ecological impact. Frontiers in Marine Science, 6, 734."
+
+"Perkins-Kirkpatrick, S., King, A. D., Cougnon, E. A., Grose, M. R., Oliver, E. C. J., Holbrook, N., ... & Pourasghar, F. (2019). 
+The role of natural variability and anthropogenic climate change in the 2017/18 Tasman Sea marine heatwave."
+
+"Schlegel, R. W., Darmaraki, S., Benthuysen, J. A., Filbee-Dexter, K., & Oliver, E. C. (2021). 
+Marine cold-spells. Progress in Oceanography, 198, 102684."
+
+"Smale, D. A., Wernberg, T., Oliver, E. C., Thomsen, M., Harvey, B. P., Straub, S. C., ... & Moore, P. J. (2019). 
+Marine heatwaves threaten global biodiversity and the provision of ecosystem services. Nature Climate Change, 9(4), 306-312."
+
+"Storey, M., & Gudger, E. W. (1936). 
+Mortality of fishes due to cold at Sanibel Island, Florida, 1886-1936. Ecology, 17(4), 640-648."
+
+"Wang, S., Jing, Z., Sun, D., Shi, J., & Wu, L. (2022). 
+A new model for isolating the marine heatwave changes under warming scenarios. Journal of Atmospheric and Oceanic Technology."
+
+"Wernberg, T., Smale, D. A., Tuya, F., Thomsen, M. S., Langlois, T. J., De Bettignies, T., ... & Rousseaux, C. S. (2013). 
+An extreme climatic event alters marine ecosystem structure in a global biodiversity hotspot. Nature Climate Change, 3(1), 78-82."
+
+"Wernberg, T., Bennett, S., Babcock, R. C., De Bettignies, T., Cure, K., Depczynski, M., ... & Wilson, S. (2016). 
+Climate-driven regime shift of a temperate marine ecosystem. Science, 353(6295), 169-172."
+
+"WMO (2013). 
+The Global Climate 2001-2010: a decade of climate extremes. WMO- No. 1103."
+
+"Yeager, S. G., Kim, W. M., & Robson, J. (2016). 
+What caused the Atlantic cold blob of 2015. US CLIVAR Variations, 14(2), 24-31."
 
 
 # BAMS text ---------------------------------------------------------------
