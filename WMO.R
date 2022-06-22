@@ -397,67 +397,72 @@ ggsave("graph/WMO_dec_2020.png", fig_final, width = 12, height = 6)
 ggsave("graph/WMO_dec_2020.eps", fig_final, width = 12, height = 6)
 
 # Figure caption
-"Figure XX: "
+"Figure XX: The decadal occurrence of marine heatwaves (MHW) and marine cold-spells (MCS) over the global ocean. 
+a) The average annual percent of the surface of the global ocean that experienced at least one MHW or MCS. 
+b) The globally averaged annual days that the ocean experienced a MHW or MCS (left Y-axis). 
+Also expressed as the average percent of the ocean that this could cover for the entire year (right Y-axis). 
+All bars show the annual values averaged over the indicated decade, with whiskers showing the highest and lowest annual values. 
+The colours in the bars show the proportion of the category of the MHW/MCS for the total cover (a) or global days (b). 
+Note that both the MHW (red) and MCS (blue) values are in positive units; MCS values are shown below the X-axis for ease of comparison."
 
 # List some noteworthy events:
-  # Med - 2003; Western Australia - 2012; NW Atlantic - 2013; Blob - 2015-18; NZ - 20??
-"One could argue that it was during this decade (2001 - 2010) that the focussed study of marine heatwaves (MHW) and marine cold-spells (MCS) began. 
-There was of course a wealth of literature focussing on these extreme events going back at least as far as 
-1936 (e.g. Storey & Gudger, 1936), but it was the publication of Hobday et al. (2016, 2018) when a quantitative definition 
-for these events that could produce both locally and globally comparible results started to see widespread use. 
-There is some important criticism of this methodology that should be considered (see opinion in Jacox, 2019), with 
-the most conspicuous being that with the Hobday definition of MHW/MCS, the warming signal in the temperature time series is 
-not first removed (generally via linear interpolation, but see Wang et al. (2022) for rebuttal). 
-This is one of the primary reasons why one will note a general increase in all of the following MHW results, and a decrease for MCS.
-That being said, there was a series of high profile MHW this decade. Indeed, the only well documented MHW to have occurred 
-in a previous decade was in the Mediterranean in 2003 (Garrabou et al., 2009), which was driven primarily by the atmospheric heatwave 
-(Olita et al., 2007) that killed 66,000 people across Europe (WMO, 2013).
-The 2011 Western Austalia MHW can be credited as having finally clarified the need to create a globally
-consistent MHW definition. This event wreaked havoc on hundreds of kilometres of coastal kelp forests (Wernberg et al., 2013),
+"It can be argued that it was during the current decade (2001 - 2010) when the focussed study of marine heatwaves (MHW) and marine cold-spells (MCS) began. 
+There was of course a wealth of literature focussing on these extreme events going back at least as far as 1936 (e.g. Storey & Gudger, 1936), 
+but it was the publication of Hobday et al. (2016, 2018) when a quantitative and qualitative definition for these events that could produce both 
+locally and globally comparable results started to see widespread use. 
+There is some important criticism of this methodology that should be considered (see opinion in Jacox, 2019), 
+with the most conspicuous being that with the Hobday definition of MHW/MCS, 
+the warming signal in the temperature time series is not first removed (generally via linear interpolation, but see Wang et al. (2022)). 
+This is one of the primary reasons why one will note a general increase in all of the following MHW results, and a decrease for MCS. 
+That being said, there was a series of high profile MHW this decade. 
+Indeed, the only well documented MHW to have occurred in a previous decade was in the Mediterranean in 2003 (Garrabou et al., 2009), 
+which was driven primarily by the atmospheric heatwave (Olita et al., 2007) that killed 66,000 people across Europe that summer (WMO, 2013). 
+The 2011 Western Australia MHW can be credited as having finally clarified the need to create a globally consistent MHW definition. 
+This event wreaked havoc on hundreds of kilometres of coastal kelp forests (Wernberg et al., 2013), 
 most of which have remained as a much less productive scrub turf since (Wernberg et al., 2016). 
-The 2012 Northwest Atlantic MHW occurred at just the right time of year to drive the centre of the North American lobster 
-fishery just far enough north as to cross over an international border,
+The 2012 Northwest Atlantic MHW occurred at just the right time of year to drive the centre of the North American lobster fishery 
+just far enough north as to cross over an international border,
 making it the first ocean climate event on record to cause political tension between two high income nations (Mills et al., 2013). 
-Without a doubt the largest MHW to have occurred since record keeping began in 1982 was the 2014-2016 event, appropriately nicknamed 'The Blob'.
-This event covered much of the northeast Pacific and persisted for years, affecting every level in the tophic web (Cavole et al., 2016).
-More recently the waters around Tasmania have been expriencing regularly occurring MHW, 
+Without a doubt the largest MHW to have occurred since record keeping began in 1982 was the 2014-2016 event, appropriately nicknamed 'The Blob'. 
+This MHW covered much of the northeast Pacific and persisted for years, affecting every level in the trophic web (Cavole et al., 2016). 
+More recently the waters around Tasmania have been experiencing regularly recurring MHW, 
 putting much of the local flora and fauna at risk (Perkins-Kirkpatrick et al., 2019). 
-For more insight on the global risks of MHW to biodiversity and ecosystem services please see Smale et al. (2019).
-As the orld continues to warm, it is almost a certainty that the following decade will be host to a cast
-of newsworthy MHW that far outpaces those of this closing decade.
-Very little can be said of noteworthy MCS from 2011 - 2020, with the exception of the semi-persistent 'cold blob' 
-found in the Altantic ocean below Greenland. It has been positted that this may be a sign of the slowing of the AMOC (Yeager et al., 2016)."
+For a more complete list of high impact MHW, and further insight into the global risks of MHW to biodiversity and ecosystem services, please see Smale et al. (2019). 
+As the world continues to warm, it is almost a certainty that the following decade will be host to a cast of newsworthy MHW that far outpaces those of this closing decade. 
+Very little can be said of noteworthy MCS from 2011 - 2020, with the exception of the semi-persistent 'cold blob' found in the Atlantic ocean below Greenland. 
+It has been posited that this may be a sign of the slowing of the AMOC (Yeager et al., 2016)."
 
 # List top ten warmest year stats
-"Over 2011-2020, 60% of the surface of the ocean experienced a MHW on any given year, with the highest being 65% in 2016 (Figure XXa).
+"Over 2011-2020, 60% of the surface of the ocean experienced a MHW on average, with the highest being 65% in 2016 (Figure XXa). 
 The top ten years of MHW coverage contain seven years from this decade, and three from the previous (2000 - 2010). 
-For MCS, the present decadal average is 31.5%, and no years from this or the previous decade are found in the top ten.
-The top three years with the highest average daily count of MHWs were  in 2016, 2020, and 2019 respectively (Figure XXb).
-The last eight years of the decade (2013-2020) were all in the top ten highest years of recorded MHW days, in addition to 2010 (#8) and 1998 (#9). 
-Roughly the opposite has been seen for MCS, with only 2011 (#9) and 2010 (#10) being in the top ten of years with highest daily averages, 
-which is otherwise populated with years from the beginning of the data record. The curious uptick in global MCS days for this decade 
-is due to an increase in the duraiton (but not intensity) of MCS in the southern ocean (Schlegel et al., 2022). 
+For MCS, the present decadal average cover is 31.5%, and no years from this or the previous decade are found in the top ten. 
+The top three years with the highest average MHW days were in 2016 (61 days), 2020 (58 days), and 2019 (54 days) (Figure XXb). 
+The last eight years of the decade (2013-2020) were all in the top ten highest years of average MHW days, in addition to 2010 (36 days) and 1998 (29 days). 
+Roughly the opposite has been seen for MCS, with only 2011 (21 days) and 2010 (19 days) being in the top ten of years of highest daily averages, 
+which is otherwise populated by years from the beginning of the data record. 
+The curious uptick in global MCS days for this decade started in 2007 and is due to an increase in the 
+duration (but not intensity) of MCS in the Southern Ocean (Schlegel et al., 2022). 
 Therefore, while 2010 and 2011 may be in the top ten years with the highest average MCS days, 
-the top ten for highest percent cover of the ocean is almost entirely those years from the beginning of recorded data."
+this is why the top ten years for the highest percent cover of the ocean is almost entirely those years from the beginning of recorded data, 
+with 1985 (63%) having the most coverage."
 
 # Cat II over cat I observations
-"A defining characteristic of MHWs in this decade (2011-2020) has been the emergence of Category II (Strong) events over Category I (Moderate),
-which has remained a consistent feature from 2014-2020. This had occurred only twice before in the historic record (1998, 2010).
-The same cannot be said for MCSs, for which this has occurred only in the first three years of the available data (1982-1984),
-and at no other point in this or the preceeding decades."
+"A defining characteristic of MHWs in this decade (2011-2020) has been the emergence of Category II (Strong) events over Category I (Moderate), 
+which has remained a consistent feature from 2014-2020. 
+This had occurred only twice before in the historic record (1998, 2010). 
+The same cannot be said for MCSs, for which this has occurred only in the first three years of the available data (1982-1984), 
+and at no other point in this or the preceding decades."
 
 # Years with extreme days
-"The occurrence of Category IV (Extreme) events was so uncommon in the past that they could hardly be measured on a global scale.
-Now they occur frequently enough that in the current decade the ocean experienced an average of 0.5 extreme days per year (25 times that of MCS), 
-with a record of 1 full day in 2016. While this may sound like a small value, consider that generally for a MHW to experience 
-even 1 day at Category IV requires a mountain of anomalous temperature underneath. It is also known that the occurrence of Category IV events may 
-be able to change entire ecosystems (e.g. Wernberg et al., 2016, Smale et al., 2019). 
-That so many Category IV MHW days are occurring that, when averaged over the entire surface of the ocean they 
-no longer amount to a miniscule fraction, should be a worrying sign.
-Indeed, this is exactly what is warned of in Oliver et al. (2019) when they show in Figure 3 the difference in the average daily
-MHW categories for RCP 4.5 vs RCP 8.5. Depending on the emmissions scenario that we humans manage to hold ourselves to, 
-we will either be seeing very few more Category IV days (RCP4.5), or they will become dominant (RCP8.5).
-In which case it is likely that most ecosystems throughout the ocean will be forced to change."
+"The occurrence of Category IV (Extreme) events was so uncommon in the past that they could hardly be measured on a global scale. 
+Now Category IV MHW occur frequently enough that in the current decade the ocean experienced an average of 0.5 extreme MHW days per year (25 times that of MCS), 
+with a record of 1 full day in 2016. While this may sound like a small value, 
+consider that generally for a MHW to experience even 1 day at Category IV requires a mountain of anomalous temperature underneath. 
+It is also known that the occurrence of Category IV events may be able to change entire ecosystems (e.g. Wernberg et al., 2016; Smale et al., 2019). 
+That so many Category IV MHW days are occurring that when averaged over the entire surface of the ocean they no longer amount to a miniscule fraction is a worrying sign. 
+Indeed, this is exactly what is warned of in Oliver et al. (2019) when they show in Figure 3 the difference in the average daily MHW categories for RCP 4.5 vs RCP 8.5. 
+Depending on the emissions scenario that we humans manage to hold ourselves to, we will either see relatively few more Category IV days (RCP4.5), 
+or they will begin their march towards dominance from 2050 onwards (RCP8.5). In which case it is likely that most ecosystems throughout the ocean will be forced to change."
 
 # An interesting metric would be the surface area that experienced 100+ MHW days in a year
 
