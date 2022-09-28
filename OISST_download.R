@@ -157,6 +157,23 @@ OISST_merge_2018 <- function(lon_step, df){
   print(paste0("Finished run on ",lon_row_pad," at ",Sys.time()))
 }
 
+# Function for downloading a specific set of pre-defined pixels
+# NB: One may think this would be faster than extracting a square bbox, but this is almost never the case
+# I've saved this function here because it is still a promising method of extracting data
+# It shows promise when one needs to extract multiple different bbox from a single NetCDF file
+# For example see `download_MUR_ALL()` in ~/WP1/functions.R
+OISST_pix_dl <- function(file_date, pixel_coords){
+  file_date_flat <- gsub("-", "", file_date)
+  OISST_url <- paste0("https://www.ncei.noaa.gov/thredds/dodsC/OisstBase/NetCDF/V2.1/AVHRR/",
+                      substr(file_date_flat, 1, 6),"/oisst-avhrr-v02r01.",file_date_flat,".nc")
+  OISST_raster <- brick(OISST_url, varname = "sst")
+  OISST_res <- data.frame(pixel_coords,
+                          t = file_date,
+                          temp = as.vector(raster::extract(OISST_raster,
+                                                           pixel_coords[c("lon", "lat")], method = "simple")))
+  rm(OISST_raster); gc()
+  return(OISST_res)
+}
 
 # Download ----------------------------------------------------------------
 

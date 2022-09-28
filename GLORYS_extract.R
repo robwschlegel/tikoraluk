@@ -15,12 +15,10 @@ library(doParallel); registerDoParallel(cores = 50)
 
 # Extraction coordinates --------------------------------------------------
 
-JP_points <- read_csv("extracts/npp_light_2020-10-09.csv") %>% 
-  dplyr::select(Long_converted, Lat_converted) %>% 
-  dplyr::rename(site_lon = Long_converted, site_lat = Lat_converted) %>% 
-  distinct() %>% 
-  na.omit() %>% 
-  data.frame()
+JP_points <- read_csv("extracts/2022-09-09_geo2.csv") %>%
+  dplyr::select(lon, lat) %>%
+  dplyr::rename(site_lon = lon, site_lat = lat) %>%
+  distinct() %>%  na.omit() %>%  data.frame()
 
 # Have a peek at the data
 # ggplot(data = JP_points, aes(x = site_lon, y = site_lat)) +
@@ -215,7 +213,7 @@ extract_GLORYS_lat <- function(lat_step, shelf_file, coords){
   return(tidync_GLORYS_lat)
 }
 
-# Function for multicoring the xtraction of shelf data from one file
+# Function for multicoring the extraction of shelf data from one file
 # shelf_file <- shelf_files[126]
 extract_GLORYS_all_lat <- function(shelf_file, coords){
   
@@ -271,10 +269,10 @@ extract_GLORYS_shelf <- function(bbox){
 # Set cores
 registerDoParallel(cores = 25)
 
-# system.time(
-# JP_data <- extract_GLORYS_coords(JP_points)
-# ) # ~ 18 minutes for one site
-# write_csv(JP_data, file = "extracts/JP_data.csv")
+system.time(
+JP_data <- extract_GLORYS_coords(JP_points)
+) # ~ 18 minutes for one site
+write_csv(JP_data, file = "extracts/JP_data.csv")
 
 # Extract Arctic data
 # arctic_bbox <- data.frame(site_lon = c(-180, 180), site_lat = c(60, 82))
@@ -295,14 +293,13 @@ registerDoParallel(cores = 25)
 
 # Annual summaries --------------------------------------------------------
 
-# JP_annual <- JP_data %>% 
-#   mutate(t = lubridate::year(t)) %>% 
-#   group_by(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth) %>% 
-#   summarise(temp = mean(temp, na.rm = T), .groups = "drop")
-# write_csv(JP_annual, file = "extracts/JP_annual.csv")
+JP_annual <- JP_data %>%
+  mutate(t = lubridate::year(t)) %>%
+  group_by(site_lon, site_lat, nav_lon, nav_lat, dist, t, depth) %>%
+  summarise(temp = mean(temp, na.rm = T), .groups = "drop")
+write_csv(JP_annual, file = "extracts/JP_annual.csv")
 
 
 # Pixel distance from sites -----------------------------------------------
 # The distance that the pixels are from the sites is important meta-data
-
 
