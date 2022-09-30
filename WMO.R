@@ -39,6 +39,10 @@ MCS_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily
 MHW_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2021.Rds")
 MCS_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2021.Rds")
 
+# Load 2022
+MHW_cat_daily_2022 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2022.Rds")
+MCS_cat_daily_2022 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2022.Rds")
+
 # Total history
 MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds")
 MCS_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_total.Rds")
@@ -63,14 +67,19 @@ cat_prop_stats <- function(df){
 cat_prop_stats(MHW_cat_daily_2016)
 cat_prop_stats(MHW_cat_daily_2020)
 cat_prop_stats(MHW_cat_daily_2021)
+cat_prop_stats(MHW_cat_daily_2022)
 
 # Get MCS stats
 cat_prop_stats(MCS_cat_daily_1982)
 cat_prop_stats(MCS_cat_daily_2020)
 cat_prop_stats(MCS_cat_daily_2021)
+cat_prop_stats(MCS_cat_daily_2022)
 
 # Historic record
-total_daily <- MHW_total_summary %>% 
+total_daily_MHW <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_area_prop_mean))
+total_daily_MCS <- MCS_total_summary %>% 
   group_by(t) %>% 
   summarise(sum(cat_area_prop_mean))
 
@@ -93,14 +102,16 @@ first_cum_prop_stats(MHW_cat_daily_2012)
 first_cum_prop_stats(MHW_cat_daily_2016)
 first_cum_prop_stats(MHW_cat_daily_2020)
 first_cum_prop_stats(MHW_cat_daily_2021)
+first_cum_prop_stats(MHW_cat_daily_2022)
 
 # Get MCS stats
 first_cum_prop_stats(MCS_cat_daily_1982)
 first_cum_prop_stats(MCS_cat_daily_1985)
 first_cum_prop_stats(MCS_cat_daily_2020)
 first_cum_prop_stats(MCS_cat_daily_2021)
+first_cum_prop_stats(MCS_cat_daily_2022)
 
-# Years when there were more cat II than I events
+# Years when there were more cat II than I MHW
 cat_II_over_I <- MHW_total_summary %>% 
   group_by(t) %>% 
   dplyr::select(t, first_area_cum_prop, category) %>% 
@@ -108,6 +119,7 @@ cat_II_over_I <- MHW_total_summary %>%
   mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
          cat_II_over_I = case_when(`II Strong` > `I Moderate` ~ TRUE, TRUE ~ FALSE))
 
+# Years when there were more cat I than II MCS
 cat_I_over_II <- MCS_total_summary %>% 
   group_by(t) %>% 
   dplyr::select(t, first_area_cum_prop, category) %>% 
@@ -115,12 +127,20 @@ cat_I_over_II <- MCS_total_summary %>%
   mutate(total_cover = `I Moderate`+`II Strong`+`III Severe`+`IV Extreme`,
          cat_I_over_II = case_when(`I Moderate` > `II Strong` ~ TRUE, TRUE ~ FALSE))
 
+# Historic record
+total_area_MHW <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(first_area_cum_prop))
+total_area_MCS <- MCS_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(first_area_cum_prop))
+
 
 # Panel D) ----------------------------------------------------------------
 # Average days of MHWs per pixel
 # cat_area_prop
 
-cat_prop_stats <- function(df){
+cat_days_stats <- function(df){
   df %>% 
     group_by(category) %>%
     filter(t == max(t)) %>% 
@@ -130,28 +150,34 @@ cat_prop_stats <- function(df){
 }
 
 # Get MHW stats
-cat_prop_stats(MHW_cat_daily_1982)
-cat_prop_stats(MHW_cat_daily_2016)
-cat_prop_stats(MHW_cat_daily_2019)
-cat_prop_stats(MHW_cat_daily_2020)
-cat_prop_stats(MHW_cat_daily_2021)
+cat_days_stats(MHW_cat_daily_1982)
+cat_days_stats(MHW_cat_daily_2016)
+cat_days_stats(MHW_cat_daily_2019)
+cat_days_stats(MHW_cat_daily_2020)
+cat_days_stats(MHW_cat_daily_2021)
+cat_days_stats(MHW_cat_daily_2022)
 
 # Get MCS stats
-cat_prop_stats(MCS_cat_daily_1982)
-cat_prop_stats(MCS_cat_daily_1985)
-cat_prop_stats(MCS_cat_daily_2019)
-cat_prop_stats(MCS_cat_daily_2020)
-cat_prop_stats(MCS_cat_daily_2021)
+cat_days_stats(MCS_cat_daily_1982)
+cat_days_stats(MCS_cat_daily_1985)
+cat_days_stats(MCS_cat_daily_2019)
+cat_days_stats(MCS_cat_daily_2020)
+cat_days_stats(MCS_cat_daily_2021)
+cat_days_stats(MCS_cat_daily_2022)
 
 # Historic summary
-total_days <- MHW_total_summary %>% 
+total_days_MHW <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_area_prop))
+total_days_MCS <- MCS_total_summary %>% 
   group_by(t) %>% 
   summarise(sum(cat_area_prop))
 
 
 # WMO text ----------------------------------------------------------------
 
-# 2020
+## 2020 text ---------------------------------------------------------------
+
 "Much of the ocean experienced at least a 'Strong' MHW at some point throughout 2020 (Figure 7A).
 Conspicuously absent are MHWs in the Atlantic Ocean south of Greenland, and in the eastern equatorial Pacific.
 The Laptev Sea experienced a particularly intense MHW from June to December. 
@@ -165,7 +191,9 @@ In total, 84% of the ocean experienced at least one MHW (Figure 7C), matching th
 On average, each ocean pixel experienced a total of 77 MHW days (Figure 7D). 
 This is greater than 2019 (74) but less than the 2016 peak (83)."
 
-# 2021 text
+
+## 2021 text ---------------------------------------------------------------
+
 "Marine heatwaves and cold-spells
 In analogy with heatwaves and cold spells on land, marine heatwaves (MHW) and marine cold-spells (MCS) are prolonged periods of 
 extreme heat or cold that affect the near-surface layer of the ocean. 
@@ -192,9 +220,42 @@ In total, 25% of the ocean surface experienced at least one MCS during 2021 (Fig
 which is comparable to 2020 (25%), but much less than the 1985 record (63%). 
 Of the 25% coverage, most MCS were classified as either ‘moderate’ (20%) or ‘strong’ (4%)."
 
-# MHW figure caption
+
+## 2022 text ---------------------------------------------------------------
+
+"Marine heatwaves and cold-spells
+As with heatwaves and cold spells on land, marine heatwaves (MHW) and marine cold-spells (MCS) are prolonged periods of 
+extreme heat or cold in seas and oceans. MHWs have generally become more frequent over the 20th Century while MCS have been decreasing.
+These events can have a range of consequences for marine life and dependent communities. 
+Satellite retrievals of sea-surface temperature are used to operationally monitor MHWs and MCSs globally, 
+categorised here as moderate, strong, severe, or extreme (for definitions, seeMarine heatwave and marine cold spell data).
+
+Now the third La Niña year in a row, persistently low sea-surface temperatures in the equatorial Pacific mean an absence of MHW there (Figure 7), 
+while simultaneously being one of the only regions of the global ocean to see wide-spread 'strong' MCS coverage (Figure 8).
+The Southern Ocean is however the only region in which MCSs are increasing in duration.
+This is due to a complex process that is the focus of ongoing research.
+The Laptev and Beaufort Seas experienced 'severe' and 'extreme' MHWs over Spring to Autumn of 2022.
+This is now a persistent annual phenomenon and is likely a sign that the global tipping point of sea ice melt in the Arctic has been passed.
+The ice-edge regions to the north of Svalbard and east of the Ross Sea experienced notable 'extreme' MHW for the second consecutive year.
+
+The global ocean experienced an average daily MHW coverage of 16%, 
+which is less than the record of 17% in 2016 but higher than the 2021 average of 13%.
+The most common category of MHW in 2022 was ‘moderate’ (27%). 
+This is the first time in nine years when the most common MHW category was not 'strong'.
+Overall 55% of the ocean surface experienced at least one MHW during 2022 (Figure 7c) – less than the record of 65% in 2016 
+and the lowest annual coverage since 2012 (57%).
+
+The average daily coverage of the global ocean by MCSs in 2021 was 5% (Figure 8b).
+While this is lower than the record high in 1982 (7%), it is the highest value since 2011 (6%). 
+In total, 22% of the ocean surface experienced at least one MCS during 2022 (Figure 8c), 
+less than 2021 (25%), and much less than the 1985 record (63%). 
+Of the 22% coverage, almost all MCS were classified as either ‘moderate’ (18%) or ‘strong’ (4%)."
+
+
+## Figure captions ---------------------------------------------------------
+
 "Figure 7: (a) Global map showing the highest MHW category (for definitions, see Marine heatwave and marine cold-spell data) 
-experienced at each pixel over 2021 (reference period 1982–2011). 
+experienced at each pixel over 2022 (reference period 1982–2011). 
 Light grey indicates that no MHW occurred in a pixel over the entire year; 
 (b) Stacked bar plot showing the percentage of the surface of the ocean experiencing an MHW on any given day of the year; 
 (c) Stacked bar plot showing the cumulative percentage of the surface of the ocean that experienced an MHW over the year. 
@@ -204,11 +265,12 @@ d) Stacked bar plot showing the cumulative number of MHW days averaged over the 
 Note: This average is calculated by dividing the cumulative sum of MHW days per pixel weighted by the surface area of those pixels.
 Data are from NOAA OISST. Source: Robert Schlegel"
 
-# MCS figure caption
 "Figure 8: as for Figure 7 but showing marine cold-spells (MCSs) rather than marine heatwaves (MHWs). Data are from NOAA OISST.
 Source: Robert Schlegel"
 
-# Addendum
+
+## Addendum ----------------------------------------------------------------
+
 "Marine heatwave and marine cold-spell data
 MHWs are categorized as moderate when the sea-surface temperature (SST) is above the 90th
 percentile of the climatological distribution for five days or longer; the subsequent categories are
@@ -230,7 +292,9 @@ Banzon, V. et al., 2016: A Long-Term Record of Blended Satellite and in Situ Sea
 Temperature for Climate Monitoring, Modeling and Environmental Studies. Earth System
 Science Data, 8(1): 165–176. doi: https://essd.copernicus.org/articles/8/165/2016/."
 
-# References
+
+## References --------------------------------------------------------------
+
 "Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
 A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238."
 
