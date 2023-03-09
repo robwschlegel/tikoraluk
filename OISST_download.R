@@ -277,10 +277,10 @@ extract_pixel <- function(lon_1, lat_1, max_date){
 }
 
 # Get pixels
-sst_1 <- extract_pixel(112.625, -29.375, "2021-12-31")
+sst_1 <- extract_pixel(112.625, -29.375, "2022-12-31")
 save(sst_1, file = "extracts/sst_1.RData")
-sst_2 <- extract_pixel(9.125, 43.625, "2021-12-31")
+sst_2 <- extract_pixel(9.125, 43.625, "2022-12-31")
 save(sst_2, file = "extracts/sst_2.RData")
-sst_3 <- extract_pixel(293.125, 43.125, "2021-12-31")
+sst_3 <- extract_pixel(293.125, 43.125, "2022-12-31")
 save(sst_3, file = "extracts/sst_3.RData")
 

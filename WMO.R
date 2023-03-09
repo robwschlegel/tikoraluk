@@ -71,6 +71,7 @@ cat_prop_stats(MHW_cat_daily_2022)
 
 # Get MCS stats
 cat_prop_stats(MCS_cat_daily_1982)
+cat_prop_stats(MCS_cat_daily_1985)
 cat_prop_stats(MCS_cat_daily_2020)
 cat_prop_stats(MCS_cat_daily_2021)
 cat_prop_stats(MCS_cat_daily_2022)
@@ -296,13 +297,14 @@ Science Data, 8(1): 165–176. doi: https://essd.copernicus.org/articles/8/165/2
 ## References --------------------------------------------------------------
 
 "Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
-A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238."
+A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238. https://doi.org/10.1016/j.pocean.2015.12.014"
 
 "Hobday, A. J., Oliver, E. C., Gupta, A. S., Benthuysen, J. A., Burrows, M. T., Donat, M. G., ... & Smale, D. A. (2018). 
-Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173."
+Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173. https://www.jstor.org/stable/26542662"
 
 "Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
-Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. Journal of Climate, 34(8), 2923-2939."
+Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. 
+Journal of Climate, 34(8), 2923-2939. https://doi.org/10.1175/JCLI-D-20-0166.1"
 
 
 # Decadal report ----------------------------------------------------------
