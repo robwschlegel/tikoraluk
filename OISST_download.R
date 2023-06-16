@@ -24,7 +24,7 @@ library(doParallel); registerDoParallel(cores = 25) # 50 cores exceeds available
 load("../tikoraluk/metadata/lon_lat_OISST.RData")
 load("../tikoraluk/metadata/lon_OISST.RData")
 lon_lat_OISST <- dplyr::arrange(lon_lat_OISST, lon, lat)
-OISST_files <- dir("../data/OISST", pattern = "avhrr-only", full.names = T)
+OISST_files <- dir("../data/OISST", pattern = "oisst-avhrr", full.names = T)
 
 # Calculate square kilometres per pixel
 # This function assumes a lon lat column on a 0.25 degree grid
@@ -276,11 +276,15 @@ extract_pixel <- function(lon_1, lat_1, max_date){
     dplyr::select(t, temp)
 }
 
-# Get pixels
+# Get pixels for heatwaveR
 sst_1 <- extract_pixel(112.625, -29.375, "2022-12-31")
 save(sst_1, file = "extracts/sst_1.RData")
 sst_2 <- extract_pixel(9.125, 43.625, "2022-12-31")
 save(sst_2, file = "extracts/sst_2.RData")
 sst_3 <- extract_pixel(293.125, 43.125, "2022-12-31")
 save(sst_3, file = "extracts/sst_3.RData")
+
+# Get pixel for CLIVAR summer school
+sst_adriatic <- extract_pixel(13.125, 44.875, "2022-12-31")
+write_csv(sst_adriatic, file = "extracts/sst_adriatic.csv")
 
