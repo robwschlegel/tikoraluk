@@ -13,7 +13,8 @@ library(ncdf4)
 library(tidync)
 library(abind)
 library(geosphere)
-library(processNC)
+# library(processNC)
+# library(raster)
 library(doParallel); registerDoParallel(cores = 25) # 50 cores exceeds available RAM
 
 # The information for the NOAA OISST data
@@ -289,40 +290,3 @@ save(sst_3, file = "extracts/sst_3.RData")
 sst_adriatic <- extract_pixel(13.125, 44.875, "2022-12-31")
 write_csv(sst_adriatic, file = "extracts/sst_adriatic.csv")
 
-
-# processNC extraction ----------------------------------------------------
-
-library(raster)
-
-ncdump::NetCDF("../data/OISST/oisst-avhrr-v02r01.ts.0005.nc")
-lon_OISST[5]
-lat_OISST
-processNC::subsetNC(files = "../data/OISST/oisst-avhrr-v02r01.ts.0005.nc", 
-                    ext = c(37.875, 44.125, 1.125, 1.125), varid = "sst")
-
-# function for filtering quickly
-filter_nc <- function(nc_file){
-  test1 <- tidync::tidync(nc_file) |> 
-    hyper_filter(lat = between(lat, 10, 12)) |> 
-    hyper_tibble()
-}
-
-OISST_sub <- plyr::ldply(OISST_files[205:208], filter_nc)
-ncpath <- "~/data/"
-ncname <- "OISST_sub"
-ncfname <- paste0(ncpath, ncname, ".nc")
-# dname <- "tmp"
-
-# Transform from xyzt into raster
-inputProj <- "+init=epsg:4326 +proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"
-s_df_raster <- OISST_sub |> 
-  filter(time >= 4383, time <= 5000) |> 
-  rename(X = lon, Y = lat, Z = sst) |> 
-  group_split(time) |> 
-  map(~raster::rasterFromXYZ(.x, res = c(0.25, 0.25), digits = 3, crs = inputProj)) |> 
-  stack()
-raster::stackSave(s_df_raster, "data/OISST_sub.nc")
-
-files <- list.files(paste0(system.file(package="processNC"), "/extdata"), 
-                    pattern="tas.*\\.nc", full.names=TRUE)
-subsetNC(files, ext=c(8.5, 14, 47, 51), startdate=1990, enddate=1999)
