@@ -182,3 +182,4 @@ system.time(
   plyr::ddply(OISST_RData_multi[771:1440,], .variables = "x", 
               .fun = MHW_match_calc, .parallel = TRUE)
 ) # 895 seconds on 50 cores
+
