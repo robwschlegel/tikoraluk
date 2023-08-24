@@ -21,27 +21,22 @@ MCS_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily
 MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2016.Rds")
 # 1982 is the most intense MCS year
 
-# Load the most coverage year
+# Load the most daily coverage year
+MHW_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2023.Rds")
+
+# Load the most spatial coverage year
 MCS_cat_daily_1985 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_1985.Rds")
 
 # Load the most recent low coverage year
 MHW_cat_daily_2012 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2012.Rds")
 
-# Load 2019
-MHW_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2019.Rds")
-MCS_cat_daily_2019 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2019.Rds")
-
-# Load 2020
-MHW_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2020.Rds")
-MCS_cat_daily_2020 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2020.Rds")
-
-# Load 2021
-MHW_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2021.Rds")
-MCS_cat_daily_2021 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2021.Rds")
-
-# Load 2022
+# Load previous year
 MHW_cat_daily_2022 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2022.Rds")
 MCS_cat_daily_2022 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2022.Rds")
+
+# Load current year
+MHW_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_2023.Rds")
+MCS_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1982-2011_2023.Rds")
 
 # Total history
 MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1982-2011_total.Rds")
@@ -65,27 +60,57 @@ cat_prop_stats <- function(df){
 
 # Get MHW stats
 cat_prop_stats(MHW_cat_daily_2016)
-cat_prop_stats(MHW_cat_daily_2020)
-cat_prop_stats(MHW_cat_daily_2021)
 cat_prop_stats(MHW_cat_daily_2022)
+cat_prop_stats(MHW_cat_daily_2023)
 
 # Get MCS stats
 cat_prop_stats(MCS_cat_daily_1982)
-cat_prop_stats(MCS_cat_daily_1985)
-cat_prop_stats(MCS_cat_daily_2020)
-cat_prop_stats(MCS_cat_daily_2021)
 cat_prop_stats(MCS_cat_daily_2022)
+cat_prop_stats(MCS_cat_daily_2023)
 
 # Historic record
 total_daily_MHW <- MHW_total_summary %>% 
   group_by(t) %>% 
-  summarise(sum(cat_area_prop_mean))
+  summarise(daily_average_cover = sum(cat_area_prop_mean))
 total_daily_MCS <- MCS_total_summary %>% 
   group_by(t) %>% 
-  summarise(sum(cat_area_prop_mean))
+  summarise(daily_average_cover = sum(cat_area_prop_mean))
 
 
 # Panel C) ----------------------------------------------------------------
+# Average days of MHWs per pixel
+# cat_area_prop
+
+cat_days_stats <- function(df){
+  df %>% 
+    group_by(category) %>%
+    filter(t == max(t)) %>% 
+    ungroup() %>% 
+    dplyr::select(t, category, cat_area_cum_prop) %>% 
+    mutate(sum = sum(cat_area_cum_prop))
+}
+
+# Get MHW stats
+cat_days_stats(MHW_cat_daily_1982)
+cat_days_stats(MHW_cat_daily_2016)
+cat_days_stats(MHW_cat_daily_2022)
+cat_days_stats(MHW_cat_daily_2023)
+
+# Get MCS stats
+cat_days_stats(MCS_cat_daily_1982)
+cat_days_stats(MCS_cat_daily_2022)
+cat_days_stats(MCS_cat_daily_2023)
+
+# Historic summary
+total_days_MHW <- MHW_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_area_prop))
+total_days_MCS <- MCS_total_summary %>% 
+  group_by(t) %>% 
+  summarise(sum(cat_area_prop))
+
+
+# Panel D) ----------------------------------------------------------------
 # Overall percent of ocean affected by MHWs
 # first_area_cum_prop
 
@@ -101,16 +126,14 @@ first_cum_prop_stats <- function(df){
 # Get MHW stats
 first_cum_prop_stats(MHW_cat_daily_2012)
 first_cum_prop_stats(MHW_cat_daily_2016)
-first_cum_prop_stats(MHW_cat_daily_2020)
-first_cum_prop_stats(MHW_cat_daily_2021)
 first_cum_prop_stats(MHW_cat_daily_2022)
+first_cum_prop_stats(MHW_cat_daily_2023)
 
 # Get MCS stats
 first_cum_prop_stats(MCS_cat_daily_1982)
 first_cum_prop_stats(MCS_cat_daily_1985)
-first_cum_prop_stats(MCS_cat_daily_2020)
-first_cum_prop_stats(MCS_cat_daily_2021)
 first_cum_prop_stats(MCS_cat_daily_2022)
+first_cum_prop_stats(MCS_cat_daily_2023)
 
 # Years when there were more cat II than I MHW
 cat_II_over_I <- MHW_total_summary %>% 
@@ -135,44 +158,6 @@ total_area_MHW <- MHW_total_summary %>%
 total_area_MCS <- MCS_total_summary %>% 
   group_by(t) %>% 
   summarise(sum(first_area_cum_prop))
-
-
-# Panel D) ----------------------------------------------------------------
-# Average days of MHWs per pixel
-# cat_area_prop
-
-cat_days_stats <- function(df){
-  df %>% 
-    group_by(category) %>%
-    filter(t == max(t)) %>% 
-    ungroup() %>% 
-    dplyr::select(t, category, cat_area_cum_prop) %>% 
-    mutate(sum = sum(cat_area_cum_prop))
-}
-
-# Get MHW stats
-cat_days_stats(MHW_cat_daily_1982)
-cat_days_stats(MHW_cat_daily_2016)
-cat_days_stats(MHW_cat_daily_2019)
-cat_days_stats(MHW_cat_daily_2020)
-cat_days_stats(MHW_cat_daily_2021)
-cat_days_stats(MHW_cat_daily_2022)
-
-# Get MCS stats
-cat_days_stats(MCS_cat_daily_1982)
-cat_days_stats(MCS_cat_daily_1985)
-cat_days_stats(MCS_cat_daily_2019)
-cat_days_stats(MCS_cat_daily_2020)
-cat_days_stats(MCS_cat_daily_2021)
-cat_days_stats(MCS_cat_daily_2022)
-
-# Historic summary
-total_days_MHW <- MHW_total_summary %>% 
-  group_by(t) %>% 
-  summarise(sum(cat_area_prop))
-total_days_MCS <- MCS_total_summary %>% 
-  group_by(t) %>% 
-  summarise(sum(cat_area_prop))
 
 
 # WMO text ----------------------------------------------------------------
@@ -253,20 +238,59 @@ less than 2021 (25%), and much less than the 1985 record (63%).
 Of the 22% coverage, almost all MCS were classified as either ‘moderate’ (18%) or ‘strong’ (4%)."
 
 
+## 2023 text ---------------------------------------------------------------
+
+"Marine heatwaves and cold-spells
+
+As with heatwaves and cold-spells on land, marine heatwaves (MHW) and marine cold-spells (MCS) are prolonged periods of 
+extreme heat or cold in seas and oceans that can have a range of consequences for marine life and dependent communities. 
+MHWs have become more frequent, intense, and longer lasting over the 20th Century, while MCS have been decreasing. 
+Satellite retrievals of sea-surface temperature are used to operationally monitor MHWs and MCSs globally, 
+categorised here as moderate, strong, severe, extreme, or ice (for definitions, see Marine heatwave and marine cold-spell data).
+
+Coming out of a triple dip La Niña, 2023 saw the rise of the first El Niño in several years. 
+While it had been projected to become a strong event, [at the time of writing] by most measures it stopped short of that. 
+The occurrence of El Niño events is important for global MHW occurrence as these tend to cause wide-spread events throughout 
+the Eastern Tropical Pacific. 
+While this region did experience 'strong' MHWs (Figure XX A), they were not as expansive as they have been during previous El Niño years. 
+Of particular interest in 2023 was the persistent and wide-spread MHW coverage of the North Atlantic Ocean 
+throughout summer and autumn [at time of writing]. 
+This has been a curious event because this regions tends not to be driven by ENSO variability, 
+meaning that the understanding of why this occurred will likely be an area of focussed research in the future. 
+Other noteworthy regions were the Mediterranean Sea, which experienced near complete coverage of 'strong' and 'severe' 
+MHWs for the 12th consecutive year, and the waters surrounding New Zealand, which [at the time of writing] 
+have remained at a +1-2°C temperature anomaly since January. Leading to a practically unheard of cumulative temperature anomaly of +500°C. 
+The occurrence of MCS within +-60° of the equator was practically unheard of (Figure YY A).
+
+The global ocean experienced an average daily MHW coverage of 20% [so far] (Figure XX B), which has shattered the previous record of 17% in 2016. 
+When averaged across the surface of the ocean, the global daily total of MHWs [so far] in 2023 was  47 (Figure XX C). 
+This is less than 2022 (58 days), and the 2016 record (61 days). 
+Overall 63% of the ocean surface [so far] experienced at least one MHW during 2023 (Figure XX D), 
+less than the record of 65% in 2016, but much higher than 2022 (58%). 
+The most common category of MHW in 2023 was ‘moderate’ (30%), 
+making this the second year in a row when the most common MHW category was not 'strong' (2014-2021). 
+
+The average daily coverage of the global ocean by MCSs in 2023 was 2% [so far] (Figure YY B). 
+This is much lower than 2022 (5%), and the record high in 1982 (7%). 
+The global daily total of MCS in 2023 was 5 days (Figure YY C), far below 2022 (17 days) and the record in 1982 (24 days). 
+In total, 14% of the ocean surface experienced at least one MCS during 2023 [so far] (Figure YY D), less than 2022 (25%), 
+and much less than the 1985 record (63%). 
+Of the 14% coverage, most MCS were classified as either ‘moderate’ (8%) or ‘ice’ (3%)."
+
+
 ## Figure captions ---------------------------------------------------------
 
 "Figure 7: (a) Global map showing the highest MHW category (for definitions, see Marine heatwave and marine cold-spell data) 
-experienced at each pixel over 2022 (reference period 1982–2011). 
-Light grey indicates that no MHW occurred in a pixel over the entire year; 
+experienced at each pixel over 2023 (reference period 1982–2011). Light grey indicates that no MHW occurred in a pixel over the entire year; 
 (b) Stacked bar plot showing the percentage of the surface of the ocean experiencing an MHW on any given day of the year; 
-(c) Stacked bar plot showing the cumulative percentage of the surface of the ocean that experienced an MHW over the year. 
-Note: These values are based on when in the year a pixel first experienced its highest MHW category, so no pixel is counted twice.
-Horizontal lines in this figure show the final percentages for each category of MHW; 
-d) Stacked bar plot showing the cumulative number of MHW days averaged over the surface of the ocean. 
-Note: This average is calculated by dividing the cumulative sum of MHW days per pixel weighted by the surface area of those pixels.
-Data are from NOAA OISST. Source: Robert Schlegel"
+(c) Stacked bar plot showing the cumulative number of MHW days averaged over the surface of the ocean. 
+Note: This average is calculated by dividing the cumulative sum of MHW days per pixel weighted by the surface area of those pixels. 
+(d) Stacked bar plot showing the total percentage of the surface of the ocean that experienced an MHW from 1982 to present.
+Data are from NOAA OISST. 
+Source: Robert Schlegel"
 
-"Figure 8: as for Figure 7 but showing marine cold-spells (MCSs) rather than marine heatwaves (MHWs). Data are from NOAA OISST.
+"Figure 8: as for Figure 7 but showing marine cold-spells (MCSs) rather than marine heatwaves (MHWs). 
+Data are from NOAA OISST.
 Source: Robert Schlegel"
 
 
@@ -278,33 +302,34 @@ percentile of the climatological distribution for five days or longer; the subse
 defined with respect to the difference between the SST and the climatological distribution average:
 strong, severe, or extreme, if that difference is, respectively, more than two, three or four times the
 difference between the 90th percentile and the climatological distribution average (Hobday et al.,
-2018). MCS categories are analogous but counting days below the 10th percentile.
+2018). MCS categories are analogous but counting days below the 10th percentile, with the exception of the ‘ice’ category. 
+This category is given to any MCS when the threshold for the occurrence on any given day of the event is below -1.7°C (Schlegel et la., 2021). 
+These are therefore considered to be conditions caused by sea-ice properties, and not extreme temperature fluctuations.
 
 The baseline used for MHWs and MCSs is 1982–2011, which is shifted by one year from the
 standard normal period of 1981–2010 because the first full year of the satellite SST series on which
-it is based is 1982.
+it is based is 1982. This period has not been updated to the current standard normal period of 1991-2020 because the shifting 
+of the baseline has a significant effect on the results, and would not allow for comparison of MHW/MCS statistics with previous 
+versions of this report.
 
-Hobday, A.J. et al., 2018: Categorizing and Naming Marine Heatwaves. Oceanography, 31(2):
-1–13. doi: https://eprints.utas.edu.au/27875/.
-
-NOAA OISST v2: Optimum Interpolation Sea Surface Temperature (OISST):
-
-Banzon, V. et al., 2016: A Long-Term Record of Blended Satellite and in Situ Sea-Surface
-Temperature for Climate Monitoring, Modeling and Environmental Studies. Earth System
-Science Data, 8(1): 165–176. doi: https://essd.copernicus.org/articles/8/165/2016/."
+All MHWs and MCSs are detected using the NOAA daily Optimum Interpolation Sea Surface Temperature (OISST) v2.1 dataset (Huang et al. 2021)."
 
 
 ## References --------------------------------------------------------------
 
 "Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
-A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238. https://doi.org/10.1016/j.pocean.2015.12.014"
+A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238. https://doi.org/10.1016/j.pocean.2015.12.014
 
-"Hobday, A. J., Oliver, E. C., Gupta, A. S., Benthuysen, J. A., Burrows, M. T., Donat, M. G., ... & Smale, D. A. (2018). 
-Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173. https://www.jstor.org/stable/26542662"
+Hobday, A. J., Oliver, E. C., Gupta, A. S., Benthuysen, J. A., Burrows, M. T., Donat, M. G., ... & Smale, D. A. (2018). 
+Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173. https://www.jstor.org/stable/26542662
 
-"Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
+Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
 Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. 
-Journal of Climate, 34(8), 2923-2939. https://doi.org/10.1175/JCLI-D-20-0166.1"
+Journal of Climate, 34(8), 2923-2939. https://doi.org/10.1175/JCLI-D-20-0166.1
+
+Schlegel, R. W., Darmaraki, S., Benthuysen, J. A., Filbee-Dexter, K., & Oliver, E. C. (2021). 
+Marine cold-spells. Progress in Oceanography, 198, 102684."
+
 
 
 # Decadal report ----------------------------------------------------------
