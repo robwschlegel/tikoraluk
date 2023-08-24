@@ -290,3 +290,7 @@ save(sst_3, file = "extracts/sst_3.RData")
 sst_adriatic <- extract_pixel(13.125, 44.875, "2022-12-31")
 write_csv(sst_adriatic, file = "extracts/sst_adriatic.csv")
 
+# Get pixel for demoMHW
+sst_kong <- extract_pixel(11.125, 79.125, "2022-12-31")
+write_csv(sst_kong, file = "extracts/sst_kong.csv")
+
