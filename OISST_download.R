@@ -13,6 +13,8 @@ library(ncdf4)
 library(tidync)
 library(abind)
 library(geosphere)
+library(stars)
+library(terra)
 # library(processNC)
 # library(raster)
 library(doParallel); registerDoParallel(cores = 25) # 50 cores exceeds available RAM
@@ -177,6 +179,7 @@ OISST_pix_dl <- function(file_date, pixel_coords){
   return(OISST_res)
 }
 
+
 # Download ----------------------------------------------------------------
 
 OISST_2018_1 <- OISST_dl(c("2018-01-01T00:00:00Z", "2018-06-30T00:00:00Z"))
@@ -268,14 +271,26 @@ ggplot(filter(OISST_global_monthly_2020), aes(x = t, y = temp)) +
 # Extract pixels ----------------------------------------------------------
 
 # Function for extracting and prepping a single pixel
-extract_pixel <- function(lon_1, lat_1, max_date){
-  sst_1 <- tidync(OISST_files[which(lon_OISST == lon_1)]) %>% 
+extract_pixel <- function(lon_1, lat_1, max_date, append_coords = FALSE){
+  
+  # Get data
+  sst_sub <- tidync(OISST_files[which(lon_OISST == lon_1)]) %>% 
     hyper_filter(lat = lat == lat_1) %>% 
     hyper_tibble() %>% 
     mutate(t = as.Date(time, origin = "1970-01-01")) %>% 
     filter(t <= max_date) %>%
     dplyr::rename(temp = sst) %>% 
     dplyr::select(t, temp)
+  
+  # Add coordinates as desired
+  if(append_coords){
+    sst_sub$lon = lon_1
+    sst_sub$lat = lat_1
+    sst_sub <- dplyr::select(sst_sub, lon, lat, t, temp)
+  }
+  
+  # Exit
+  return(sst_sub)
 }
 
 # Get pixels for heatwaveR
@@ -293,4 +308,38 @@ write_csv(sst_adriatic, file = "extracts/sst_adriatic.csv")
 # Get pixel for demoMHW
 sst_kong <- extract_pixel(11.125, 79.125, "2022-12-31")
 write_csv(sst_kong, file = "extracts/sst_kong.csv")
+
+
+# Baby NetCDF -------------------------------------------------------------
+# Using the terra package to create a quick smol NetCDF file
+# NB: Uses `extract_pixel()` from the above section
+
+# NB: This has unexpected behaviour and is not currently working
+# I can't rule out a local issue
+
+# Extract four adjacent pixels in WA
+sst_a <- extract_pixel(112.625, -29.375, "2022-12-31", append_coords = T)
+sst_b <- extract_pixel(112.625, -29.125, "2022-12-31", append_coords = T)
+sst_c <- extract_pixel(112.875, -29.375, "2022-12-31", append_coords = T)
+sst_d <- extract_pixel(112.875, -29.125, "2022-12-31", append_coords = T)
+sst_q <- as.data.frame(rbind(sst_a, sst_b, sst_c, sst_d))
+write_csv(sst_q, "extracts/sst_q.csv")
+
+# Create stars
+sst_stars <- st_as_stars(sst_q, dims = c("lon", "lat", "t"), xy = c("lon", "lat"))
+sst_spat <- as(sst_stars, "SpatRaster")
+terra::writeCDF(sst_spat, filename = "extracts/SST_sub.nc")
+
+# Load and check
+sst_test3 <- tidync("extracts/SST_sub.nc") |> hyper_tibble()
+
+# Combine and create raster stack
+sst_time <- unique(sst_q$t)
+sst_r <- as.matrix(sst_q[c("lon", "lat", "temp")])
+sst_rast <- terra::rast(sst_stars)
+
+# Test
+sst_test1 <- filter(sst_q, t == "1982-12-31")
+sst_test2 <- rast(sst_test1, digits = 3, xmin = 112.625, xmax = 112.875, ymin = -29.375, ymax = -29.125)
+plot(sst_test2)
 
