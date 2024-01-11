@@ -65,7 +65,8 @@ GLORYS_ocean <- tidync(GLORYS_files[1]) %>%  # Be careful if this index above is
 #   group_by(x, y) %>% 
 #   filter(depth == min(depth) | depth == max(depth)) %>%
 #   ungroup() %>% 
-#   distinct()
+#   distinct()                                                                                                                                     
+
 # save(GLORYS_surface_bottom, file = "extracts/GLORYS_surface_bottom.RData")
 load("extracts/GLORYS_surface_bottom.RData")
 
