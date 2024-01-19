@@ -32,7 +32,7 @@ ERA5_files <- data.frame(files = c(ERA5_lhf_files, ERA5_shf_files, ERA5_lwr_file
                                    ERA5_u_files, ERA5_v_files, ERA5_mslp_files, ERA5_t2m_files,
                                    ERA5_tcc_files, ERA5_pcp_files, ERA5_evp_files)) |> 
   mutate(var_group = sapply(strsplit(files, "_"), "[[", 2))
-
+#
 
 # Functions ---------------------------------------------------------------
 
@@ -67,7 +67,7 @@ load_ERA5 <- function(file_name, lon_range, lat_range){
     time_shift = 0
   }
   
-  # Load data
+  # Extract data from NetCDF
   nc_file <- nc_open(file_name)
   nc_lon <- ncvar_get(nc_file, "longitude")
   nc_lat <- ncvar_get(nc_file, "latitude")
@@ -76,25 +76,19 @@ load_ERA5 <- function(file_name, lon_range, lat_range){
   idx_lat <- which(nc_lon %between% lat_range)
   nc_lon_sub <- nc_lon[idx_lon]
   nc_lat_sub <- nc_lat[idx_lat]
-  nc_array <- ncvar_get(nc_file, names(nc_file$var)[1],
-                        start = c(idx_lon[1], idx_lat[1], 1),
-                        count = c(length(idx_lon), length(idx_lat), length(nc_time)))
-  nc_df <- t(as.data.frame(nc_array)) |> 
+  res_array <- ncvar_get(nc_file, names(nc_file$var)[1],
+                         start = c(idx_lon[1], idx_lat[1], 1),
+                         count = c(length(idx_lon), length(idx_lat), length(nc_time)))
+  nc_close(nc_file)
+  
+  # Convert to data.frame
+  res_df <- t(as.data.frame(res_array)) |> 
     as.data.frame() |> 
     `colnames<-`(nc_lon_sub) |> 
     mutate(lat = rep(nc_lat_sub, length(nc_time)),
-           time = rep(nc_time, length(nc_lat_sub))) |> 
-    pivot_longer(cols = c(!lat, -time), names_to = "lon", values_to = names(nc_file$var)[1]) |> 
-    mutate(across(everything(), as.numeric))
-  
-  # Load data
-  res <- tidync(file_name) |> 
-    # hyper_filter(longitude = longitude == 10, # tester...
-                 # latitude = latitude == 76) |> 
-    hyper_filter(longitude = dplyr::between(longitude, lon_range[1], lon_range[2]),
-                 latitude = dplyr::between(latitude, lat_range[1], lat_range[2])) |>
-    hyper_tibble() |> 
-    dplyr::rename(lon = longitude, lat = latitude, t = time) |> 
+           t = rep(nc_time, length(nc_lat_sub))) |> 
+    pivot_longer(cols = c(-lat, -t), names_to = "lon", values_to = names(nc_file$var)[1]) |> 
+    mutate(across(everything(), as.numeric)) |> 
     # mutate(lon = if_else(lon > 180, lon-360, lon)) |>  # Shift to +- 180 scale
     # na.omit() |>  
     mutate(t = as.POSIXct(t * 3600, origin = '1900-01-01', tz = "GMT")) |> 
@@ -102,57 +96,43 @@ load_ERA5 <- function(file_name, lon_range, lat_range){
     mutate(t = as.Date(t))
   
   # Switch to data.table for faster means
-  res_dt <- data.table(res)
+  res_dt <- data.table(res_df)
   setkey(res_dt, lon, lat, t)
   res_mean <- res_dt[, lapply(.SD, mean), by = list(lon, lat, t)]
   return(res_mean)
+  # rm(file_name, var_name, nc_file, nc_lon, nc_lat, nc_time, idx_lon, idx_lat, nc_lon_sub, nc_lat_sub,
+  #    res_array, res_df, res_dt, res_mean); gc()
 }
 
 # Function for processing ERA5 data
 # file_df <- filter(ERA5_files, var_group == "EVAP")
 # lon_range <- c(10, 18); lat_range <- c(77, 79); year_range <- c(1993, 2022) # testers...
-process_ERA5 <- function(file_df, lon_range, lat_range, year_range){
+process_ERA5 <- function(file_df, file_prefix, lon_range, lat_range, year_range){
 
-  # The base data rounded to days
+  # The base data rounded to daily
   print(paste0("Began loading ",file_df$var_group[1]," at ", Sys.time()))
   # system.time(
   res_base <- plyr::ldply(annual_filter(file_df$files, year_range)$file_name, load_ERA5, 
                           .parallel = TRUE, .paropts = c(.inorder = FALSE),
                           lon_range = lon_range, lat_range = lat_range)
-  # ) # 46 seconds for 1, 119 for 4, xxx for 30
+  # ) # 2 seconds for 1, 21 for 4, 553 for ~30
   
-  # The base data
-  # system.time(
-  # res_base <- plyr::ldply(file_df$files, load_ERA5, .parallel = F, .progress = "text")
-  # ) # 66 seconds for one, 378 seconds for 4
-  
-  # Combine the little half days
+  # Combine the little half days and save
   print(paste0("Began meaning ",file_df$var_group[1]," at ", Sys.time()))
   res_dt <- data.table(res_base)
   setkey(res_dt, lon, lat, t)
-  res_mean <- res_dt[, lapply(.SD, mean), by = list(lon, lat, t)]
-  
-  # The clims+anoms
-  print(paste0("Began anoms on ",file_df$var_group[1]," at ", Sys.time()))
-  # system.time(
-  res_anom <- res_mean %>% 
-    pivot_longer(cols = c(-lon, -lat, -t), names_to = "var", values_to = "val") %>% 
-    plyr::ddply(., c("lon", "lat", "var"), calc_clim_anom, .parallel = T, point_accuracy = 8)
-  # ) # 53 seconds for four
-  saveRDS(res_anom, paste0("data/ERA5_",file_df$var_name[1],"_anom.Rda"))
-  
-  # The time series
-  print(paste0("Began ts for ",file_df$var_name[1]," at ", Sys.time()))
-  # system.time(
-  res_ts <- res_mean %>% 
-    right_join(OISST_regions, by = c("lon", "lat")) %>%
-    na.omit() %>% 
-    dplyr::select(-lon, -lat) %>% 
-    group_by(region, t) %>% 
-    summarise_all("mean") %>% 
-    ungroup()
-  # ) # 1 second for one, 2 seconds for four
-  saveRDS(res_ts, paste0("data/ERA5_",file_df$var_name[1],"_ts.Rda"))
-  rm(res_base, res_anom, res_ts); gc()
+  res_mean <- res_dt[, lapply(.SD, mean), by = list(lon, lat, t)] |> 
+    filter(year(t) <= max(annual_filter(file_df$files, year_range)$year))
+  saveRDS(res_mean, paste0("extracts/",file_prefix,"_ERA5_",file_df$var_group[1],".Rda"))
+  rm(res_base, res_dt, res_mean); gc()
   return()
+  # rm(file_df, file_prefix, lon_range, lat_range, year_range); gc()
 }
+
+
+# Extract -----------------------------------------------------------------
+
+# Isfjorden
+plyr::d_ply(ERA5_files, c("var_group"), process_ERA5, .parallel = F, .progress = "text", # NB: This won't run in parallel
+            file_prefix = "is", lon_range = c(10, 18), lat_range = c(77, 79), year_range = c(1993, 2022))
+
