@@ -73,7 +73,7 @@ load_ERA5 <- function(file_name, lon_range, lat_range){
   nc_lat <- ncvar_get(nc_file, "latitude")
   nc_time <- ncvar_get(nc_file, "time")
   idx_lon <- which(nc_lon %between% lon_range)
-  idx_lat <- which(nc_lon %between% lat_range)
+  idx_lat <- which(nc_lat %between% lat_range)
   nc_lon_sub <- nc_lon[idx_lon]
   nc_lat_sub <- nc_lat[idx_lat]
   res_array <- ncvar_get(nc_file, names(nc_file$var)[1],
