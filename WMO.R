@@ -400,7 +400,8 @@ df_bar_cat <- decadal_cat %>%
   pivot_wider(values_from = mean, names_from = var_name) %>% 
   mutate(cat_type = paste0(type," - ", category),
          daily_cover = case_when(type == "MCS" ~ -daily_cover, TRUE ~ daily_cover),
-         percent_cover = case_when(type == "MCS" ~ -percent_cover, TRUE ~ percent_cover))
+         percent_cover = case_when(type == "MCS" ~ -percent_cover, TRUE ~ percent_cover)) |> 
+  filter(cat_type != "MCS - V Ice")
 df_bar_sum <- decadal_sum %>% 
   pivot_longer(cols = c(min, mean, max)) %>% 
   unite(var_stat, var_name, name) %>% 
@@ -424,7 +425,7 @@ fig_legend <- ggplot(data = df_colour_palette, aes(x = y, y = rev(category))) +
   labs(x = NULL, y = NULL) +
   theme_void() +
   theme(panel.border = element_rect(fill = NA, colour = "black"))
-fig_legend
+# fig_legend
 
 # Daily average and daily percent figure
 fig_day <- ggplot(data = df_bar_cat, aes(x = dec)) +
@@ -434,16 +435,16 @@ fig_day <- ggplot(data = df_bar_cat, aes(x = dec)) +
                 aes(group = type, ymin = daily_cover_min, ymax = daily_cover_max)) +
   geom_hline(aes(yintercept = 0)) +
   geom_label(data = df_labs, aes(x = dec, y = 0, label = labs)) + 
-  geom_grob(aes(x = 1.2, y = 50, label = list(cowplot::as_grob(fig_legend))), vp.width = 0.3, vp.height = 0.3) +
+  geom_grob(aes(x = 1.2, y = 60, label = list(cowplot::as_grob(fig_legend))), vp.width = 0.3, vp.height = 0.3) +
   # geom_point(data = df_bar_sum, aes(y = daily_cover_mean)) + # The top of the bars
   scale_fill_manual("Category", values = event_colours) +
-  scale_y_continuous(limits = c(-27, 65),
-                     breaks = c(-20, 20, 40, 60),
-                     labels = c("20", "20", "40", "60"),
+  scale_y_continuous(limits = c(-40, 90),
+                     breaks = c(-20, 20, 40, 60, 80),
+                     labels = c("20", "20", "40", "60", "80"),
                      sec.axis = sec_axis(name = paste0("Average ocean coverage"), 
                                          trans = ~ . + 0,
-                                         breaks = c(-21.9, -14.6, -7.3, 7.3, 14.6, 21.9, 29.2, 36.5, 43.8, 51.1, 58.4),
-                                         labels = c("6%", "4%", "2%", "2%", "4%", "6%", "8%", "10%", "12%", "14%", "16%"))) +
+                                         breaks = c(seq(-10, 30, 5)/0.365)[c(1,2,4,5,6,7,8,9)],
+                                         labels = c("10%", "5%", "5%", "10%", "15%", "20%", "25%", "30%"))) +
   # scale_x_continuous(expand = c(0, 0)) +
   # guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
   labs(y = paste0("Average ocean days"), x = NULL) +
@@ -455,7 +456,7 @@ fig_day <- ggplot(data = df_bar_cat, aes(x = dec)) +
         axis.ticks.x = element_blank(),
         legend.title = element_text(size = 12),
         legend.text = element_text(size = 10))
-fig_day
+# fig_day
 
 # Stacked barplot of cumulative percent of ocean affected by MHWs
 fig_percent <- ggplot(data = df_bar_cat, aes(x = dec)) +
@@ -466,9 +467,9 @@ fig_percent <- ggplot(data = df_bar_cat, aes(x = dec)) +
   geom_hline(aes(yintercept = 0)) +
   geom_label(data = df_labs, aes(x = dec, y = 0, label = labs)) +
   scale_fill_manual("Category", values = event_colours) +
-  scale_y_continuous(limits = c(-70, 70),
-                     breaks = c(-60, -40, -20, 20, 40, 60),
-                     labels = c("60%", "40%", "20%", "20%", "40%", "60%")) +
+  scale_y_continuous(limits = c(-100, 100),
+                     breaks = c(-80, -60, -40, -20, 20, 40, 60, 80),
+                     labels = c("80%", "60%", "40%", "20%", "20%", "40%", "60%", "80%")) +
   # scale_x_continuous(breaks = seq(1984, 2019, 7)) +
   labs(y = paste0("Total ocean coverage"), x = NULL) +
   coord_cartesian(expand = F) +
@@ -479,7 +480,7 @@ fig_percent <- ggplot(data = df_bar_cat, aes(x = dec)) +
         axis.ticks.x = element_blank(),
         legend.title = element_text(size = 12),
         legend.text = element_text(size = 10))
-fig_percent
+# fig_percent
 
 # Combine and save
 fig_final <- ggpubr::ggarrange(fig_percent, fig_day, align = "hv", labels = c("a)", "b)"))

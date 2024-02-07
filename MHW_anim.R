@@ -1,6 +1,6 @@
 # MHW_anim.R
 # The purpose of this script currently is to make animations of the 
-# three reference time series that are pacakged in heatwaveR.
+# three reference time series that are packaged in heatwaveR.
 # It does this based on the daily category files used in the MHW Tracker
 
 
