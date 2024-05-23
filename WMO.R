@@ -124,6 +124,7 @@ first_cum_prop_stats <- function(df){
 }
 
 # Get MHW stats
+first_cum_prop_stats(MHW_cat_daily_1982)
 first_cum_prop_stats(MHW_cat_daily_2012)
 first_cum_prop_stats(MHW_cat_daily_2016)
 first_cum_prop_stats(MHW_cat_daily_2022)
