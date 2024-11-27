@@ -9,6 +9,42 @@
 library(tidyverse)
 library(heatwaveR)
 library(ggpmisc)
+library(doParallel)
+
+
+# Download data -----------------------------------------------------------
+
+# Options to help download large chunks of MHW/MCS data
+
+# MHW files
+mhw_files <- dir("../data/cat_clim", pattern = "1982-2011.Rda", full.names = TRUE, recursive = TRUE)
+
+# MCS files
+mcs_files <- dir("../data/cat_clim/MCS", pattern = "1982-2011.Rds", full.names = TRUE, recursive = TRUE)
+
+# Function that concatenates files into annuals and saves to "extract/"
+save_cat_clim_year <- function(year_choice, files, overwrite = FALSE){
+  # Subset files by year
+  year_files <- files[grepl(paste0("/",year_choice,"/"), files)]
+  # Load
+  year_res <- plyr::ldply(year_files, read_rds, .parallel = FALSE)
+  # Get file segment
+  if(grepl("MCS", year_files[1])){
+    event_type <- "cat.clim.MCS."
+  } else {
+    event_type <- "cat.clim.MHW."
+  }
+  # Save and clear RAM
+  if(!file.exists(paste0("extracts/",event_type,year_choice,".Rds")) | overwrite)
+    saveRDS(year_res, file = paste0("extracts/",event_type,year_choice,".Rds"))
+  rm(year_files, year_res, event_type); gc()
+}
+
+# Save so they can be downloaded locally
+# NB: Don't run this in parallel
+registerDoParallel(cores = 10)
+plyr::l_ply(1982:2024, save_cat_clim_year, mhw_files, .parallel = TRUE)
+plyr::l_ply(1982:2024, save_cat_clim_year, mcs_files, .parallel = TRUE)
 
 
 # Years of interest -------------------------------------------------------
