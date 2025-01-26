@@ -654,5 +654,164 @@ What caused the Atlantic cold blob of 2015. US CLIVAR Variations, 14(2), 24-31."
 
 # BAMS text ---------------------------------------------------------------
 
-# Search through old e-mails to retrieve text from correspondence.
+## 2023 text----------------------------------------------------------------
+
+"The 2023 analysis of NOAA OISST daily v2.1 (Huang et al. 2021) revealed an ocean where 94% of the surface experienced at least one marine heatwave (MHW; Hobday et al. 2016; Figs. x.y.z.a,b), 
+and 27% experienced at least one marine cold-spell (MCS; Fig. x.y.z.c,d). 
+The most common MHW category (Hobday et al. 2018) in 2023 was Category 2 Strong (49%), with the coverage of Category 3 Severe events reaching 10%. 
+Category 1 Moderate MCSs have remained the most common (16%) cool events in all years since 1987. 
+The ocean experienced a global average of 116 MHW days (13 MCS days) in 2023. 
+This is far greater than the 2016 MHW record of 86 days (MCS record of 37 days in 1982; Figs. x.y.za,c). 
+This equates to a daily average MHW coverage of 32% (4% MCS; Figs. x.y.za,c)."
+
+
+## 2024 text ---------------------------------------------------------------
+
+"The 2024 analysis of NOAA OISST daily v2.1 (Huang et al. 2021) revealed an ocean where 91% of the surface experienced at least one 
+marine heatwave (MHW; Hobday et al. 2016; Figs. x.y. a,b), and 26% experienced at least one marine cold-spell (MCS; Fig. x.y. c,d). 
+The most common MHW category (Hobday et al. 2018) in 2024 was Category 2 Strong (46%), with the coverage of Category 3 Severe events reaching 8%. 
+Category 1 Moderate MCSs have remained the most common (16%) cool events in all years since 1987. 
+The ocean experienced a global average of 100 MHW days (9 MCS days) in 2024. 
+This is far greater than the 2016 MHW record of 58 days (MCS record of 55 days in 1982; Figs. x.y. a,c). 
+This equates to a daily average MHW coverage of 27% (2% MCS; Figs. x.y. a,c)."
+
+"2024 started off where 2023 ended, hot. With most of the Atlantic Ocean, and the majority of all oceans within ±20° of the equator in a MHW state.
+Large patches of the Southern Ocean to the south of Africa and Australia as well.
+The MHW in the Atlantic, north of the equator, was a continuation of the basin-scale event that started in January of 2023, 
+and has continued nearly unabated for two years through to the end of 2024.
+It seems only a matter of time until this event gains a unique name for itself, a la 'The Blob' in the Northeast Pacific.
+Similar in size to this North Atlantic event was another, loosely connected just to the south of the equator.
+A holdover from 2023, the basin-scale event picked up steam going into March, but finally dissipated in June, 
+just as a MHW larger than Western Europe began to develop in the North Atlantic.
+This event persisted nearly to the end of the year, though did break up twice, 
+potentially signifying different key drivers of the anomalous heat.
+From August to late November, the Barents and Kara Sea experienced what has become a perennially re-occurring Category 4 MHW.
+The Gulf af Aden, and much of the surrounding waters, experienced a noteworthy MHW in February.
+With the Mediterranean Sea reserving its place for special mention, for another year in a row, 
+due to the exceptionally intense regional MHWs it experienced from July to September.
+
+Notable MCSs within ±60° of the equator have nearly vanished since the late 90s. With 2024 being no exception.
+Some high category events did take place throughout the year, 
+though almost all of them were either an expression of seasonal changes in the ice edge of the polar regions, 
+or particularly pronounced anti-cyclonic eddies within the western boundary currents (WBC). 
+The ice edge events in particular cannot be ruled out as artefacts of the data assimilation of the OISST product.
+That being said, the Russian coastline of the Barents Sea exhibited intense cooling over May to June, 
+with the Karas sea experiencing a wide-spread Category 4 MCS from June to July."
+
+
+## Figure caption ----------------------------------------------------------
+
+"Fig. x.y. Annual global marine heatwave (MHW; [a],[b]) and marine cold-spell (MCS; [c],[d]) occurrence from NOAA OISST
+v2.1 using a climatology base period of 1991–2020. (a),(c) The average count of MHW/MCS days experienced over the
+surface of the ocean each year (left y-axis), also expressed as the percent of the surface of the ocean experiencing a 
+MHW/MCS on any given day (right y-axis) of that year. (b),(d) Total percent of the surface area of the ocean that experienced
+an MHW/MCS at some point during the year. The values shown are for the highest category of MHW/MCS experienced at any point."
+
+
+## Technical definition ----------------------------------------------------
+
+"A MHW is detected when five or more consecutive days of temperature are above a 90th percentile daily climatology (Hobday et al. 2016). 
+MHWs are categorized as moderate when the greatest temperature anomaly during the event is less than double the difference between 90th percentile and seasonal climatology. 
+When this value is more than double, triple, or quadruple the distance, the MHW is categorized as strong, severe, or extreme, respectively (Hobday et al. 2018). 
+The direct inverse is used to detect and categorize MCSs (i.e., days below the 10th percentile). 
+The baseline period used to detect events in this report is 1991–2020, matching the current advise from the WMO for defining climate normals.
+Note that this years report is the first to shift to the new baseline, while all previous reports used the 1982-2011 baseline.
+This means that the values for MHWs will appear lower in this report than previous years, even though, in absolute terms, the ocean continues to warm."
+
+
+## References --------------------------------------------------------------
+
+"Hobday, A. J., Alexander, L. V., Perkins, S. E., Smale, D. A., Straub, S. C., Oliver, E. C., ... & Wernberg, T. (2016). 
+A hierarchical approach to defining marine heatwaves. Progress in Oceanography, 141, 227-238. https://doi.org/10.1016/j.pocean.2015.12.014
+
+Hobday, A. J., Oliver, E. C., Gupta, A. S., Benthuysen, J. A., Burrows, M. T., Donat, M. G., ... & Smale, D. A. (2018). 
+Categorizing and naming marine heatwaves. Oceanography, 31(2), 162-173. https://www.jstor.org/stable/26542662
+
+Huang, B., Liu, C., Banzon, V., Freeman, E., Graham, G., Hankins, B., ... & Zhang, H. M. (2021). 
+Improvements of the daily optimum interpolation sea surface temperature (DOISST) version 2.1. Journal of Climate, 34(8), 2923-2939. https://doi.org/10.1175/JCLI-D-20-0166.1"
+
+
+## Load data ---------------------------------------------------------------
+# NB: Now using 1991-2020 clim for BAMS reports
+
+# Load 1982, the first year
+MHW_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_1982.Rds")
+MCS_cat_daily_1982 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1991-2020_1982.Rds")
+
+# Load the most intense year
+MHW_cat_daily_2016 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_2016.Rds")
+# 1982 is the most intense MCS year
+
+# Load the most daily coverage year
+MHW_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_2023.Rds")
+
+# Load the most spatial coverage year
+MCS_cat_daily_1985 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1991-2020_1985.Rds")
+
+# Load the most recent low coverage year
+MHW_cat_daily_2012 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_2012.Rds")
+
+# Load previous year
+MHW_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_2023.Rds")
+MCS_cat_daily_2023 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1991-2020_2023.Rds")
+
+# Load current year
+MHW_cat_daily_2024 <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_2024.Rds")
+MCS_cat_daily_2024 <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1991-2020_2024.Rds")
+
+# Total history
+MHW_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_cat_daily_1991-2020_total.Rds")
+MCS_total_summary <- readRDS("../MHWapp/data/annual_summary/OISST_MCS_cat_daily_1991-2020_total.Rds")
+
+
+## Panel A+C ----------------------------------------------------------------
+## Annual MHW/MCS days
+
+# Daily percent coverage
+cat_prop_stats <- function(df){
+  df %>% 
+    group_by(category) %>% 
+    summarise(mean = mean(cat_area_prop), .groups = "drop") %>% 
+    mutate(sum = sum(mean))
+}
+cat_prop_stats(MHW_cat_daily_2024)
+cat_prop_stats(MCS_cat_daily_2024)
+
+# Total days per year
+cat_days_stats <- function(df){
+  df %>% 
+    group_by(category) %>%
+    filter(t == max(t)) %>% 
+    ungroup() %>% 
+    dplyr::select(t, category, cat_area_cum_prop) %>% 
+    mutate(sum = sum(cat_area_cum_prop))
+}
+
+cat_days_stats(MHW_cat_daily_2024)
+cat_days_stats(MHW_cat_daily_2016)
+cat_days_stats(MCS_cat_daily_2024)
+cat_days_stats(MCS_cat_daily_1982)
+
+
+## Panel B+D ----------------------------------------------------------------
+## Annual total MHW+MCS cover
+
+first_cum_prop_stats <- function(df){
+  df %>% 
+    group_by(category) %>%
+    filter(t == max(t)) %>% 
+    ungroup() %>% 
+    dplyr::select(t, category, first_area_cum_prop) %>% 
+    mutate(sum = sum(first_area_cum_prop))
+}
+
+first_cum_prop_stats(MHW_cat_daily_2024)
+first_cum_prop_stats(MHW_cat_daily_2016)
+first_cum_prop_stats(MCS_cat_daily_2024)
+first_cum_prop_stats(MCS_cat_daily_1982)
+
+
+# Annual video ------------------------------------------------------------
+
+# See: "../MHWapp/MHW_annual_summary.R"
 
